@@ -260,6 +260,7 @@ describe("unit and end lines", () => {
         ammoPolicy: "spread" as const,
         autoEject: true,
         heatFlamer: true,
+        amsPolicy: "expected" as const,
       }),
       damage: {
         pilotHits: 2,
@@ -578,6 +579,7 @@ describe("decodeUnitLine", () => {
         ammoPolicy: "leastFirst" as const,
         autoEject: true,
         heatFlamer: true,
+        amsPolicy: "expected" as const,
       }),
       damage: {
         pilotHits: 2,

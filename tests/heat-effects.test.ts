@@ -290,15 +290,21 @@ describe("heatFlamer setup and replay", () => {
     const base = buildUnitInit("me", "HBK-4G", 1, { col: 9, row: 9 }, "n");
     expect(decodeUnitLine(encodeUnitLine(base)).policy.heatFlamer).toBe(true);
     const off = { ...base, policy: { ...base.policy, heatFlamer: false } };
-    expect(encodeUnitLine(off).endsWith(":ef")).toBe(true);
+    expect(encodeUnitLine(off).endsWith(":f")).toBe(true);
     expect(decodeUnitLine(encodeUnitLine(off)).policy).toEqual({
       ammoPolicy: "exposed",
       autoEject: true,
       heatFlamer: false,
+      amsPolicy: "expected",
     });
     const both = {
       ...base,
-      policy: { ammoPolicy: "core" as const, autoEject: false, heatFlamer: false },
+      policy: {
+        ammoPolicy: "core" as const,
+        autoEject: false,
+        heatFlamer: false,
+        amsPolicy: "expected" as const,
+      },
     };
     expect(encodeUnitLine(both).endsWith(":cxf")).toBe(true);
     expect(decodeUnitLine(encodeUnitLine(both)).policy).toEqual(both.policy);

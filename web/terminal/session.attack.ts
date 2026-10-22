@@ -1141,6 +1141,13 @@ export function resolutionLines(r: AttackResolution): string[] {
       "  " +
         i18n("res.clusterMod", { mod: r.clusterMod > 0 ? `+${r.clusterMod}` : `${r.clusterMod}` }),
     );
+  const ams = r.missileDefense;
+  if (ams !== undefined) {
+    const streak = r.clusterRoll === null ? i18n("res.amsStreak") : "";
+    lines.push(
+      `  ${i18n("res.ams", { weapon: ams.weapon, without: ams.hitsWithout, with: ams.hitsWith })}${streak}`,
+    );
+  }
   if (r.hit && r.groups.length > 0) {
     lines.push(
       "  " +

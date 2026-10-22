@@ -1,7 +1,13 @@
-import { setUnitPolicy, unitPolicyOf } from "btlib10x";
+import { buildUnitInit, setUnitPolicy, unitPolicyOf } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
-import { encodePolicyEntry, replayPlayer, replayPrettifier } from "../web/terminal/replay";
+import {
+  decodeUnitLine,
+  encodePolicyEntry,
+  encodeUnitLine,
+  replayPlayer,
+  replayPrettifier,
+} from "../web/terminal/replay";
 import { newSession, type Session } from "../web/terminal/session";
 import { execute } from "./helpers";
 
@@ -39,7 +45,9 @@ describe("policy command", () => {
   it("shows and changes the acting unit's policies in the movement phase", () => {
     const s = battle();
     const id = actorId(s);
-    expect(execute(s, "policy")).toEqual([`${id}: ammo exposed, auto-eject on, flamer-heat on`]);
+    expect(execute(s, "policy")).toEqual([
+      `${id}: ammo exposed, auto-eject on, flamer-heat on, AMS expected`,
+    ]);
     expect(execute(s, "policy ammoPolicy least-first")).toEqual([
       `${id}: ammoPolicy set to least-first`,
     ]);
@@ -49,9 +57,10 @@ describe("policy command", () => {
       ammoPolicy: "leastFirst",
       autoEject: false,
       heatFlamer: false,
+      amsPolicy: "expected",
     });
     expect(execute(s, "policy")).toEqual([
-      `${id}: ammo least-first, auto-eject off, flamer-heat off`,
+      `${id}: ammo least-first, auto-eject off, flamer-heat off, AMS expected`,
     ]);
   });
 
@@ -97,7 +106,7 @@ describe("policy command", () => {
     execute(s, "policy ammoPolicy exposed");
     expect(s.replay!.lines.length).toBe(before);
     execute(s, "policy autoEject off");
-    expect(s.replay!.lines.at(-1)).toBe(`P${idx}ex`);
+    expect(s.replay!.lines.at(-1)).toBe(`P${idx}x`);
   });
 
   it("set keeps working in setup for the three policies", () => {
@@ -112,6 +121,7 @@ describe("policy command", () => {
       ammoPolicy: "leastFirst",
       autoEject: true,
       heatFlamer: false,
+      amsPolicy: "expected",
     });
   });
 });
@@ -124,6 +134,7 @@ describe("setUnitPolicy", () => {
       ammoPolicy: "exposed",
       autoEject: true,
       heatFlamer: false,
+      amsPolicy: "expected",
     });
   });
 
@@ -176,11 +187,21 @@ describe("replay P records", () => {
   });
 
   it("encodes the whole policy and keeps P on its activation's line", () => {
-    expect(encodePolicyEntry("0", { ammoPolicy: "core", autoEject: true, heatFlamer: true })).toBe(
-      "P0c",
-    );
     expect(
-      encodePolicyEntry("a", { ammoPolicy: "leastFirst", autoEject: false, heatFlamer: false }),
+      encodePolicyEntry("0", {
+        ammoPolicy: "core",
+        autoEject: true,
+        heatFlamer: true,
+        amsPolicy: "expected",
+      }),
+    ).toBe("P0c");
+    expect(
+      encodePolicyEntry("a", {
+        ammoPolicy: "leastFirst",
+        autoEject: false,
+        heatFlamer: false,
+        amsPolicy: "expected",
+      }),
     ).toBe("Palxf");
     expect(
       replayPrettifier([
@@ -191,10 +212,52 @@ describe("replay P records", () => {
         "P0c",
         "M0s",
         "M1s",
-        "P1e",
+        "P1",
         "A1F",
         "A0F",
       ]),
-    ).toEqual(["V1", "Bm;S1", "U1a:X:0101n456", "P0c;M0s;M1s", "P1e;A1F;A0F"]);
+    ).toEqual(["V1", "Bm;S1", "U1a:X:0101n456", "P0c;M0s;M1s", "P1;A1F;A0F"]);
+  });
+});
+
+describe("amsPolicy", () => {
+  it("is set in setup and by the acting unit, and rejects other values", () => {
+    const s = newSession(1);
+    execute(s, "map quickstart");
+    execute(s, "add me HBK-4G 9 9 n");
+    execute(s, "add foe WVR-6R 9 5 s");
+    expect(execute(s, "set me amsPolicy FirstHit")).toEqual(["me: amsPolicy set to first-hit"]);
+    expect(s.setup.roster[0]!.policy.amsPolicy).toBe("firstHit");
+    expect(execute(s, "status").join("\n")).toMatch(/me .* AMS first-hit @/);
+    expect(execute(s, "set me amsPolicy sometimes")[0]).toMatch(
+      /amsPolicy must be expected, first-hit, priority or off/,
+    );
+    execute(s, "start");
+    expect(s.battle!.units.me!.amsPolicy).toBe("firstHit");
+    const id = actorId(s);
+    expect(execute(s, "policy amsPolicy priority")).toEqual([`${id}: amsPolicy set to priority`]);
+    expect(s.battle!.units[id]!.amsPolicy).toBe("priority");
+    expect(() => setUnitPolicy(s.battle!, id, { amsPolicy: "always" as unknown as "off" })).toThrow(
+      /bad AMS policy/,
+    );
+  });
+
+  it("encodes as m / p / o after the other policy chars; defaults write none", () => {
+    const base = {
+      ammoPolicy: "exposed",
+      autoEject: true,
+      heatFlamer: true,
+    } as const;
+    expect(encodePolicyEntry("0", { ...base, amsPolicy: "expected" })).toBe("P0");
+    expect(encodePolicyEntry("0", { ...base, amsPolicy: "firstHit" })).toBe("P0m");
+    expect(encodePolicyEntry("0", { ...base, amsPolicy: "priority" })).toBe("P0p");
+    expect(encodePolicyEntry("0", { ...base, heatFlamer: false, amsPolicy: "off" })).toBe("P0fo");
+    const init = buildUnitInit("me", "EXC-B2", 1, { col: 9, row: 9 }, "n", 4, 5, 6, {
+      ...base,
+      amsPolicy: "priority",
+    });
+    const line = encodeUnitLine(init);
+    expect(line.endsWith(":p")).toBe(true);
+    expect(decodeUnitLine(line).policy.amsPolicy).toBe("priority");
   });
 });

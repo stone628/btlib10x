@@ -79,9 +79,9 @@ export const ko: Catalog = {
   "cmd.set.help": "로스터에 있는 유닛의 속성을 수정",
   "cmd.set.arg.id": "수정할 유닛 id",
   "cmd.set.arg.prop":
-    "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer",
+    "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer, amsPolicy",
   "cmd.set.arg.value":
-    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first, autoEject와 heatFlamer의 경우 on|off)",
+    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first, autoEject와 heatFlamer의 경우 on|off, amsPolicy의 경우 expected|first-hit|priority|off)",
   "cmd.rm.help": "배치된 유닛 제거",
   "cmd.rm.arg.id": "이전에 추가한 유닛의 id",
   "cmd.statusSetup.help": "설정 요약: 팀별 유닛 그룹, 선택된 맵",
@@ -130,10 +130,10 @@ export const ko: Catalog = {
   "cmd.heat.help": "유닛의 발열 게이지 상태 표시 (기본: 행동 유닛)",
   "cmd.heat.arg.id": "확인할 유닛\n기본은 행동 유닛",
   "cmd.policy.help":
-    "행동 유닛의 정책 표시 또는 변경 (ammoPolicy, autoEject, heatFlamer); 즉시 적용",
-  "cmd.policy.arg.prop": "정책 이름: ammoPolicy, autoEject, heatFlamer",
+    "행동 유닛의 정책 표시 또는 변경 (ammoPolicy, autoEject, heatFlamer, amsPolicy); 즉시 적용",
+  "cmd.policy.arg.prop": "정책 이름: ammoPolicy, autoEject, heatFlamer, amsPolicy",
   "cmd.policy.arg.value":
-    "새 값: ammoPolicy는 exposed|core|spread|least-first, autoEject와 heatFlamer는 on|off",
+    "새 값: ammoPolicy는 exposed|core|spread|least-first, autoEject와 heatFlamer는 on|off, amsPolicy는 expected|first-hit|priority|off",
   "cmd.candidateMove.help": "이동 가능 영역을 ASCII 전장 격자로 표시",
   "cmd.candidateAttack.help": "공격 가능한 목표와 가용 무기를 표시",
   "cmd.punch.help": "인접한 적에 펀치 공격 예약 (TW p.145)",
@@ -251,7 +251,7 @@ export const ko: Catalog = {
   "ok.mapLoaded": "맵 {name}: {w}x{h}개",
   "ok.added": "{id} ({model}) 위치 ({col},{row}), 방향 {facing} 팀 {team}에 배치됨",
   "ok.set": "{id}: {prop}을(를) {value}(으)로 설정",
-  "policy.summary": "{id}: 탄약 {ammo}, 자동 탈출 {eject}, 화염방사 발열 {flamer}",
+  "policy.summary": "{id}: 탄약 {ammo}, 자동 탈출 {eject}, 화염방사 발열 {flamer}, AMS {ams}",
   "ok.removed": "{id} 제거됨",
   "ok.started": "=== 전투 시작 ===",
   "ok.modeDeclared": "{id}, {mode} 모드 선언: {budget} MP, 시작 ({col},{row}) {facing}향 {posture}",
@@ -390,6 +390,7 @@ export const ko: Catalog = {
   "err.badAmmoPolicy": "탄약 정책은 exposed|core|spread|least-first 중 하나여야 합니다",
   "err.badAutoEject": "autoEject는 on 또는 off여야 합니다",
   "err.badHeatFlamer": "heatFlamer는 on 또는 off여야 합니다",
+  "err.badAmsPolicy": "amsPolicy는 expected, first-hit, priority, off 중 하나여야 합니다",
   "err.phaseDriver": "단계 드라이버가 수렴하지 않았습니다",
   "err.twist.badDirection": "상체 회전 방향은 front, left, right 중 하나여야 합니다",
   "err.twist.locked": "fire 명령이 예약되면 상체 회전은 잠김 — 먼저 cancel 하세요",
@@ -420,9 +421,10 @@ export const ko: Catalog = {
   "setup.mapNone": "(없음)",
   "setup.teamHeader": "팀 {team}:",
   "setup.unitLine":
-    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} 자동탈출 {eject}{flamer} @ {pos} 방향 {facing}",
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} 자동탈출 {eject}{flamer}{ams} @ {pos} 방향 {facing}",
   "setup.noUnits": "(배치된 유닛 없음)",
   "setup.heatFlamerOff": " 화염방사 발열 off",
+  "setup.amsPolicy": " AMS {policy}",
 
   // movement status
   "moveStatus.headLine": "예약된 이동:",
@@ -716,6 +718,9 @@ export const ko: Catalog = {
   "log.clubConsumed": "[{id}]의 {kind} 곤봉이 명중으로 파괴됨",
   "log.heatMove": "[{id}] 이동 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
   "log.heatWeapon": "[{id}] 무기 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
+  "log.amsEngaged":
+    "[{id}] {weapon}이(가) {attacker} {attackWeapon} 요격: 발열 {heat} (기본 {base}, 턴 누적 {total}){ammo}",
+  "log.amsShotsLeft": ", 잔탄 {shots}",
   "log.heatEngineCrit": "[{id}] 엔진 크리티컬 발열 {heat} 발생 (기본 {base}, 턴 누적 {total})",
   "log.heatInflicted":
     "[{id}] 외부 발열 {heat} 받음 (턴 누적 {total}, 발열 처리 단계에 반영, 최대 {cap})",
@@ -851,6 +856,8 @@ export const ko: Catalog = {
   "res.heatAsHeat": "피해 대신 대상에 발열 {heat} (대상 발열 처리 단계에 반영)",
   "res.heatExtra": "대상에 발열 {heat} ({dice}, 대상 발열 처리 단계에 반영)",
   "res.outOfAmmo": "{weapon} 탄약 부족으로 발사 중지",
+  "res.ams": "{weapon} 클러스터 굴림 −4: 미사일 {without} → {with}",
+  "res.amsStreak": " (스트릭은 11로 간주)",
   "res.clusterRoll": "클러스터 굴림 2D6 = {roll}",
   "res.clusterMod": "클러스터 사거리 보정 {mod}",
   "res.hits": "명중: {groups} ({arc})",

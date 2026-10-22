@@ -1,13 +1,17 @@
 import { describe, expect, it } from "vitest";
+import { FACINGS, type Facing, type Rng } from "../src/core/types";
 import { mechDef, mechDefFor } from "../src/data/index";
 import { weaponDefFor } from "../src/data/weapon.schema";
-import { ammoWeaponTotals, pooledShotsLeft } from "../src/rules/ammo";
+import { ammoWeaponTotals, binsForWeaponName, pooledShotsLeft } from "../src/rules/ammo";
+import type { AmsPolicy } from "../src/rules/ams";
+import { classifyFiringArc, effectiveFacingForTwist, type Twist } from "../src/rules/arcs";
 import { crittedWeapons, isSlotDestroyed, isWeaponCritted } from "../src/rules/critical";
 import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
 import {
   actorQueue,
   advancePhase,
   buildUnitInit,
+  DEFAULT_UNIT_POLICY,
   declareAttacks,
   executeMove,
   nextActor,
@@ -1513,5 +1517,158 @@ describe("weapon-volley crit accumulation (TW p. 38 simultaneity)", () => {
     expect(critted).toContain(1); // AC/10 from first ML (ENF weaponIndex 1)
     // Shoulder crit on LA: destroys the Large Laser (ENF weaponIndex 2).
     expect(critted).toContain(2);
+  });
+});
+
+describe("AMS in the weapon attack phase (TW p.129)", () => {
+  /** Every die shows `face`: every 2D6 is 2 x face. */
+  const constRng = (face: number): Rng => ({ d6: () => face, snapshot: () => "0", load: () => {} });
+  const AMS = "Anti-Missile System";
+  const excDef = () => mechDef("EXC-B2")!;
+  /** Atlas 7 hexes south of an EXC-B2 (AMS in the center torso, front arc). */
+  const setup = (
+    excFacing: Facing = "s",
+    amsPolicy: AmsPolicy = "expected",
+    attacker: string = "AS7-D",
+  ): BattleState => {
+    const units: UnitInit[] = [
+      buildUnitInit("atk", attacker, 1, { col: 3, row: 8 }, "n"),
+      buildUnitInit("exc", "EXC-B2", 2, { col: 3, row: 1 }, excFacing, 4, 5, 6, {
+        ...DEFAULT_UNIT_POLICY,
+        amsPolicy,
+      }),
+    ];
+    return startAttackTurn(createTestBattle([], units, true));
+  };
+  const fire = (state: BattleState, weaponIndices: number[], events: GameEvent[] = []) => {
+    declareAttacks(
+      state,
+      "atk",
+      weaponIndices.map((weaponIndex) => ({ weaponIndex, targetId: "exc" })),
+      [],
+      [],
+      constRng(4),
+    );
+    resolveAllAttacks(state, constRng(4), events);
+    return events;
+  };
+  const resolved = (events: GameEvent[]) =>
+    events.flatMap((e) => (e.kind === "attackResolved" ? [e.resolution] : []));
+  const engaged = (events: GameEvent[]) =>
+    events.flatMap((e) => (e.kind === "amsEngaged" ? [e] : []));
+
+  it("engages a hitting LRM 20: 12 -> 9 missiles, 1 ammo, 1 heat", () => {
+    const state = setup();
+    // Every 2D6 is 8: LRM 20 at 7 hexes hits TN 4; Cluster 8 -> 12, 4 -> 9.
+    const events = fire(state, [4]);
+    const [lrm] = resolved(events);
+    expect(lrm!.missileDefense).toEqual({
+      weaponIndex: 2,
+      weapon: AMS,
+      hitsWithout: 12,
+      hitsWith: 9,
+    });
+    expect(lrm!.groups.reduce((sum, g) => sum + g.damage, 0)).toBe(9);
+    const exc = requireUnit(state, "exc");
+    expect(pooledShotsLeft(excDef(), exc, AMS)).toBe(11);
+    expect(exc.heatPending).toBe(1);
+    expect(engaged(events)).toEqual([
+      expect.objectContaining({
+        unitId: "exc",
+        weaponIndex: 2,
+        attackerId: "atk",
+        attackWeapon: "LRM 20",
+        heat: 1,
+        totalGenerated: 1,
+        shotsLeft: 11,
+      }),
+    ]);
+    // The engagement prints right after the attack it cut down.
+    const at = events.findIndex((e) => e.kind === "attackResolved");
+    expect(events[at + 1]?.kind).toBe("amsEngaged");
+    expect(resolutionLines(lrm!).some((l) => l.includes("12 → 9"))).toBe(true);
+  });
+
+  it("off lets the volley through and spends nothing", () => {
+    const state = setup("s", "off");
+    const events = fire(state, [4]);
+    expect(resolved(events)[0]!.missileDefense).toBeUndefined();
+    expect(engaged(events)).toEqual([]);
+    expect(pooledShotsLeft(excDef(), requireUnit(state, "exc"), AMS)).toBe(12);
+    expect(requireUnit(state, "exc").heatPending).toBe(0);
+  });
+
+  it("engages one attack per turn, picked by the policy", () => {
+    // SRM 6 (long range, TN 8) resolves before the LRM 20 (TN 4); both hit.
+    const pick = (policy: AmsPolicy) =>
+      resolved(fire(setup("s", policy), [5, 4])).map((r) => r.missileDefense !== undefined);
+    expect(pick("firstHit")).toEqual([true, false]);
+    expect(pick("expected")).toEqual([false, true]);
+    expect(pick("priority")).toEqual([false, true]);
+  });
+
+  it("covers only its own arc: a front-torso AMS ignores fire into the rear", () => {
+    const state = setup("n");
+    const events = fire(state, [4]);
+    expect(resolved(events)[0]!.hit).toBe(true);
+    expect(engaged(events)).toEqual([]);
+  });
+
+  it("needs ammo and power at phase start", () => {
+    const dry = setup();
+    for (const bin of binsForWeaponName(excDef(), AMS)) {
+      requireUnit(dry, "exc").ammoBins[bin.id] = 0;
+    }
+    expect(engaged(fire(dry, [4]))).toEqual([]);
+
+    const down = setup();
+    requireUnit(down, "exc").shutdown = "manual";
+    expect(engaged(fire(down, [4]))).toEqual([]);
+  });
+
+  it("cuts a Streak volley as a roll of 11 - 4", () => {
+    const state = setup("s", "expected", "MC-MKII-2");
+    // CL Streak SRM 4 at 7 hexes: medium range, TN 6 <= 8.
+    const [streak] = resolved(fire(state, [3]));
+    expect(streak!.clusterRoll).toBeNull();
+    expect(streak!.missileDefense).toEqual(
+      expect.objectContaining({ hitsWithout: 4, hitsWith: 3 }),
+    );
+    expect(streak!.groups).toHaveLength(3);
+  });
+
+  it("covers the arc its torso twisted into this phase", () => {
+    // Find a facing that puts the attacker in a side arc and the twist that
+    // brings it to the front (the AMS sits in the center torso).
+    const exc = { col: 3, row: 1 };
+    const atk = { col: 3, row: 8 };
+    let found: { facing: Facing; twist: Twist } | null = null;
+    for (const facing of FACINGS) {
+      const side = classifyFiringArc(exc, atk, facing);
+      if (side !== "leftSide" && side !== "rightSide") continue;
+      for (const twist of ["leftSide", "rightSide"] as const) {
+        if (classifyFiringArc(exc, atk, effectiveFacingForTwist(facing, twist)) === "front") {
+          found = { facing, twist };
+        }
+      }
+      if (found !== null) break;
+    }
+    if (found === null) throw new Error("no side facing found");
+    const run = (twist: Twist | null) => {
+      const state = setup(found.facing);
+      const events: GameEvent[] = [];
+      declareAttacks(state, "atk", [{ weaponIndex: 4, targetId: "exc" }], [], [], constRng(4));
+      if (twist === null) passAttack(state, "exc");
+      else {
+        // EXC-B2 Gauss Rifle (right arm) answers at the twisted front.
+        declareAttacks(state, "exc", [{ weaponIndex: 3, targetId: "atk" }], [], [], constRng(4), {
+          twist,
+        });
+      }
+      resolveAllAttacks(state, constRng(4), events);
+      return engaged(events).length;
+    };
+    expect(run(null)).toBe(0);
+    expect(run(found.twist)).toBe(1);
   });
 });

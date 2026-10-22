@@ -194,7 +194,9 @@ These are implementation choices, not rule changes.
   water.
 - **Buildings.** Basements, multi-floor interiors, structural transfer;
   hull-down; cover hits damaging buildings.
-- **Equipment pipeline.** Artemis / Narc / AMS (and ECM interaction); rotary
+- **Equipment pipeline.** Artemis / Narc (AMS and Laser AMS are in, TW
+  p.129, `amsPolicy`; still to come: the Narc single-missile AMS roll, TacOps
+  Enhanced Missile Defense, AMS-vs-ECM questions); rotary
   jam-clear; Targeting Computer; TAG and guided ammo; LRM indirect fire;
   C3 / C3i; ECM bubble; Stealth Armor; switchable and special munitions.
 - **Salvage valuation.** `salvageReport` lists what hulls and wreckage

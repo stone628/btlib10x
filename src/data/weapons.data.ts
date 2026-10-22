@@ -59,6 +59,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     long: 0,
     category: "EQUIPMENT",
     heat: 1,
+    antiMissile: "ammo", // TW p.129: 1 shot + 1 heat per engagement
   },
   {
     name: "AP Gauss Rifle",
@@ -292,8 +293,8 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 10,
   },
   // Source: BattleTechWiki (Sarna) "Laser Anti-Missile System", not the TW
-  // rulebook. Clan: 1 ton, 1 slot, 5 heat. The engine has no anti-missile
-  // rules yet, so LAMS (like AMS) is carried as inert equipment.
+  // rulebook (TO:AUE is not in the workspace). Clan: 1 ton, 1 slot, 5 heat.
+  // Engages missiles like the AMS (TW p.129) but spends no ammo.
   {
     name: "CL Laser Anti-Missile System",
     short: 0,
@@ -301,6 +302,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     long: 0,
     category: "EQUIPMENT",
     heat: 5,
+    antiMissile: "laser",
   },
   {
     name: "CL LB 2-X AC",
@@ -769,7 +771,8 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     heat: 10,
   },
   // Source: BattleTechWiki (Sarna) "Laser Anti-Missile System", not the TW
-  // rulebook. Inner Sphere: 1.5 tons, 2 slots, 7 heat; inert like AMS.
+  // rulebook. Inner Sphere: 1.5 tons, 2 slots, 7 heat; engages like the AMS,
+  // no ammo.
   {
     name: "Laser Anti-Missile System",
     short: 0,
@@ -777,6 +780,7 @@ export const WEAPON_DATA: readonly WeaponDef[] = [
     long: 0,
     category: "EQUIPMENT",
     heat: 7,
+    antiMissile: "laser",
   },
   {
     name: "LB 2-X AC",

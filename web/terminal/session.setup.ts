@@ -1,6 +1,7 @@
 import {
   buildUnitInit,
   createBattle,
+  DEFAULT_UNIT_POLICY,
   FACINGS,
   type Facing,
   type HexCoord,
@@ -22,7 +23,13 @@ import { startReplay } from "./replay";
 import type { Session, SessionGameEvent } from "./session";
 import { drive } from "./session";
 import { ammoPolicyLabel } from "./session.common";
-import { findProp, POLICY_PROPS, type PolicyProp, parsePolicyValue } from "./session.policy";
+import {
+  amsPolicyLabel,
+  findProp,
+  POLICY_PROPS,
+  type PolicyProp,
+  parsePolicyValue,
+} from "./session.policy";
 
 export interface SetupContext extends MapNameHolder {
   seed: number;
@@ -212,7 +219,8 @@ export function setupSetUnitProp(
     }
     case "ammoPolicy":
     case "autoEject":
-    case "heatFlamer": {
+    case "heatFlamer":
+    case "amsPolicy": {
       const { patch, value } = parsePolicyValue(prop, raw);
       unit.policy = { ...unit.policy, ...patch };
       return { prop, value };
@@ -245,6 +253,10 @@ export function setupStatus(setup: SetupContext): Chunk {
           ammo: ammoPolicyLabel(u.policy.ammoPolicy),
           eject: u.policy.autoEject ? "on" : "off",
           flamer: u.policy.heatFlamer ? "" : i18n("setup.heatFlamerOff"),
+          ams:
+            u.policy.amsPolicy === DEFAULT_UNIT_POLICY.amsPolicy
+              ? ""
+              : i18n("setup.amsPolicy", { policy: amsPolicyLabel(u.policy.amsPolicy) }),
           pos: hexKey(u.position),
           facing: u.facing,
         }),

@@ -5,6 +5,7 @@ import type { MechModelHolder } from "../data/mech.schema";
 import type { WeaponDef } from "../data/weapon.schema";
 import { weaponDefFor } from "../data/weapon.schema";
 import type { AmmoBins } from "./ammo";
+import { amsClusterHits, isAmsEngageable } from "./ams";
 import type { Arc } from "./arcs";
 import { clusterHits, groupMissiles, modifiedClusterRoll } from "./cluster";
 import {
@@ -109,6 +110,26 @@ export interface WeaponAttackInput {
    *  p.303 footnote ‡); fixed before the to-hit roll. Ignored for weapons
    *  without `heatEffect.kind === "asHeat"`. */
   readonly heatMode?: boolean;
+  /** The target's anti-missile defense (TW p.129): asked once per missile
+   *  attack, after it hits and before its Cluster roll. Returns the AMS
+   *  that engages it, or null to let it through. Omitted: no AMS. */
+  readonly missileDefense?: (weapon: WeaponDef) => MissileDefenseUse | null;
+}
+
+/** The target's AMS that engaged an attack. */
+export interface MissileDefenseUse {
+  /** Weapon index of the AMS on the target. */
+  readonly weaponIndex: number;
+  /** AMS weapon name. */
+  readonly weapon: string;
+}
+
+/** An engaged missile attack: what the AMS took off it (TW p.129). */
+export interface MissileDefenseResult extends MissileDefenseUse {
+  /** Missiles that would have hit without the AMS (the full volley for Streak). */
+  readonly hitsWithout: number;
+  /** Missiles that hit after the −4 (Streak: counted as a roll of 11 first). */
+  readonly hitsWith: number;
 }
 
 /** Heat a hit puts on the target (H weapons, TW p.113), applied as outside
@@ -185,6 +206,8 @@ export interface AttackResolution {
   readonly crits: readonly CriticalResolution[];
   /** Heat the hit inflicts on the target; absent unless an H weapon hit. */
   readonly inflictedHeat?: InflictedHeat;
+  /** The target's AMS engaged this attack; absent otherwise. */
+  readonly missileDefense?: MissileDefenseResult;
 }
 
 /** Partial-cover to-hit modifier for cover terrain (water1 / building). */
@@ -221,10 +244,19 @@ function volleyDamage(
   return damageForBracket(weapon, bracket) * shots;
 }
 
-export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
+/** Inputs the to-hit number depends on: everything but dice and damage. */
+export type WeaponToHitInput = Omit<
+  WeaponAttackInput,
+  "rng" | "targetDamage" | "targetCrits" | "ammoExhausted" | "missileDefense"
+>;
+
+/** The to-hit breakdown {@link resolveWeaponAttack} rolls against, plus the
+ *  partial-cover modifier it used. Pure: no dice. */
+export function weaponToHit(input: WeaponToHitInput): {
+  readonly breakdown: ToHitBreakdown;
+  readonly partialCoverMod: number;
+} {
   const weapon: WeaponDef = weaponDefFor(input);
-  const shots = input.shots ?? 1;
-  const arc = input.arc ?? "front";
   // Caller-computed value (battle-state aware, includes wrecks + intervening)
   // wins; direct callers without it get the target-hex fallback.
   const partialCoverMod =
@@ -235,7 +267,6 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
           (input.attackerLevel ?? 0) <= (input.targetLevel ?? 0)
         ? PARTIAL_COVER_TERRAIN_MOD
         : 0);
-  const partialCover = partialCoverMod > 0;
 
   const breakdown = computeToHit({
     gunnery: input.gunnery,
@@ -258,6 +289,15 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     weapon,
     ...(input.attackerHeat !== undefined ? { heatMod: toHitHeatModifier(input.attackerHeat) } : {}),
   });
+  return { breakdown, partialCoverMod };
+}
+
+export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution {
+  const weapon: WeaponDef = weaponDefFor(input);
+  const shots = input.shots ?? 1;
+  const arc = input.arc ?? "front";
+  const { breakdown, partialCoverMod } = weaponToHit(input);
+  const partialCover = partialCoverMod > 0;
 
   const prone = input.attackerProne ?? false;
   const propArm = prone ? (input.propArm ?? null) : null;
@@ -331,9 +371,26 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
     // Streak launchers: to-hit success means full tube count hits; no
     // cluster roll, no extra RNG consumed. Miss path already returned above,
     // so launcher never fires on miss (no ammo, no heat there either).
+    // AMS (TW p.129): the defender decides once the attack has hit,
+    // before the Cluster roll; an engaged Streak still throws no dice.
+    const ams =
+      input.missileDefense !== undefined && isAmsEngageable(weapon)
+        ? input.missileDefense(weapon)
+        : null;
     let hits: number;
+    let stopped = 0;
     if (weapon.streak === true) {
       hits = weapon.missiles;
+      if (ams !== null) {
+        const hitsWith = amsClusterHits(weapon, 0);
+        (base as { missileDefense?: MissileDefenseResult }).missileDefense = {
+          ...ams,
+          hitsWithout: hits,
+          hitsWith,
+        };
+        stopped = hits - hitsWith;
+        hits = hitsWith;
+      }
     } else {
       const clusterRoll = roll2D6(input.rng);
       base.clusterRoll = clusterRoll;
@@ -342,8 +399,20 @@ export function resolveWeaponAttack(input: WeaponAttackInput): AttackResolution 
       const mod = weapon.clusterRangeMod?.[breakdown.rangeBracket] ?? 0;
       if (mod !== 0) base.clusterMod = mod;
       hits = clusterHits(weapon.missiles, modifiedClusterRoll(clusterRoll, mod));
+      if (ams !== null) {
+        const hitsWith = amsClusterHits(weapon, clusterRoll, mod);
+        (base as { missileDefense?: MissileDefenseResult }).missileDefense = {
+          ...ams,
+          hitsWithout: hits,
+          hitsWith,
+        };
+        stopped = hits - hitsWith;
+        hits = hitsWith;
+      }
     }
-    missedDamage = (weapon.missiles - hits) * weapon.missileDamage;
+    // Missiles the AMS destroyed never reach the hex, so they strike no
+    // adjacent building either.
+    missedDamage = (weapon.missiles - hits - stopped) * weapon.missileDamage;
     if (weapon.missileDamage === MISSILE_SINGLE_DAMAGE) {
       for (let i = 0; i < hits; i++) {
         const placed = hitLocationPlaced(input.rng, partialCover, arc);

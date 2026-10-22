@@ -1,6 +1,8 @@
 import {
   AMMO_POLICIES,
+  AMS_POLICIES,
   type AmmoPolicy,
+  type AmsPolicy,
   setUnitPolicy,
   type UnitPolicy,
   type UnitState,
@@ -15,7 +17,12 @@ import { ammoPolicyLabel } from "./session.common";
  *  unit during the movement and attack phases (`policy`). */
 export type PolicyProp = keyof UnitPolicy;
 
-export const POLICY_PROPS: ReadonlyArray<PolicyProp> = ["ammoPolicy", "autoEject", "heatFlamer"];
+export const POLICY_PROPS: ReadonlyArray<PolicyProp> = [
+  "ammoPolicy",
+  "autoEject",
+  "heatFlamer",
+  "amsPolicy",
+];
 
 /** Case-insensitive property name lookup; the error lists `props`. */
 export function findProp<P extends string>(word: string, props: ReadonlyArray<P>): P {
@@ -34,6 +41,17 @@ export function parsePolicyProp(word: string): PolicyProp {
 function resolveAmmoPolicy(word: string): AmmoPolicy | null {
   const normalized = word.toLowerCase().replaceAll("-", "");
   return AMMO_POLICIES.find((p) => p.toLowerCase() === normalized) ?? null;
+}
+
+/** CLI word for an AMS policy (`firstHit` reads `first-hit`). */
+export function amsPolicyLabel(policy: AmsPolicy): string {
+  return policy === "firstHit" ? "first-hit" : policy;
+}
+
+/** Parse a CLI word into an AMS policy. Case-insensitive, hyphen optional. */
+function resolveAmsPolicy(word: string): AmsPolicy | null {
+  const normalized = word.toLowerCase().replaceAll("-", "");
+  return AMS_POLICIES.find((p) => p.toLowerCase() === normalized) ?? null;
 }
 
 /** Parse a policy value as `set` and `policy` accept it: the patch to apply
@@ -58,6 +76,11 @@ export function parsePolicyValue(
       if (word !== "on" && word !== "off") throw new Error(i18n("err.badHeatFlamer"));
       return { patch: { heatFlamer: word === "on" }, value: word };
     }
+    case "amsPolicy": {
+      const policy = resolveAmsPolicy(raw);
+      if (policy === null) throw new Error(i18n("err.badAmsPolicy"));
+      return { patch: { amsPolicy: policy }, value: amsPolicyLabel(policy) };
+    }
   }
 }
 
@@ -69,6 +92,7 @@ export function policySummaryLine(unit: UnitState): string {
     ammo: ammoPolicyLabel(p.ammoPolicy),
     eject: p.autoEject ? "on" : "off",
     flamer: p.heatFlamer ? "on" : "off",
+    ams: amsPolicyLabel(p.amsPolicy),
   });
 }
 

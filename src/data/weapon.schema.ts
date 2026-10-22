@@ -76,9 +76,16 @@ export interface WeaponDef {
    *  'Mech targets and lands in their next Heat Phase as outside heat
    *  (capped at 15 per turn, TW p.159). */
   readonly heatEffect?: WeaponHeatEffect;
+  /** Anti-missile system (TW pp.129-130): engages one missile attack that
+   *  hits through its arc per turn instead of firing. `ammo` draws one shot
+   *  per engagement (AMS); `laser` needs no ammo (Laser AMS). */
+  readonly antiMissile?: WeaponAntiMissile;
   /** Broad weapon class used for catalog grouping and UI categorization. */
   readonly category: WeaponCategory;
 }
+
+/** Anti-missile system kind: ammo-fed AMS or ammo-free Laser AMS. */
+export type WeaponAntiMissile = "ammo" | "laser";
 
 /**
  * Heat-causing (H) weapon behavior:
@@ -197,6 +204,11 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
       valid = false;
     }
   }
+  const antiMissile = raw.antiMissile;
+  if (antiMissile !== undefined && antiMissile !== "ammo" && antiMissile !== "laser") {
+    errors.push(`${label}.antiMissile must be ammo or laser`);
+    valid = false;
+  }
   const clusterRangeMod = raw.clusterRangeMod;
   if (clusterRangeMod !== undefined) {
     if (!isRecord(clusterRangeMod)) {
@@ -234,6 +246,7 @@ function parseWeapon(raw: unknown, label: string, errors: string[]): WeaponDef |
     "critExplosion",
     "crits",
     "heatEffect",
+    "antiMissile",
     "category",
   ] as const) {
     const v = raw[key];
@@ -296,8 +309,9 @@ export function weaponDefFor(h: WeaponNameHolder): WeaponDef {
 /**
  * True when the row fires as a ranged weapon in the Weapon Attack Phase.
  * EQUIPMENT rows never do: physical weapons strike through physical-attack
- * declarations (TW p.146), and TAG, Narc, probes, ECM, AMS, MGA and pods
- * belong to the unbuilt equipment pipeline (docs/VISION.md §4), so they
+ * declarations (TW p.146), AMS and Laser AMS engage incoming missiles on
+ * their own (`antiMissile`, TW p.129), and TAG, Narc, probes, ECM, MGA and
+ * pods belong to the unbuilt equipment pipeline (docs/VISION.md §4), so they
  * carry no damage and must not reach weapon-attack resolution.
  */
 export function isFireableWeapon(weapon: WeaponDef): boolean {

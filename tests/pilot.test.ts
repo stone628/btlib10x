@@ -426,7 +426,12 @@ describe("eject", () => {
 
     it("with auto-eject off the head loss kills the MechWarrior (TW p.128)", () => {
       const { hbk, events } = sweepHeadLoss(0, {
-        policy: { ammoPolicy: "exposed", autoEject: false, heatFlamer: true },
+        policy: {
+          ammoPolicy: "exposed",
+          autoEject: false,
+          heatFlamer: true,
+          amsPolicy: "expected",
+        },
       });
       expect(hbk.removed).toBe("destroyed");
       expect(hbk.destroyed).toBe("headDestroyed");

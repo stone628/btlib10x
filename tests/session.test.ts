@@ -298,6 +298,7 @@ describe("set <id> autoEject", () => {
       ammoPolicy: "exposed",
       autoEject: false,
       heatFlamer: true,
+      amsPolicy: "expected",
     });
     expect(execute(s, "status").join("\n")).toMatch(/auto-eject off/);
     expect(execute(s, "set me autoEject maybe")[0]).toMatch(/autoEject must be on or off/);
@@ -306,6 +307,7 @@ describe("set <id> autoEject", () => {
       ammoPolicy: "core",
       autoEject: false,
       heatFlamer: true,
+      amsPolicy: "expected",
     });
   });
 
@@ -313,14 +315,20 @@ describe("set <id> autoEject", () => {
     const base = buildUnitInit("me", "HBK-4G", 1, { col: 9, row: 9 }, "n");
     const off = {
       ...base,
-      policy: { ammoPolicy: "exposed" as const, autoEject: false, heatFlamer: true },
+      policy: {
+        ammoPolicy: "exposed" as const,
+        autoEject: false,
+        heatFlamer: true,
+        amsPolicy: "expected" as const,
+      },
     };
     const line = encodeUnitLine(off);
-    expect(line.endsWith(":ex")).toBe(true);
+    expect(line.endsWith(":x")).toBe(true);
     expect(decodeUnitLine(line).policy).toEqual({
       ammoPolicy: "exposed",
       autoEject: false,
       heatFlamer: true,
+      amsPolicy: "expected",
     });
     expect(encodeUnitLine(base)).not.toMatch(/:e?x?$/);
     expect(decodeUnitLine(encodeUnitLine(base)).policy.autoEject).toBe(true);

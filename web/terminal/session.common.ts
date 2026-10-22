@@ -1509,6 +1509,21 @@ function handleSessionGameEvent(s: Session, e: SessionGameEvent, out: OutputHand
         }),
       );
       break;
+    case "amsEngaged":
+      out.idLines(
+        e.unitId,
+        i18n("log.amsEngaged", {
+          id: e.unitId,
+          weapon: e.weapon,
+          attacker: e.attackerId,
+          attackWeapon: e.attackWeapon,
+          heat: e.heat,
+          base: e.base,
+          total: e.totalGenerated,
+          ammo: e.shotsLeft === null ? "" : i18n("log.amsShotsLeft", { shots: e.shotsLeft }),
+        }),
+      );
+      break;
     case "heatEngineCrit":
       out.idLines(
         e.unitId,

@@ -41,6 +41,7 @@
 import { hexCell } from "../core/terrain";
 import type { HexCell, Location, TerrainType } from "../core/types";
 import type { AmmoBins } from "./ammo";
+import { isAmsPolicy } from "./ams";
 import { assertBuildingsMatchCells, type BuildingState } from "./building";
 import { type CritMask, cloneCritTable } from "./critical";
 import type { UnitDamageState } from "./damage";
@@ -104,6 +105,7 @@ function cloneUnitState(unit: UnitState): UnitState {
     ammoPolicy: unit.ammoPolicy,
     autoEject: unit.autoEject,
     heatFlamer: unit.heatFlamer,
+    amsPolicy: unit.amsPolicy,
     jammedWeapons: [...unit.jammedWeapons],
     critSlotsDestroyed: cloneCritTable(unit.critSlotsDestroyed),
     blownOffLimbs: unit.blownOffLimbs.map((l) => ({ ...l })),
@@ -220,12 +222,13 @@ export function parseBattleState(data: string): BattleState {
 }
 
 /** The parsed JSON is fresh, so it is adopted as is apart from the cells.
- *  Snapshots saved before `autoEject` / `heatFlamer` existed load with them
- *  engaged (the default policy) and no outside heat pending. */
+ *  Snapshots saved before `autoEject` / `heatFlamer` / `amsPolicy` existed
+ *  load with the default policy and no outside heat pending. */
 function unpackBattle(packed: PackedBattle): BattleSnapshot {
   for (const unit of Object.values(packed.units)) {
     if (typeof unit.autoEject !== "boolean") unit.autoEject = true;
     if (typeof unit.heatFlamer !== "boolean") unit.heatFlamer = true;
+    if (!isAmsPolicy(unit.amsPolicy)) unit.amsPolicy = "expected";
     if (typeof unit.heatExternalPending !== "number") unit.heatExternalPending = 0;
   }
   const cells = unpackCells(packed.cells, packed.width * packed.height);
@@ -321,6 +324,7 @@ export function loadUnitState(unit: UnitState, snapshot: UnitSnapshot): void {
   unit.ammoPolicy = next.ammoPolicy;
   unit.autoEject = next.autoEject;
   unit.heatFlamer = next.heatFlamer;
+  unit.amsPolicy = next.amsPolicy;
   unit.jammedWeapons = next.jammedWeapons;
   unit.critSlotsDestroyed = next.critSlotsDestroyed;
   unit.blownOffLimbs = next.blownOffLimbs.map((l) => ({ ...l }));

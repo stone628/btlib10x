@@ -37,7 +37,7 @@ import {
 } from "../core/types";
 import { ensureMechRegistered, type MapDef, type MechModelHolder, mechDefFor } from "../data/index";
 import type { ResolvedMechDef } from "../data/mech.schema";
-import { isFireableWeapon, weaponDefFor } from "../data/weapon.schema";
+import { isFireableWeapon, type WeaponDef, weaponDefFor } from "../data/weapon.schema";
 import {
   armWeaponToHitModifier,
   clubHandsFunctional,
@@ -51,6 +51,7 @@ import {
   isAmmoPolicy,
   pooledShotsLeft,
 } from "./ammo";
+import { type AmsAttack, type AmsPolicy, chooseAms, isAmsEngageable, isAmsPolicy } from "./ams";
 import {
   type Arc,
   classifyArc,
@@ -65,7 +66,14 @@ import {
   type Twist,
   twistDelta,
 } from "./arcs";
-import { type AttackResolution, PARTIAL_COVER_TERRAIN_MOD, resolveWeaponAttack } from "./attack";
+import {
+  type AttackResolution,
+  type MissileDefenseUse,
+  PARTIAL_COVER_TERRAIN_MOD,
+  resolveWeaponAttack,
+  type WeaponToHitInput,
+  weaponToHit,
+} from "./attack";
 import {
   applyBuildingDamage,
   type BuildingState,
@@ -186,7 +194,13 @@ import {
   waterEntryModifier,
 } from "./piloting";
 import { saveUnitState } from "./snapshot";
-import { computeToHit, DEFAULT_GUNNERY, type RangeBracket, toHitTotal } from "./tohit";
+import {
+  computeToHit,
+  DEFAULT_GUNNERY,
+  hitProbability,
+  type RangeBracket,
+  toHitTotal,
+} from "./tohit";
 
 export type UnitSkillRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
@@ -205,6 +219,10 @@ export interface UnitPolicy {
    *  instead of damage (TW p.303 footnote ‡). On: every flamer hit heats the
    *  target; off: flamers deal normal damage. */
   heatFlamer: boolean;
+  /** Which hitting missile attack the unit's AMS / Laser AMS engage (TW
+   *  p.129; see `src/rules/ams.ts`): `expected` (default), `firstHit`,
+   *  `priority` or `off`. */
+  amsPolicy: AmsPolicy;
 }
 
 /** Policy a unit gets when setup names none. */
@@ -212,6 +230,7 @@ export const DEFAULT_UNIT_POLICY: Readonly<UnitPolicy> = {
   ammoPolicy: "exposed",
   autoEject: true,
   heatFlamer: true,
+  amsPolicy: "expected",
 };
 
 /** The only legal team ids: 1 and 2 (one side each). */
@@ -287,6 +306,9 @@ export interface WeaponAttackDecl {
    *  against the attacker's twisted facing: +1 for a secondary target in the
    *  forward arc, +2 in a side/rear arc. Absent for the primary target. */
   readonly secondaryMod?: SecondaryTargetMod;
+  /** Torso twist the volley was declared with (TW pp.105-106); recorded so
+   *  the unit's own AMS cover the twisted arcs this phase. Absent: untwisted. */
+  readonly twist?: Twist;
 }
 
 export type { SecondaryTargetMod };
@@ -521,6 +543,8 @@ export interface UnitState extends MechModelHolder {
   autoEject: boolean;
   /** Flamers fire in heat mode (from `UnitPolicy.heatFlamer`). */
   heatFlamer: boolean;
+  /** AMS engagement choice (from `UnitPolicy.amsPolicy`). */
+  amsPolicy: AmsPolicy;
   jammedWeapons: number[];
   /** Arms and legs blown off by critical hits (TW p.124, 145), with their
    *  salvage flag. A severed limb can be picked up as a club (TW p.146). */
@@ -776,6 +800,27 @@ export type GameEvent =
       readonly totalGenerated: number;
     }
   | {
+      /** The unit's AMS / Laser AMS engaged a missile attack that hit it (TW
+       *  p.129), pushed right after that attack's `attackResolved`. `heat`
+       *  joins the unit's own heat this turn (`totalGenerated` = its
+       *  `heatPending` after this event). */
+      readonly kind: "amsEngaged";
+      readonly unitId: string;
+      /** Weapon index and name of the engaging AMS on `unitId`. */
+      readonly weaponIndex: number;
+      readonly weapon: string;
+      readonly attackerId: string;
+      readonly attackWeapon: string;
+      /** Missiles that would have hit, and that hit after the AMS. */
+      readonly hitsWithout: number;
+      readonly hitsWith: number;
+      readonly heat: number;
+      readonly base: number;
+      readonly totalGenerated: number;
+      /** AMS ammo left in the unit's pool after the shot; null for a Laser AMS. */
+      readonly shotsLeft: number | null;
+    }
+  | {
       /** A heat-causing weapon hit (TW p.113): `heat` joins the target's
        *  outside heat for its next Heat Phase. */
       readonly kind: "heatInflicted";
@@ -961,6 +1006,8 @@ interface UnitAttackResolution {
   readonly buildingDamage: number;
   /** Leg hits that struck a building serving as partial cover (TW p.102). */
   readonly coverBuilding?: { readonly hex: HexCoord; readonly damage: number };
+  /** The target's AMS engaged this attack (emitted as `amsEngaged`). */
+  readonly ams?: AmsEngagement;
 }
 
 export interface UnitAttackResult {
@@ -1724,6 +1771,7 @@ export function createBattle(
       ammoPolicy: init.policy.ammoPolicy,
       autoEject: init.policy.autoEject,
       heatFlamer: init.policy.heatFlamer,
+      amsPolicy: init.policy.amsPolicy,
       jammedWeapons: [],
       critSlotsDestroyed: start.critSlotsDestroyed,
       blownOffLimbs: [],
@@ -3292,6 +3340,9 @@ export function declareAttacks(
       const targetVolley = volley.targets.find((t) => t.targetId === decl.targetId);
       unit.declaredWeaponAttacks.push({
         ...decl,
+        ...(options.twist !== undefined && options.twist !== "front"
+          ? { twist: options.twist }
+          : {}),
         ...(volley.arcs[decl.weaponIndex] !== undefined
           ? { arc: volley.arcs[decl.weaponIndex] }
           : {}),
@@ -3660,45 +3711,321 @@ function runningStateFor(running: Record<string, RunningState>, unit: UnitState)
   return run;
 }
 
+/** The unit's phase-start ammo view (see `resolveUnitAttacks`), created on
+ *  first use and debited only by its own Streak and AMS shots. */
+function ownStateFor(own: Record<string, RunningState>, unit: UnitState): RunningState {
+  let view = own[unit.id];
+  if (view === undefined) {
+    view = {
+      damage: unit.damage,
+      critSlotsDestroyed: unit.critSlotsDestroyed,
+      ammoBins: { ...unit.ammoBins },
+    };
+    own[unit.id] = view;
+  }
+  return view;
+}
+
+/** Draw one shot of `weaponName` from the unit's phase-start view and
+ *  mirror the spending onto its running ledger, so the phase ends with one
+ *  set of bins and no shot spent twice. */
+function spendOwnAmmo(
+  def: ResolvedMechDef,
+  unit: UnitState,
+  weaponName: string,
+  ctx: AttackPhaseContext,
+  rng: Rng,
+): void {
+  const own = ownStateFor(ctx.own, unit);
+  const self = runningStateFor(ctx.running, unit);
+  const next = consumeAmmoForName(def, own, weaponName, 1, unit.ammoPolicy, rng);
+  const mirrored: AmmoBins = { ...self.ammoBins };
+  for (const [id, left] of Object.entries(next)) {
+    const spent = (own.ammoBins[id] ?? 0) - left;
+    // A bin already exploded or spilled this phase holds 0: the shot
+    // left it before the blast, so there is nothing more to take.
+    if (spent > 0) mirrored[id] = Math.max(0, (mirrored[id] ?? 0) - spent);
+  }
+  own.ammoBins = next;
+  self.ammoBins = mirrored;
+}
+
+/** A defender's AMS for the phase and the missile attacks declared at it. */
+interface DefenderAms {
+  /** Weapon indices of the AMS able to engage this phase. */
+  readonly mounts: readonly number[];
+  /** AMS already used this turn (one attack each, TW p.129). */
+  readonly used: Set<number>;
+  /** Declared missile attacks at the unit that some AMS covers, in
+   *  resolution order. */
+  readonly attacks: AmsAttack[];
+}
+
+/** An engagement made in resolution pass 1, emitted in pass 2. */
+interface AmsEngagement {
+  readonly defenderId: string;
+  readonly use: MissileDefenseUse;
+  readonly heat: number;
+  readonly shotsLeft: number | null;
+}
+
+/** State shared by every unit's volley in one `resolveAllAttacks`. */
+interface AttackPhaseContext {
+  readonly running: Record<string, RunningState>;
+  readonly phaseStartCf: Record<string, number>;
+  /** Phase-start ammo views (see `ownStateFor`). */
+  readonly own: Record<string, RunningState>;
+  /** AMS defenders by unit id; absent for units with no working AMS. */
+  readonly ams: Record<string, DefenderAms>;
+  /** Resolution-order key of the next weapon declaration. */
+  nextKey: number;
+}
+
+/**
+ * The unit's AMS able to engage this phase (TW p.129), judged at phase start
+ * so fire resolved earlier in the phase never switches one off (simultaneous
+ * fire, as for the unit's own Streaks): the unit is in play and powered, the
+ * mount's location stands and its slots are intact. Leg AMS are out while
+ * prone, as leg weapons are (TW p.113). Ammo is checked at engagement.
+ */
+function amsMountsAtPhaseStart(unit: UnitState): number[] {
+  if (isUnitRemoved(unit) || isShutdown(unit)) return [];
+  const def = mechDefFor(unit);
+  const mounts: number[] = [];
+  for (const [key, mount] of Object.entries(def.weapons)) {
+    const weaponIndex = Number(key);
+    if (weaponDefFor(mount).antiMissile === undefined) continue;
+    if (!canFireMount(unit.damage, mount)) continue;
+    if (isWeaponCritted(def, unit.critSlotsDestroyed, weaponIndex)) continue;
+    if (unit.prone && isLeg(mount.location)) continue;
+    mounts.push(weaponIndex);
+  }
+  return mounts;
+}
+
+/** Torso twist the unit declared its attacks with this phase. */
+function declaredTwist(unit: UnitState): Twist {
+  return (
+    unit.declaredWeaponAttacks.find((d) => d.twist !== undefined)?.twist ??
+    unit.declaredPhysicalAttacks.find((d) => d.twist !== undefined)?.twist ??
+    "front"
+  );
+}
+
+/** Weapon indices of the defender's AMS whose arc covers an attack from
+ *  `attacker` (the weapon firing-arc test, torso twist included; leg mounts
+ *  follow the unit's facing). */
+function amsCovering(
+  defender: UnitState,
+  mounts: readonly number[],
+  attacker: UnitState,
+): number[] {
+  const def = mechDefFor(defender);
+  const twisted = effectiveFacingForTwist(defender.facing, declaredTwist(defender));
+  const covering: number[] = [];
+  for (const weaponIndex of mounts) {
+    const mount = def.weapons[weaponIndex]!;
+    const arc = classifyFiringArc(
+      defender.position,
+      attacker.position,
+      isLeg(mount.location) ? defender.facing : twisted,
+    );
+    if (arc !== null && mountCanFireIntoArc(mount, arc)) covering.push(weaponIndex);
+  }
+  return covering;
+}
+
+/** Per-unit to-hit context of a volley, fixed for the whole phase. */
+interface VolleyContext {
+  readonly def: ResolvedMechDef;
+  readonly preHeat: number;
+  readonly sensorMod: number;
+  readonly pronePropArm: ArmLocation | null;
+}
+
+function volleyContextFor(unit: UnitState): VolleyContext {
+  const def = mechDefFor(unit);
+  return {
+    def,
+    preHeat: unit.heat,
+    sensorMod: sensorAttackModifier(
+      countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed),
+    ),
+    pronePropArm: inferPronePropArm(def, unit.declaredWeaponAttacks, unit.prone),
+  };
+}
+
+/** Everything about one declared shot the to-hit roll depends on. */
+function weaponToHitInputFor(
+  state: BattleState,
+  unit: UnitState,
+  volley: VolleyContext,
+  decl: WeaponAttackDecl,
+  phaseStartCf: Record<string, number>,
+): WeaponToHitInput {
+  const mount = volley.def.weapons[decl.weaponIndex]!;
+  const weapon = weaponDefFor(mount);
+  const target = requireUnit(state, decl.targetId);
+  const losProne = losEnds(state, unit, target);
+  const losSide = losSideFor(state, unit, target, losProne);
+  const secondaryMod = decl.secondaryMod ?? 0;
+  const rapidFire = decl.rapidFire ?? false;
+  return {
+    gunnery: unit.gunnery,
+    attackerMoved: unit.moveMode ?? "standStill",
+    attackerHeat: volley.preHeat,
+    tcMod: targetingComputerModifier(volley.def, unit.damage, unit.critSlotsDestroyed, weapon),
+    ...(secondaryMod !== 0 ? { secondaryTargetMod: secondaryMod } : {}),
+    attackerProne: unit.prone,
+    ...(volley.pronePropArm !== null ? { propArm: volley.pronePropArm } : {}),
+    sensorMod: volley.sensorMod,
+    actuatorMod: armWeaponToHitModifier(
+      volley.def,
+      unit.damage,
+      unit.critSlotsDestroyed,
+      mountArcLocation(mount),
+    ),
+    targetHexesMoved: target.hexesMovedThisTurn,
+    targetJumped: target.jumpedThisTurn,
+    targetImmobile: isImmobile(target),
+    targetProne: target.prone,
+    targetTerrain: cellAt(state, target.position).terrain,
+    partialCoverMod: partialCoverMod(state, unit, target, losSide),
+    interveningTerrains: interveningTerrains(
+      state,
+      unit.position,
+      target.position,
+      losProne,
+      losSide,
+    ),
+    distance: hexDistance(unit.position, target.position),
+    // Resolution keys hit location and armor pool off the attack direction
+    // (side of the target struck); the attacker-side firing arc only
+    // gatekept the declaration.
+    ...(decl.attackDirection !== undefined
+      ? { arc: decl.attackDirection }
+      : decl.arc !== undefined
+        ? { arc: decl.arc }
+        : {}),
+    weapon: weapon.name,
+    heatMode: unit.heatFlamer,
+    shots: rapidFire ? (weapon.rapidFireShots ?? 1) : 1,
+    buildingAbsorb: Math.ceil(
+      (phaseStartCf[hexKey(target.position)] ?? 0) / BUILDING_ABSORB_DIVISOR,
+    ),
+    missesStrikeBuilding:
+      phaseStartCf[hexKey(target.position)] !== undefined &&
+      isAdjacent(unit.position, target.position),
+    attackerLevel: cellAt(state, unit.position).level,
+    targetLevel: cellAt(state, target.position).level,
+  };
+}
+
+/**
+ * Before any shot resolves: find every unit with a working AMS and list, in
+ * resolution order, the declared missile attacks at it that an AMS covers,
+ * with their phase-start hit chances (what the `amsPolicy` weighs). Keys
+ * follow the declaration walk of `resolveUnitAttacks`.
+ */
+function prepareMissileDefense(state: BattleState, ctx: AttackPhaseContext): void {
+  let key = 0;
+  for (const unit of Object.values(state.units)) {
+    if (unit.declaredWeaponAttacks.length === 0) continue;
+    const volley = volleyContextFor(unit);
+    for (const decl of unit.declaredWeaponAttacks) {
+      const attackKey = key++;
+      const weapon = weaponDefFor(volley.def.weapons[decl.weaponIndex]!);
+      if (!isAmsEngageable(weapon)) continue;
+      const target = requireUnit(state, decl.targetId);
+      let defender = ctx.ams[target.id];
+      if (defender === undefined) {
+        const mounts = amsMountsAtPhaseStart(target);
+        if (mounts.length === 0) continue;
+        defender = { mounts, used: new Set(), attacks: [] };
+        ctx.ams[target.id] = defender;
+      }
+      const coveredBy = amsCovering(target, defender.mounts, unit);
+      if (coveredBy.length === 0) continue;
+      const { breakdown } = weaponToHit(
+        weaponToHitInputFor(state, unit, volley, decl, ctx.phaseStartCf),
+      );
+      const hitChance =
+        breakdown.automatic !== null
+          ? breakdown.automatic === "hit"
+            ? 1
+            : 0
+          : hitProbability(toHitTotal(breakdown));
+      defender.attacks.push({ key: attackKey, weapon, hitChance, coveredBy });
+    }
+  }
+}
+
+/**
+ * The target's AMS decision for the attack with resolution key `key`, asked
+ * by `resolveWeaponAttack` once the attack hits (TW p.129). An engaging AMS
+ * is marked used, spends its shot (AMS) and is logged for pass 2.
+ */
+function missileDefenseFor(
+  target: UnitState,
+  key: number,
+  ctx: AttackPhaseContext,
+  rng: Rng,
+  engagements: AmsEngagement[],
+): ((weapon: WeaponDef) => MissileDefenseUse | null) | undefined {
+  const defender = ctx.ams[target.id];
+  const attack = defender?.attacks.find((a) => a.key === key);
+  if (defender === undefined || attack === undefined) return undefined;
+  return () => {
+    const def = mechDefFor(target);
+    const own = ownStateFor(ctx.own, target);
+    const available = attack.coveredBy.filter((weaponIndex) => {
+      if (defender.used.has(weaponIndex)) return false;
+      const mount = def.weapons[weaponIndex]!;
+      const weapon = weaponDefFor(mount);
+      return weapon.antiMissile !== "ammo" || pooledShotsLeft(def, own, mount.weapon) > 0;
+    });
+    const pending = defender.attacks.filter((a) => a.key > key);
+    const chosen = chooseAms(target.amsPolicy, attack, available, pending);
+    if (chosen === null) return null;
+    defender.used.add(chosen);
+    const mount = def.weapons[chosen]!;
+    const weapon = weaponDefFor(mount);
+    let shotsLeft: number | null = null;
+    if (weapon.antiMissile === "ammo") {
+      spendOwnAmmo(def, target, mount.weapon, ctx, rng);
+      shotsLeft = pooledShotsLeft(def, ownStateFor(ctx.own, target), mount.weapon);
+    }
+    const use: MissileDefenseUse = { weaponIndex: chosen, weapon: mount.weapon };
+    engagements.push({ defenderId: target.id, use, heat: weapon.heat ?? 0, shotsLeft });
+    return use;
+  };
+}
+
 function resolveUnitAttacks(
   state: BattleState,
   unit: UnitState,
   rng: Rng,
-  running: Record<string, RunningState>,
-  phaseStartCf: Record<string, number>,
+  ctx: AttackPhaseContext,
 ): UnitAttackResult {
-  const def = mechDefFor(unit);
-  const preHeat = unit.heat;
-  const sensorMod = sensorAttackModifier(
-    countDestroyedSensor(def, unit.damage, unit.critSlotsDestroyed),
-  );
-  const pronePropArm = inferPronePropArm(def, unit.declaredWeaponAttacks, unit.prone);
+  const volley = volleyContextFor(unit);
+  const def = volley.def;
   // TW resolves weapon attacks simultaneously, so the unit's own Streak
   // launchers see its bins as they stood at phase start: damage and crits
   // other units' fire put on it this phase cannot strand, destroy or
   // explode a bin out from under its own volley, whatever the resolution
   // order. `own` is that phase-start view, debited only by the unit's own
-  // Streak shots; each shot is mirrored onto the running ledger `self`
-  // (which carries the crits the unit takes) so the phase ends with one
-  // set of bins and no shot spent twice.
-  const own: RunningState = {
-    damage: unit.damage,
-    critSlotsDestroyed: unit.critSlotsDestroyed,
-    ammoBins: { ...unit.ammoBins },
-  };
-  const self = runningStateFor(running, unit);
+  // Streak (and AMS) shots; each shot is mirrored onto the running ledger
+  // (which carries the crits the unit takes), see `spendOwnAmmo`.
+  const own = ownStateFor(ctx.own, unit);
   const jammedWeapons: number[] = [];
   const resolutions: UnitAttackResolution[] = [];
 
   for (const decl of unit.declaredWeaponAttacks) {
+    const key = ctx.nextKey++;
     const mount = def.weapons[decl.weaponIndex]!;
     const weapon = weaponDefFor(mount);
     const target = requireUnit(state, decl.targetId);
-    const losProne = losEnds(state, unit, target);
-    const losSide = losSideFor(state, unit, target, losProne);
     const secondaryMod = decl.secondaryMod ?? 0;
-    const rapidFire = decl.rapidFire ?? false;
-    const shots = rapidFire ? (weapon.rapidFireShots ?? 1) : 1;
     let ammoExhausted = false;
 
     // Streak launchers share one pool per weapon name and fire only on a
@@ -3709,60 +4036,17 @@ function resolveUnitAttacks(
       ammoExhausted = true;
     }
 
-    const run = runningStateFor(running, target);
+    const run = runningStateFor(ctx.running, target);
     const targetBaseDamage = run.damage;
+    const engagements: AmsEngagement[] = [];
+    const missileDefense = missileDefenseFor(target, key, ctx, rng, engagements);
 
     const resolution = resolveWeaponAttack({
+      ...weaponToHitInputFor(state, unit, volley, decl, ctx.phaseStartCf),
       rng,
-      gunnery: unit.gunnery,
-      attackerMoved: unit.moveMode ?? "standStill",
-      attackerHeat: preHeat,
-      tcMod: targetingComputerModifier(def, unit.damage, unit.critSlotsDestroyed, weapon),
-      ...(secondaryMod !== 0 ? { secondaryTargetMod: secondaryMod } : {}),
-      attackerProne: unit.prone,
-      ...(pronePropArm !== null ? { propArm: pronePropArm } : {}),
-      sensorMod,
-      actuatorMod: armWeaponToHitModifier(
-        def,
-        unit.damage,
-        unit.critSlotsDestroyed,
-        mountArcLocation(mount),
-      ),
-      targetHexesMoved: target.hexesMovedThisTurn,
-      targetJumped: target.jumpedThisTurn,
-      targetImmobile: isImmobile(target),
-      targetProne: target.prone,
-      targetTerrain: cellAt(state, target.position).terrain,
-      partialCoverMod: partialCoverMod(state, unit, target, losSide),
-      interveningTerrains: interveningTerrains(
-        state,
-        unit.position,
-        target.position,
-        losProne,
-        losSide,
-      ),
-      distance: hexDistance(unit.position, target.position),
-      // Resolution keys hit location and armor pool off the attack direction
-      // (side of the target struck); the attacker-side firing arc only
-      // gatekept the declaration.
-      ...(decl.attackDirection !== undefined
-        ? { arc: decl.attackDirection }
-        : decl.arc !== undefined
-          ? { arc: decl.arc }
-          : {}),
-      weapon: weapon.name,
-      heatMode: unit.heatFlamer,
       ammoExhausted,
-      shots,
       targetDamage: targetBaseDamage,
-      buildingAbsorb: Math.ceil(
-        (phaseStartCf[hexKey(target.position)] ?? 0) / BUILDING_ABSORB_DIVISOR,
-      ),
-      missesStrikeBuilding:
-        phaseStartCf[hexKey(target.position)] !== undefined &&
-        isAdjacent(unit.position, target.position),
-      attackerLevel: cellAt(state, unit.position).level,
-      targetLevel: cellAt(state, target.position).level,
+      ...(missileDefense !== undefined ? { missileDefense } : {}),
       ...(state.critsDisabled
         ? {}
         : {
@@ -3780,6 +4064,7 @@ function resolveUnitAttacks(
       run.critSlotsDestroyed = lastCrit.critSlotsDestroyed;
       run.ammoBins = lastCrit.ammoBins;
     }
+    const ams = engagements[0];
 
     // Streak launchers expend one shot only when to-hit succeeds: miss
     // means launcher never fired (no ammo, no heat, no damage).
@@ -3797,19 +4082,9 @@ function resolveUnitAttacks(
     // Draw from the shared weapon-name pool so mounts with no directly
     // linked bins still spend shared ammo. The pre-resolution guard above
     // guarantees at least one shot remains, so this always draws exactly 1.
-    if (streakFired) {
-      const next = consumeAmmoForName(def, own, weapon.name, 1, unit.ammoPolicy, rng);
-      const mirrored: AmmoBins = { ...self.ammoBins };
-      for (const [id, left] of Object.entries(next)) {
-        const spent = (own.ammoBins[id] ?? 0) - left;
-        // A bin already exploded or spilled this phase holds 0: the shot
-        // left it before the blast, so there is nothing more to take.
-        if (spent > 0) mirrored[id] = Math.max(0, (mirrored[id] ?? 0) - spent);
-      }
-      own.ammoBins = next;
-      self.ammoBins = mirrored;
-    }
+    if (streakFired) spendOwnAmmo(def, unit, weapon.name, ctx, rng);
 
+    const shots = decl.rapidFire === true ? (weapon.rapidFireShots ?? 1) : 1;
     const weaponHeat = (weapon.heat ?? 0) * shots;
 
     // TW p. 171: the hex absorbs, from each attack that hits, damage equal
@@ -3819,6 +4094,7 @@ function resolveUnitAttacks(
     // (absorbed inside `resolveWeaponAttack`); the building is charged what
     // it actually absorbed.
     const buildingDamage = resolution.buildingAbsorbed ?? 0;
+    const losSide = losSideFor(state, unit, target, losEnds(state, unit, target));
     const coverHex =
       resolution.coverDamage !== undefined
         ? partialCoverBuildingHex(state, unit, target, losSide)
@@ -3833,6 +4109,7 @@ function resolveUnitAttacks(
       ...(coverHex !== undefined && resolution.coverDamage !== undefined
         ? { coverBuilding: { hex: coverHex, damage: resolution.coverDamage } }
         : {}),
+      ...(ams !== undefined ? { ams } : {}),
     });
 
     if (resolution.jammed && !jammedWeapons.includes(decl.weaponIndex)) {
@@ -4500,9 +4777,11 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
     phaseStartCf[key] = building.cf;
   }
   const running: Record<string, RunningState> = {};
+  const ctx: AttackPhaseContext = { running, phaseStartCf, own: {}, ams: {}, nextKey: 0 };
+  prepareMissileDefense(state, ctx);
   for (const unit of Object.values(state.units)) {
     if (unit.declaredWeaponAttacks.length === 0) continue;
-    results.push(resolveUnitAttacks(state, unit, rng, running, phaseStartCf));
+    results.push(resolveUnitAttacks(state, unit, rng, ctx));
   }
 
   // Phase 2: apply all damage, crits, building damage, and heat simultaneously
@@ -4530,6 +4809,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       resolution,
       buildingDamage,
       coverBuilding,
+      ams,
     } of result.resolutions) {
       const target = requireUnit(state, targetId);
       let reported = resolution;
@@ -4615,6 +4895,26 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
         secondaryMod,
         resolution: reported,
       });
+
+      // AMS heat is the defender's own heat this turn (TW p.129).
+      if (ams !== undefined && resolution.missileDefense !== undefined) {
+        const defender = requireUnit(state, ams.defenderId);
+        defender.heatPending += ams.heat;
+        sink.push({
+          kind: "amsEngaged",
+          unitId: defender.id,
+          weaponIndex: ams.use.weaponIndex,
+          weapon: ams.use.weapon,
+          attackerId: result.unitId,
+          attackWeapon: resolution.weapon,
+          hitsWithout: resolution.missileDefense.hitsWithout,
+          hitsWith: resolution.missileDefense.hitsWith,
+          heat: ams.heat,
+          base: defender.heat,
+          totalGenerated: defender.heatPending,
+          shotsLeft: ams.shotsLeft,
+        });
+      }
 
       // Heat-causing hit (TW p.113): tallied as outside heat, landing in
       // the target's Heat Phase (TW p.159).
@@ -6254,13 +6554,19 @@ export function abandonPilot(state: BattleState, unitId: string, sink: GameEvent
 
 /** The unit's live policy (the `UnitState` copies of its `UnitPolicy`). */
 export function unitPolicyOf(unit: UnitState): UnitPolicy {
-  return { ammoPolicy: unit.ammoPolicy, autoEject: unit.autoEject, heatFlamer: unit.heatFlamer };
+  return {
+    ammoPolicy: unit.ammoPolicy,
+    autoEject: unit.autoEject,
+    heatFlamer: unit.heatFlamer,
+    amsPolicy: unit.amsPolicy,
+  };
 }
 
 /** Change the current actor's policy before its activation commits, in the
  *  movement or attack phase. Draws no dice and records no event; the change
- *  applies from now on (ammo drawn at its `declareAttacks`, flamer mode at
- *  that phase's resolution, auto-eject at the next head / center torso loss).
+ *  applies from now on (ammo drawn at its `declareAttacks`, flamer mode and
+ *  AMS choice at that phase's resolution, auto-eject at the next head /
+ *  center torso loss).
  *  Limiting it to the current actor keeps already-declared shots of other
  *  units unchanged. Returns the resulting policy. */
 export function setUnitPolicy(
@@ -6277,9 +6583,13 @@ export function setUnitPolicy(
   if (patch.ammoPolicy !== undefined && !isAmmoPolicy(patch.ammoPolicy)) {
     throw new Error(`bad ammo policy ${JSON.stringify(patch.ammoPolicy)}`);
   }
+  if (patch.amsPolicy !== undefined && !isAmsPolicy(patch.amsPolicy)) {
+    throw new Error(`bad AMS policy ${JSON.stringify(patch.amsPolicy)}`);
+  }
   if (patch.ammoPolicy !== undefined) unit.ammoPolicy = patch.ammoPolicy;
   if (patch.autoEject !== undefined) unit.autoEject = patch.autoEject;
   if (patch.heatFlamer !== undefined) unit.heatFlamer = patch.heatFlamer;
+  if (patch.amsPolicy !== undefined) unit.amsPolicy = patch.amsPolicy;
   return unitPolicyOf(unit);
 }
 

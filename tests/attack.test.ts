@@ -10,7 +10,15 @@ import {
 } from "../src";
 import { type Facing, type HexCoord, LOCATIONS } from "../src/core/types";
 import { type CritSlot, type MechDef, mechDef, resolveMechDef } from "../src/data/index";
+import { weaponDef } from "../src/data/weapon.schema";
 import { loadAmmoBins, pooledShotsLeft } from "../src/rules/ammo";
+import {
+  type AmsAttack,
+  amsExpectedSaving,
+  amsPriority,
+  chooseAms,
+  isAmsEngageable,
+} from "../src/rules/ams";
 import {
   type AttackResolution,
   resolveWeaponAttack,
@@ -982,5 +990,160 @@ describe("cluster", () => {
       expect(expectedClusterHits(40)).toBeGreaterThan(12);
       expect(expectedClusterHits(40)).toBeLessThan(40);
     });
+  });
+});
+
+describe("AMS (TW p.129)", () => {
+  const AMS = { weaponIndex: 0, weapon: "Anti-Missile System" } as const;
+
+  it("takes 4 off the Cluster roll, never below 2", () => {
+    const rng = scriptedRng(
+      3,
+      3, // to-hit 6 >= TN 4
+      2,
+      3, // raw cluster 5 -> 12 on the 20 column; 5 - 4 = 1 -> floor 2 -> 6
+      3,
+      4, // lot of 5 -> CT
+      3,
+      4, // lot of 1 -> CT
+    );
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      distance: 7,
+      weapon: "LRM 20",
+      targetDamage: freshState(),
+      missileDefense: () => AMS,
+    });
+    expect(res.clusterRoll).toBe(5);
+    expect(res.missileDefense).toEqual({ ...AMS, hitsWithout: 12, hitsWith: 6 });
+    expect(res.groups.map((g) => g.damage)).toEqual([5, 1]);
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("counts a Streak volley as a roll of 11 before the -4 and throws no cluster dice", () => {
+    const rng = scriptedRng(3, 3, 3, 4, 3, 4, 3, 4, 3, 4);
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng,
+      weapon: "Streak SRM 6",
+      targetDamage: freshState(),
+      missileDefense: () => AMS,
+    });
+    expect(res.clusterRoll).toBeNull();
+    expect(res.missileDefense).toEqual({ ...AMS, hitsWithout: 6, hitsWith: 4 });
+    expect(res.groups).toHaveLength(4);
+    expect(rng.remaining()).toBe(0);
+  });
+
+  it("is only asked about missile attacks that hit", () => {
+    let asked = 0;
+    const missileDefense = () => {
+      asked += 1;
+      return AMS;
+    };
+    const miss = resolveWeaponAttack({
+      ...BASE,
+      rng: scriptedRng(1, 1),
+      distance: 7,
+      weapon: "LRM 20",
+      targetDamage: freshState(),
+      missileDefense,
+    });
+    expect(miss.hit).toBe(false);
+    const cannon = resolveWeaponAttack({
+      ...BASE,
+      rng: scriptedRng(3, 3, 3, 4),
+      weapon: "AC/20",
+      targetDamage: freshState(30),
+      missileDefense,
+    });
+    expect(cannon.hit).toBe(true);
+    expect(cannon.missileDefense).toBeUndefined();
+    expect(asked).toBe(0);
+  });
+
+  it("lets a declined attack through unchanged", () => {
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng: scriptedRng(3, 3, 2, 3, 3, 4, 3, 4, 3, 4),
+      distance: 7,
+      weapon: "LRM 20",
+      targetDamage: freshState(),
+      missileDefense: () => null,
+    });
+    expect(res.missileDefense).toBeUndefined();
+    expect(res.groups.map((g) => g.damage)).toEqual([5, 5, 2]);
+  });
+
+  it("missiles the AMS destroyed do not strike an adjacent building", () => {
+    const res = resolveWeaponAttack({
+      ...BASE,
+      rng: scriptedRng(3, 3, 2, 3, 3, 4, 3, 4),
+      distance: 7,
+      weapon: "LRM 20",
+      targetDamage: freshState(),
+      missesStrikeBuilding: true,
+      missileDefense: () => AMS,
+    });
+    // 20 fired, 12 would hit, the AMS stops 6: only the 8 true misses fly on.
+    expect(res.buildingAbsorbed).toBe(8);
+  });
+});
+
+describe("AMS policy (amsPolicy)", () => {
+  const w = (name: string) => weaponDef(name)!;
+  const attack = (
+    key: number,
+    name: string,
+    hitChance = 1,
+    coveredBy: readonly number[] = [0],
+  ): AmsAttack => ({ key, weapon: w(name), hitChance, coveredBy });
+
+  it("values an engagement by the damage it saves", () => {
+    expect(amsExpectedSaving(w("Streak SRM 6"))).toBe(4);
+    expect(amsExpectedSaving(w("LRM 20"))).toBeCloseTo(4.61, 2);
+    expect(amsExpectedSaving(w("LRM 15"))).toBeCloseTo(3.25, 2);
+    expect(amsExpectedSaving(w("SRM 6"))).toBeCloseTo(2.83, 2);
+    expect(amsExpectedSaving(w("LRM 10"))).toBeCloseTo(2.33, 2);
+    expect(isAmsEngageable(w("LRM 5"))).toBe(true);
+    expect(isAmsEngageable(w("LB 10-X AC"))).toBe(false);
+    expect(isAmsEngageable(w("HAG 20"))).toBe(false);
+  });
+
+  it("off never engages; first-hit engages at once", () => {
+    const now = attack(0, "LRM 5");
+    const later = [attack(1, "LRM 20")];
+    expect(chooseAms("off", now, [0], later)).toBeNull();
+    expect(chooseAms("firstHit", now, [0], later)).toBe(0);
+    expect(chooseAms("expected", now, [], [])).toBeNull();
+  });
+
+  it("expected waits for a bigger saving still to come, weighted by its hit chance", () => {
+    const srm = attack(0, "SRM 6");
+    expect(chooseAms("expected", srm, [0], [attack(1, "LRM 20", 0.9)])).toBeNull();
+    // A long shot is not worth waiting for: 4.61 x 0.3 < 2.83.
+    expect(chooseAms("expected", srm, [0], [attack(1, "LRM 20", 0.3)])).toBe(0);
+    // Streak SRM 6 (4 sure) beats a sure LRM 15 hit (3.25).
+    expect(chooseAms("expected", attack(0, "Streak SRM 6"), [0], [attack(1, "LRM 15")])).toBe(0);
+  });
+
+  it("priority goes by full-volley damage, Streak first on ties", () => {
+    const streak4 = attack(0, "Streak SRM 4");
+    const lrm10 = attack(1, "LRM 10", 0.5);
+    // 8 damage volley waits for a 10 damage one; expected takes the sure 2.
+    expect(chooseAms("priority", streak4, [0], [lrm10])).toBeNull();
+    expect(chooseAms("expected", streak4, [0], [lrm10])).toBe(0);
+    expect(amsPriority(w("Streak SRM 6"))).toBeGreaterThan(amsPriority(w("SRM 6")));
+    expect(chooseAms("priority", attack(0, "SRM 6"), [0], [attack(1, "Streak SRM 6")])).toBeNull();
+    expect(chooseAms("priority", attack(0, "Streak SRM 6"), [0], [attack(1, "SRM 6")])).toBe(0);
+  });
+
+  it("uses the AMS the pending attacks need least", () => {
+    const now = attack(0, "LRM 20", 1, [0, 1]);
+    const later = [attack(1, "LRM 20", 1, [0])];
+    for (const policy of ["expected", "firstHit", "priority"] as const) {
+      expect(chooseAms(policy, now, [0, 1], later)).toBe(1);
+    }
   });
 });

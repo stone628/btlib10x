@@ -1,4 +1,3 @@
-import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { hexDistance } from "../core/hex";
 import { cellAt } from "../core/terrain";
 import { isArm, isLeg, type Location } from "../core/types";
@@ -30,7 +29,9 @@ import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
 import { sensorAttackModifier, sensorsBlind } from "./piloting";
 import type { RangeBracket } from "./tohit";
-import { computeToHit, damageForBracket, toHitTotal } from "./tohit";
+import { computeToHit, damageForBracket, hitProbability, toHitTotal } from "./tohit";
+
+export { hitProbability };
 
 export type FireBlockerReason =
   | "jammed"
@@ -103,16 +104,6 @@ export interface FireSuggestion {
   /** Enemy targets sorted best-first (most fireable weapons, then highest
    *  hit-weighted damage, then shortest distance). */
   readonly targets: FireTarget[];
-}
-
-/** 2d6 ways to roll >= tn, over 36. TNs below 3 always hit; above 12 never do. */
-const WAYS_TO_HIT: readonly number[] = [36, 36, 36, 35, 33, 30, 26, 21, 15, 10, 6, 3, 1, 0];
-
-/** Probability that 2D6 rolls at least `tn` (TW p. 106: 2 or less always hits, over 12 never). */
-export function hitProbability(tn: number): number {
-  if (tn <= D2D6_MIN) return 1;
-  if (tn > D2D6_MAX) return 0;
-  return WAYS_TO_HIT[tn]! / 36;
 }
 
 /** Hit-weighted damage across a target's fireable weapons. Higher is better. */
@@ -207,8 +198,9 @@ export function suggestFireTargets(
         const weaponIndex = Number(key);
         const weapon = weaponDefFor(mount);
         // Equipment never fires as a ranged weapon: physical weapons (TW
-        // p.146) strike through physical declarations, and TAG, Narc, AMS
-        // etc. await the equipment pipeline (`isFireableWeapon`).
+        // p.146) strike through physical declarations, AMS engage on their
+        // own, and TAG, Narc etc. await the equipment pipeline
+        // (`isFireableWeapon`).
         if (!isFireableWeapon(weapon)) return;
         const blockedEntry = (reason: FireBlockerReason): FireBlocked => ({
           weaponIndex,

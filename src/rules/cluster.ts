@@ -68,11 +68,14 @@ const WAYS_2D6: readonly number[] = [1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1];
 
 /**
  * Expected projectiles hitting for a cluster weapon of `missiles` size: the
- * Cluster Hits Table (TW p. 116) averaged over the 2D6 distribution.
+ * Cluster Hits Table (TW p. 116) averaged over the 2D6 distribution, with
+ * `mod` added to every roll (clamped like {@link modifiedClusterRoll}).
  */
-export function expectedClusterHits(missiles: number): number {
+export function expectedClusterHits(missiles: number, mod = 0): number {
   let sum = 0;
-  for (let roll = 2; roll <= 12; roll++) sum += clusterHits(missiles, roll) * WAYS_2D6[roll - 2]!;
+  for (let roll = 2; roll <= 12; roll++) {
+    sum += clusterHits(missiles, modifiedClusterRoll(roll, mod)) * WAYS_2D6[roll - 2]!;
+  }
   return sum / 36;
 }
 

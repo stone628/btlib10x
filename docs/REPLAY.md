@@ -68,10 +68,10 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 | armor | damage **taken** per location vs model default, see below |
 | crit | destroyed crit slots: `<loc><slot>` repeated (`a3a4` = right arm slots 3, 4) |
 | ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter. In `E` records a bin exports `full - shots left` whatever its fate, so shots stranded in a location lost to plain damage come back as unused and salvage can read them |
-| policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst, followed by `x` when auto-eject is off (`set <id> autoEject off`), then `f` when heat-mode flamers are off (`set <id> heatFlamer off`). Omit the field when all are the default (`e`, auto-eject on, heatFlamer on). Replays written before `f` existed decode with heatFlamer on, so a flamer hit in such a replay now resolves as heat |
+| policy | this unit's ammo policy, one char: `c` core / `s` spread / `l` leastFirst, nothing for exposed, followed by `x` when auto-eject is off (`set <id> autoEject off`), then `f` when heat-mode flamers are off (`set <id> heatFlamer off`), then the AMS policy: `m` first-hit / `p` priority / `o` off, nothing for `expected` (`set <id> amsPolicy …`). Every default writes nothing, so the field is empty (and omitted) for the default policy (exposed, auto-eject on, heatFlamer on, AMS expected); `:x` = exposed with auto-eject off. Replays written before exposed lost its `e` no longer decode |
 
 Index = registration order (first `U` is `0`). The policy field is the starting policy
-(`UnitInit.policy`, edited with `set <id> ammoPolicy|autoEject|heatFlamer <value>`); changes made
+(`UnitInit.policy`, edited with `set <id> ammoPolicy|autoEject|heatFlamer|amsPolicy <value>`); changes made
 during the battle with `policy` are `P` records. `set`/`rm` edits made during setup are not
 recorded — only the final roster is.
 
@@ -87,7 +87,7 @@ interface UnitInitDamage {
   critsDestroyed?: Partial<Record<Location, number[]>>;          // 1-based slot numbers
   ammoUsed?: Record<AmmoBinId, number>;                          // shots used per bin
 }
-// UnitInit.policy: UnitPolicy ({ ammoPolicy, autoEject, heatFlamer }) is separate and always present
+// UnitInit.policy: UnitPolicy ({ ammoPolicy, autoEject, heatFlamer, amsPolicy }) is separate and always present
 ```
 
 `createBattle` sets `baseDamage` / `baseCritSlotsDestroyed` to clones of the starting
@@ -208,8 +208,8 @@ drop-only activation.
 
 `P<idx><policy>`: the acting unit `idx` changed a policy with `policy <prop> <value>` at its movement
 or attack prompt. `<policy>` is the unit's whole policy after the change, in the `U` policy alphabet
-but always written (`P0c` = core, auto-eject on, flamer heat on; `P0exf` = exposed, auto-eject off,
-flamer heat off). The record comes before that unit's `M` / `A` record of the same activation, and
+(`P0c` = core, auto-eject on, flamer heat on; `P0xf` = exposed, auto-eject off, flamer heat off;
+`P0cp` = core with AMS priority; a bare `P0` = back to the default policy). The record comes before that unit's `M` / `A` record of the same activation, and
 the unit must be the one due to act. Setting the current value writes nothing. No dice are drawn, so
 `W` is unaffected; replays without `P` play as before, and builds without `P` reject it as an
 unknown record. The pretty layout keeps a `P` on the line of the `M` / `A` it precedes.
@@ -249,7 +249,7 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 | `mode shutdown` / `startup` / `eject` / `abandon` + `done` | `X` / `O` / `E` / `A` |
 | `done` with nothing declared in movement (pass) | `.` |
 | `cancel` | not recorded (pre-commit) |
-| `set <id> ammoPolicy\|autoEject\|heatFlamer <value>` | setup: the `U` policy field |
+| `set <id> ammoPolicy\|autoEject\|heatFlamer\|amsPolicy <value>` | setup: the `U` policy field |
 | `policy <prop> <value>` | movement / attack prompt of the acting unit: `P<idx><policy>` (only when the value changes; `policy` with no argument is UI) |
 | `torso <front\|left\|right>` | header char `F` `L` `R` (always written) |
 | `fire <tgt> <weapons…>` + `done` | `:<tgt><wpns>`, `!` for rapid-fire |

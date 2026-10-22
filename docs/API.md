@@ -145,8 +145,10 @@ Cannon carries `damage: 0`, TW p.139). Validation: `asHeat` needs a positive
 - `weaponDefFor(h: WeaponNameHolder): WeaponDef` (throws on unknown names)
 - `allWeaponDefs(): WeaponDef[]`
 - `isFireableWeapon(def: WeaponDef): boolean` — false for every `EQUIPMENT`
-  row. Physical weapons strike through physical declarations; TAG, Narc,
-  probes, ECM, AMS, MGA and pods await the equipment pipeline (VISION §4),
+  row. Physical weapons strike through physical declarations; AMS and Laser
+  AMS (`WeaponDef.antiMissile`: `"ammo"` | `"laser"`) engage incoming missiles
+  on their own (see "Anti-missile systems" below); TAG, Narc,
+  probes, ECM, MGA and pods await the equipment pipeline (VISION §4),
   so `declareAttacks` / `validateAttacks` refuse them and
   `suggestFireTargets` omits them
 - `listWeaponNames(): string[]`
@@ -657,7 +659,7 @@ Engine-internal (source-module import only): `resolveWeaponAttack` and its
 
 `AttackResolution` = `{ weapon; distance; breakdown; toHitRoll; hit; jammed;
 prone; propArm; clusterRoll; clusterMod; groups; applications; targetDamageAfter; arc; crits;
-inflictedHeat? }` —
+inflictedHeat?; missileDefense? }` —
 `applications` holds one exact `DamageApplication` per group that reached the
 target, in order (the crits a group triggered resolve before the next group and
 carry their own effects in `crits[].rows`); `targetDamageAfter` is the target's
@@ -671,7 +673,43 @@ is the per-group shape. `inflictedHeat` (`InflictedHeat` = `{ heat; source:
 heat-mode flamer (`WeaponAttackInput.heatMode`, from the attacker's
 `heatFlamer`) and the Plasma Cannon roll no hit location and deal no damage
 (empty `groups`, no crits); the Plasma Rifle throws its die after its damage
-and crits resolve.
+and crits resolve. `missileDefense` (`MissileDefenseResult` = `{ weaponIndex;
+weapon; hitsWithout; hitsWith }`) is set when the target's AMS engaged the
+attack; `groups` already reflect `hitsWith`.
+
+### Anti-missile systems (`rules/ams.ts`, TW pp.129-130)
+
+A `WeaponDef` with `antiMissile` (`"ammo"`: Anti-Missile System, 1 shot per
+engagement; `"laser"`: Laser AMS, IS and Clan, no ammo, Sarna-sourced since
+TO:AUE is not in the workspace) never fires. When a missile attack
+(`isAmsEngageable`: category `MISSILE` with `missiles`; HAGs are excluded)
+hits a unit through an arc one of its AMS covers, `resolveAllAttacks` asks
+that unit's `amsPolicy` whether to engage, after the to-hit roll and before
+the Cluster roll (`WeaponAttackInput.missileDefense` hook). Engaged: −4 on
+the Cluster roll (`AMS_CLUSTER_MOD`, floor 2); a Streak volley counts as a
+roll of 11 first (`AMS_STREAK_ROLL`) and still throws no dice. Each AMS
+engages one attack per turn; one AMS per attack. The engaging AMS adds its
+`heat` (AMS 1, Clan LAMS 5, IS LAMS 7) to the defender's `heatPending`, and an
+ammo AMS draws one shot from its pool under the unit's `ammoPolicy`.
+
+- Availability is judged at phase start (simultaneous fire, like Streak
+  ammo): the unit is in play and not shut down, the mount's location stands,
+  its slots are intact, and a leg AMS is out while prone. Ammo is checked at
+  the engagement, from the same phase-start view the unit's own Streaks draw
+  from.
+- Coverage is the weapon firing-arc test from the defender toward the
+  attacker (`mountCanFireIntoArc`), with the torso twist the defender
+  declared its own attacks with this phase (`WeaponAttackDecl.twist`).
+- `AMS_POLICIES` / `AmsPolicy` = `"expected"` (default: engage when this
+  attack's expected saving, `amsExpectedSaving`, is at least the best
+  hit-chance-weighted saving still to come for that AMS), `"firstHit"`,
+  `"priority"` (`amsPriority`: full-volley damage, Streak first on ties;
+  engage unless a higher-priority attack is still to resolve) or `"off"`.
+  With several AMS able to engage, the one the pending attacks need least is
+  used. `chooseAms` is the pure decision; `isAmsPolicy` validates.
+- Event `amsEngaged` follows the engaged attack's `attackResolved`.
+- Not modeled: Narc / single-missile 1D6 rule (Narc is inert), TacOps
+  Enhanced Missile Defense and AMS-as-weapon, aerospace AMS.
 
 ### Fireability (`rules/fireability.ts`)
 
@@ -735,7 +773,7 @@ only).
 Bin identity + depletion helpers for custom UIs:
 
 - `AmmoPolicy` (`"exposed" | "core" | "spread" | "leastFirst"`)
-- `UnitPolicy` (`{ ammoPolicy: AmmoPolicy; autoEject: boolean; heatFlamer: boolean }`, per-unit settings chosen at setup and changeable mid-battle by the acting unit with `setUnitPolicy`; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed", autoEject: true, heatFlamer: true }`, filled by `buildUnitInit`). `autoEject` (TO:AR p. 165; switchable mid-battle like the other two): on, losing the head (by damage or a blown-off head) or the center torso to an ammo/weapon blast ejects the pilot (head loss raises pilot hits to `pilotHitMax − 1` first); off, both kill the MechWarrior (TW p. 128). Copied to `UnitState.autoEject`; snapshots saved without it load as `true`. `heatFlamer` (TW p.303): on, every flamer-family (`asHeat`) weapon the unit fires deals its Damage Value as heat instead of damage; off, normal damage. Copied to `UnitState.heatFlamer`; snapshots saved without it load as `true`
+- `UnitPolicy` (`{ ammoPolicy: AmmoPolicy; autoEject: boolean; heatFlamer: boolean; amsPolicy: AmsPolicy }`, per-unit settings chosen at setup and changeable mid-battle by the acting unit with `setUnitPolicy`; `DEFAULT_UNIT_POLICY` = `{ ammoPolicy: "exposed", autoEject: true, heatFlamer: true, amsPolicy: "expected" }`, filled by `buildUnitInit`). `autoEject` (TO:AR p. 165; switchable mid-battle like the other two): on, losing the head (by damage or a blown-off head) or the center torso to an ammo/weapon blast ejects the pilot (head loss raises pilot hits to `pilotHitMax − 1` first); off, both kill the MechWarrior (TW p. 128). Copied to `UnitState.autoEject`; snapshots saved without it load as `true`. `heatFlamer` (TW p.303): on, every flamer-family (`asHeat`) weapon the unit fires deals its Damage Value as heat instead of damage; off, normal damage. Copied to `UnitState.heatFlamer`; snapshots saved without it load as `true`. `amsPolicy` picks which hitting missile attack the unit's AMS engage (see "Anti-missile systems"); copied to `UnitState.amsPolicy`; snapshots saved without it load as `"expected"`
 - `AmmoBins` — `Record<AmmoBinId, number>`: shots left in each bin, never negative; identity comes from `collectAmmoBins`, and a missing key reads as 0. The count alone does not say whether those shots can be fired: `CritState` (`{ damage, critSlotsDestroyed, ammoBins }`) is the bundle every ammo query takes, and fate derives from it — `isBinUsable(state, bin)` (location IS above 0 and the slot intact), `usableShots(state, bin)`, `strandedShots(state, bin)` (shots stuck in a location lost to plain damage, i.e. salvage). A bin whose slot is flagged destroyed is gone: neither usable nor stranded, whatever its count says
 - `CritState` — `{ damage: UnitDamageState; critSlotsDestroyed: CritMask; ammoBins: AmmoBins }`, the three fields that together decide a bin's fate; `UnitState` and `CriticalResolution` both satisfy it
 - `ammoBinId(loc, slotIndex): AmmoBinId` — `"${loc}:${slotIndex}"`
@@ -778,7 +816,7 @@ ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // curren
 abandonPilot(state, unitId, sink: GameEvent[]): void                   // current movement actor only (house rule, TO:AR p.165): a unit shut down since an earlier turn; no roll, no hits; removed = "pilotAbandoned", the frame stays as a hull in its posture
 voluntaryShutdown(state, unitId, sink: GameEvent[]): void              // current movement actor only, as its declaration: shuts down ("manual")
 attemptVoluntaryStartup(state, unitId, sink: GameEvent[], rng): void  // current movement actor only: startup attempt after a manual shutdown
-setUnitPolicy(state, unitId, patch: Partial<UnitPolicy>): UnitPolicy  // current movement or attack actor only, before its activation commits: patches UnitState.ammoPolicy / autoEject / heatFlamer, effective at once; no dice, no event; returns the resulting policy
+setUnitPolicy(state, unitId, patch: Partial<UnitPolicy>): UnitPolicy  // current movement or attack actor only, before its activation commits: patches UnitState.ammoPolicy / autoEject / heatFlamer / amsPolicy (throws on a bad ammo or AMS policy), effective at once; no dice, no event; returns the resulting policy
 unitPolicyOf(unit): UnitPolicy                                         // the unit's live policy (its UnitState copies)
 declareAttacks(state, unitId, weaponDecls, physicalDecls, sink: GameEvent[], rng, options?): void  // attack phase only: one combined declaration per turn (weapons + punch/kick/club/strike); emits a single merged `attacksDeclared`
 validateAttacks(state, unitId, weaponDecls, physicalDecls?, options?): void            // read-only gate check; throws on any rule violation without mutating state or emitting events. Options carry the torso `twist`. Returns the resolved volley metadata via `validateAttacksImpl`.
@@ -889,7 +927,7 @@ interface UnitState {
   critSlotsDestroyed: CritMask;       // destroyed-slot bitmask per location (bit i = 0-based slot i); destroyed weapons derive from it (isWeaponCritted)
   blownOffLimbs: SeveredLimb[]; club: HeldClub | null;   // severed limbs / held club
   damageTakenFrom: Record<string, number>;   // armor + structure points each other unit dealt to this one (weapon and physical attacks, the crit blasts they set off, accidental falls); battle-long, not used for kill credit
-  ammoPolicy: AmmoPolicy; autoEject: boolean; heatFlamer: boolean;   // from UnitPolicy
+  ammoPolicy: AmmoPolicy; autoEject: boolean; heatFlamer: boolean; amsPolicy: AmsPolicy;   // from UnitPolicy
   moveMode; hexesMovedThisTurn; jumpedThisTurn; mpSpent;
   declaredWeaponAttacks; declaredPhysicalAttacks; declaredPickup; passedAttacks;
   destroyed: DestroyedState;          // "not" | "headDestroyed" | "centerTorsoDestroyed" | "cockpitDestroyed" | "headBlownOff" | "engineDestroyed"
@@ -919,6 +957,7 @@ type GameEvent =
   | { kind: "buildingCollapsed"; hex; cf }
   | { kind: "heatInflicted"; unitId; targetId; weapon; heat; source: "asHeat" | "extraHeat"; totalReceived }
   | { kind: "heatExternal"; unitId; received; applied; wasted }   // outside heat landing, TW p.159
+  | { kind: "amsEngaged"; unitId; weaponIndex; weapon; attackerId; attackWeapon; hitsWithout; hitsWith; heat; base; totalGenerated; shotsLeft: number | null }   // unitId's AMS cut the attack just resolved (TW p.129); heat joins heatPending; shotsLeft null for a Laser AMS
   | ... ;                              // see src/rules/game.ts for the full union
 
 interface ActorQueueActorView { id; team; shutdown; destroyed; removed }

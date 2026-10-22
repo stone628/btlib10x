@@ -13,6 +13,7 @@
 
 import {
   type AmmoPolicy,
+  type AmsPolicy,
   type Arc,
   type AttackDecl,
   abandonPilot,
@@ -421,24 +422,40 @@ function fieldsOfInit(init: UnitInit): DamageFields {
   };
 }
 
-const POLICY_CHAR: Readonly<Record<string, string>> = {
-  exposed: "e",
+/** Ammo policy char; `exposed` (the default) writes none. */
+const POLICY_CHAR: Readonly<Record<AmmoPolicy, string>> = {
+  exposed: "",
   core: "c",
   spread: "s",
   leastFirst: "l",
 };
 
-/** Policy text: ammo policy char, then `x` when auto-eject is off and `f`
- *  when heat-mode flamers are off. Shared by the `U` policy field and `P`. */
+/** AMS policy char; `expected` (the default) writes none. */
+const AMS_POLICY_CHAR: Readonly<Record<AmsPolicy, string>> = {
+  expected: "",
+  firstHit: "m",
+  priority: "p",
+  off: "o",
+};
+const AMS_POLICY_BY_CHAR: ReadonlyMap<string, AmsPolicy> = new Map(
+  (Object.entries(AMS_POLICY_CHAR) as [AmsPolicy, string][]).map(([p, c]) => [c, p]),
+);
+
+/** Policy text: ammo policy char (`c` core, `s` spread, `l` least-first,
+ *  none for exposed), then `x` when auto-eject is off, `f` when heat-mode
+ *  flamers are off and the AMS policy char (`m` first-hit, `p` priority, `o`
+ *  off). Empty for the default policy. Shared by the `U` policy field and `P`. */
 function policyText(policy: UnitPolicy): string {
   return (
-    (POLICY_CHAR[policy.ammoPolicy] ?? "e") +
+    POLICY_CHAR[policy.ammoPolicy] +
     (policy.autoEject ? "" : "x") +
-    (policy.heatFlamer ? "" : "f")
+    (policy.heatFlamer ? "" : "f") +
+    AMS_POLICY_CHAR[policy.amsPolicy]
   );
 }
 
-/** `P<idx><policy>`: the acting unit's policy after a mid-battle change (always written in full). */
+/** `P<idx><policy>`: the acting unit's whole policy after a mid-battle change
+ *  (a bare `P<idx>` is the default policy). */
 export function encodePolicyEntry(idx: string, policy: UnitPolicy): string {
   return `P${idx}${policyText(policy)}`;
 }
@@ -460,7 +477,7 @@ export function encodeUnitLine(init: UnitInit): string {
     armorField(f),
     critField(f),
     ammoField(f),
-    policy === "e" ? "" : policy,
+    policy,
   ])}`;
 }
 
@@ -670,12 +687,9 @@ const LOC_BY_CODE: ReadonlyMap<string, Location> = new Map(
 const FACING_BY_CHAR: ReadonlyMap<string, Facing> = new Map(
   (Object.entries(FACING_CHAR) as [Facing, string][]).map(([f, c]) => [c, f]),
 );
-const POLICY_BY_CHAR: ReadonlyMap<string, AmmoPolicy> = new Map([
-  ["e", "exposed"],
-  ["c", "core"],
-  ["s", "spread"],
-  ["l", "leastFirst"],
-]);
+const POLICY_BY_CHAR: ReadonlyMap<string, AmmoPolicy> = new Map(
+  (Object.entries(POLICY_CHAR) as [AmmoPolicy, string][]).map(([p, c]) => [c, p]),
+);
 const MODE_BY_CHAR: Readonly<Record<string, MoveMode>> = {
   s: "standStill",
   w: "walk",
@@ -713,11 +727,11 @@ function locOf(c: string | undefined): Location {
 /** Inverse of {@link encodeUnitLine}. Throws a plain `Error` describing what is wrong. */
 /** Inverse of `policyText`. */
 function decodePolicy(text: string): UnitPolicy {
-  const pm = /^([a-z])(x?)(f?)$/.exec(text);
+  const pm = /^([csl]?)(x?)(f?)([mpo]?)$/.exec(text);
   if (pm === null) throw new Error(`bad policy ${JSON.stringify(text)}`);
-  const ammoPolicy = POLICY_BY_CHAR.get(pm[1]!);
-  if (ammoPolicy === undefined) throw new Error(`bad ammo policy ${JSON.stringify(text)}`);
-  return { ammoPolicy, autoEject: pm[2] === "", heatFlamer: pm[3] === "" };
+  const ammoPolicy = POLICY_BY_CHAR.get(pm[1]!)!;
+  const amsPolicy = AMS_POLICY_BY_CHAR.get(pm[4]!)!;
+  return { ammoPolicy, autoEject: pm[2] === "", heatFlamer: pm[3] === "", amsPolicy };
 }
 
 export function decodeUnitLine(line: string): UnitInit {
@@ -774,7 +788,7 @@ export function decodeUnitLine(line: string): UnitInit {
       [`${locOf(mm[1])}:${slotNumber(mm[2])}`]: Number(mm[3]),
     };
   }
-  const { ammoPolicy, autoEject, heatFlamer } =
+  const { ammoPolicy, autoEject, heatFlamer, amsPolicy } =
     policy === "" ? DEFAULT_UNIT_POLICY : decodePolicy(policy);
   const init = buildUnitInit(
     id,
@@ -785,7 +799,7 @@ export function decodeUnitLine(line: string): UnitInit {
     Number(gunnery) as UnitInit["gunnery"],
     Number(piloting) as UnitInit["piloting"],
     parseInt(hitMax!, 36),
-    { ammoPolicy, autoEject, heatFlamer },
+    { ammoPolicy, autoEject, heatFlamer, amsPolicy },
   );
   return Object.keys(damage).length > 0 ? { ...init, damage } : init;
 }

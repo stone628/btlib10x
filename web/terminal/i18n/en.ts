@@ -79,9 +79,9 @@ export const en = {
   "cmd.set.help": "edit a property on a unit already on the roster",
   "cmd.set.arg.id": "unit id to modify",
   "cmd.set.arg.prop":
-    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer",
+    "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer, amsPolicy",
   "cmd.set.arg.value":
-    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer)",
+    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer, expected|first-hit|priority|off for amsPolicy)",
   "cmd.rm.help": "remove a placed unit",
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
@@ -130,10 +130,10 @@ export const en = {
   "cmd.heat.help": "show a unit's heat scale status (default: acting unit)",
   "cmd.heat.arg.id": "unit to inspect; defaults to the acting unit",
   "cmd.policy.help":
-    "show or change the acting unit's policies (ammoPolicy, autoEject, heatFlamer); takes effect at once",
-  "cmd.policy.arg.prop": "policy name: ammoPolicy, autoEject, heatFlamer",
+    "show or change the acting unit's policies (ammoPolicy, autoEject, heatFlamer, amsPolicy); takes effect at once",
+  "cmd.policy.arg.prop": "policy name: ammoPolicy, autoEject, heatFlamer, amsPolicy",
   "cmd.policy.arg.value":
-    "new value: exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer",
+    "new value: exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer, expected|first-hit|priority|off for amsPolicy",
   "cmd.candidateMove.help": "show movement candidate, drawn on the ASCII battle grid",
   "cmd.candidateAttack.help": "show possible target with available weapons",
   "cmd.punch.help": "queue a punch attack against an adjacent enemy (TW p.145)",
@@ -254,7 +254,7 @@ export const en = {
   "ok.mapLoaded": "map {name}: {w}x{h}",
   "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing} on team {team}",
   "ok.set": "{id}: {prop} set to {value}",
-  "policy.summary": "{id}: ammo {ammo}, auto-eject {eject}, flamer-heat {flamer}",
+  "policy.summary": "{id}: ammo {ammo}, auto-eject {eject}, flamer-heat {flamer}, AMS {ams}",
   "ok.removed": "removed {id}",
   "ok.started": "=== BATTLE STARTED ===",
   "ok.modeDeclared":
@@ -398,6 +398,7 @@ export const en = {
   "err.badAmmoPolicy": "ammo policy must be one of exposed|core|spread|least-first",
   "err.badAutoEject": "autoEject must be on or off",
   "err.badHeatFlamer": "heatFlamer must be on or off",
+  "err.badAmsPolicy": "amsPolicy must be expected, first-hit, priority or off",
   "err.phaseDriver": "phase driver failed to settle",
   "err.twist.badDirection": "torso direction must be front, left, or right",
   "err.twist.locked": "torso twist is locked once a fire command is queued; cancel first",
@@ -430,9 +431,10 @@ export const en = {
   "setup.mapNone": "(none)",
   "setup.teamHeader": "team {team}:",
   "setup.unitLine":
-    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} auto-eject {eject}{flamer} @ {pos} facing {facing}",
+    "  {id}  {model} ({name}) gunnery {gunnery} piloting {piloting} hits {hitMax} ammo {ammo} auto-eject {eject}{flamer}{ams} @ {pos} facing {facing}",
   "setup.noUnits": "(no units placed)",
   "setup.heatFlamerOff": " flamer-heat off",
+  "setup.amsPolicy": " AMS {policy}",
 
   // movement status
   "moveStatus.headLine": "queued movements:",
@@ -729,6 +731,9 @@ export const en = {
   "log.clubConsumed": "[{id}]'s {kind} club breaks on the hit",
   "log.heatMove": "[{id}] generates {heat} movement heat (base {base}, turn generated {total})",
   "log.heatWeapon": "[{id}] generates {heat} weapon heat (base {base}, turn generated {total})",
+  "log.amsEngaged":
+    "[{id}] {weapon} engages {attacker} {attackWeapon}: {heat} heat (base {base}, turn generated {total}){ammo}",
+  "log.amsShotsLeft": ", {shots} shots left",
   "log.heatEngineCrit":
     "[{id}] generates {heat} engine-crit heat (base {base}, turn generated {total})",
   "log.heatInflicted":
@@ -872,6 +877,8 @@ export const en = {
   "res.heatAsHeat": "{heat} heat to target instead of damage (lands in its heat phase)",
   "res.heatExtra": "{heat} heat to target ({dice}; lands in its heat phase)",
   "res.outOfAmmo": "{weapon} out of ammo, did not fire",
+  "res.ams": "{weapon} −4 on cluster roll: {without} → {with} missiles",
+  "res.amsStreak": " (Streak counts as 11)",
   "res.clusterRoll": "cluster roll 2D6 = {roll}",
   "res.clusterMod": "cluster range mod {mod}",
   "res.hits": "hits: {groups} ({arc})",

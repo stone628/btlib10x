@@ -94,6 +94,7 @@ export type {
 } from "./data/mech.schema";
 export { type TerrainDef, terrainDef } from "./data/terrain.schema";
 export type {
+  WeaponAntiMissile,
   WeaponCategory,
   WeaponDef,
   WeaponHeatEffect,
@@ -120,6 +121,16 @@ export {
   usableShots,
 } from "./rules/ammo";
 export {
+  AMS_CLUSTER_MOD,
+  AMS_POLICIES,
+  AMS_STREAK_ROLL,
+  type AmsPolicy,
+  amsExpectedSaving,
+  amsPriority,
+  isAmsEngageable,
+  isAmsPolicy,
+} from "./rules/ams";
+export {
   type Arc,
   classifyArcWithBoundary,
   classifyFiringArc,
@@ -132,6 +143,8 @@ export type {
   AttackResolution,
   HitGroup,
   InflictedHeat,
+  MissileDefenseResult,
+  MissileDefenseUse,
   TargetCritContext,
   WeaponAttackInput,
 } from "./rules/attack";

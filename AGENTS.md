@@ -47,6 +47,11 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   of damage under the per-unit `UnitPolicy.heatFlamer` (default on); Plasma
   Rifle adds 1D6 heat, Plasma Cannon deals 2D6 heat only. Outside heat lands
   in the heat phase, capped at 15 per turn. Fire/smoke and infernos deferred.
+- Anti-missile systems (TW pp.129-130): AMS and Laser AMS (`WeaponDef.antiMissile`
+  `"ammo"` | `"laser"`) engage one hitting missile attack per turn in their arc,
+  −4 on the Cluster roll (Streak counts as 11); the defender's
+  `UnitPolicy.amsPolicy` (`expected` default, `firstHit`, `priority`, `off`)
+  picks which. Logic in `src/rules/ams.ts`, wiring in `resolveAllAttacks`.
 - Damage model: each location holds a flat armor HP number; overflow transfers inward **only after** a location's armor is fully depleted (no per-dot tracking).
 - Partial cover (TW): a target in a water1/building hex with the attacker not
   higher gains +1 to-hit and leg hit-location rolls strike the cover (dealt
