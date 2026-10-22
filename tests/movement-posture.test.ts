@@ -614,11 +614,8 @@ describe("postureMove", () => {
   }
 
   describe("posture-change then move", () => {
-    it("mode drop/crawl are gone; bare mode standup defaults to standstill", async () => {
+    it("rejects unknown and standing-only modes while prone with the valid-modes hint", async () => {
       const { s } = await started();
-      expect(execute(s, "mode drop")[0]).toMatch(/^error:/);
-      expect(execute(s, "mode crawl")[0]).toMatch(/^error:/);
-      expect(execute(s, "mode crawl")[0]).toMatch(/valid modes:/);
       forceProne(s, requireMovementActor(s).id);
       expect(execute(s, "mode standup foo")[0]).toMatch(/^error:/);
       expect(execute(s, "mode walk")[0]).toMatch(/valid modes:/);

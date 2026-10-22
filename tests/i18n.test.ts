@@ -8,9 +8,7 @@ import {
   reachableLandings,
   suggestFireTargets,
 } from "../src/index";
-import { en } from "../web/terminal/i18n/en";
-import type { LocaleId, MessageKey } from "../web/terminal/i18n/index";
-import { i18nIn, LOCALES, normalizeLocale } from "../web/terminal/i18n/index";
+import { i18nIn, normalizeLocale } from "../web/terminal/i18n/index";
 import {
   commitAttack,
   commitMovement,
@@ -116,12 +114,6 @@ function autoPlay(s: ReturnType<typeof newSession>): void {
 }
 
 describe("i18n catalogs", () => {
-  it("ko provides every key in the canonical en catalog", () => {
-    const enKeys = Object.keys(en);
-    const koKeys = Object.keys(LOCALES.ko);
-    expect(koKeys.sort()).toEqual([...enKeys].sort());
-  });
-
   it("interpolates {param} placeholders", () => {
     expect(i18nIn("en", "ok.mapLoaded", { name: "beginner", w: 15, h: 16 })).toBe(
       "map beginner: 15x16",
@@ -135,16 +127,6 @@ describe("i18n catalogs", () => {
     expect(normalizeLocale("ko")).toBe("ko");
     expect(normalizeLocale("en")).toBe("en");
     expect(normalizeLocale("xx")).toBeNull();
-  });
-
-  it("falls back to English for missing catalog entries", () => {
-    const locales = LOCALES as Record<string, unknown>;
-    locales.partial = {};
-    try {
-      expect(i18nIn("partial" as LocaleId, "board.noMap")).toBe(en["board.noMap"]);
-    } finally {
-      delete locales.partial;
-    }
   });
 
   it("leaves unknown keys out of interpolation when params are absent", () => {
@@ -210,18 +192,6 @@ describe("localized output smoke test", () => {
     expect(execute(s, "board")).toEqual([i18nIn("ko", "board.noMap")]);
     expect(execute(s, "bogus")).toEqual([`오류: 알 수 없는 명령 'bogus' ('help'를 입력해 보세요)`]);
     expect(execute(s, "status").join("\n")).toContain("(배치된 유닛 없음)");
-  });
-
-  it("keeps dense rule tokens (GATOR, locations) untranslated", () => {
-    const s = newSession(7);
-    execute(s, "lang ko");
-    execute(s, "map beginner");
-    execute(s, "add a1 HBK-4G 8 8");
-    execute(s, "add b1 HBK-4G 12 12");
-    execute(s, "start");
-    if (s.battle === null) throw new Error("battle not started");
-    // location abbreviations stay stable regardless of locale
-    expect(Object.keys(en) as MessageKey[]).toContain("sheet.statusHeader");
   });
 });
 

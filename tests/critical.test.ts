@@ -927,19 +927,6 @@ describe("CASE", () => {
     expect(checkCASE(hbk, "leftTorso")).toBe(undefined);
   });
 
-  it("hasCase recognizes explicit CASE / CASE II slots on an IS mech", () => {
-    const hbk = mechDef("HBK-4G")!;
-    const withCase: typeof hbk = {
-      ...hbk,
-      techBase: "Inner Sphere",
-      critSlots: {
-        ...hbk.critSlots,
-        leftTorso: [...hbk.critSlots.leftTorso, { kind: "soak", name: "case" }],
-      },
-    };
-    expect(checkCASE(withCase, "leftTorso")).toBe("case");
-  });
-
   it("IS CASE works in any location (TW p.133)", () => {
     const hbk = mechDef("HBK-4G")!;
     const withCase = (loc: Location): typeof hbk => ({

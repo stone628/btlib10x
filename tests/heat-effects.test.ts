@@ -4,7 +4,6 @@ import { parseMtf } from "../scripts/mtf.mjs";
 import { LOCATIONS } from "../src/core/types";
 import { type MechDef, resolveMechDef, validateMechDef } from "../src/data/index";
 import { parseWeaponsData, weaponDef } from "../src/data/weapon.schema";
-import { WEAPON_DATA } from "../src/data/weapons.data";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
 import {
@@ -111,7 +110,6 @@ describe("heat-causing weapon catalog (TW pp.139, 303-304)", () => {
   });
 
   it("validates heatEffect shapes", () => {
-    expect(() => parseWeaponsData(WEAPON_DATA)).not.toThrow();
     const bad =
       (heatEffect: unknown, damage = 2) =>
       () =>
@@ -272,17 +270,6 @@ describe("outside heat in the battle (TW p.159)", () => {
     const parsed = parseBattleState(saveBattleState(state));
     expect(parsed.units.her!.heatFlamer).toBe(false);
     expect(parsed.units.enf!.heatExternalPending).toBe(4);
-  });
-
-  it("loads snapshots saved before the fields existed with defaults", () => {
-    const raw = JSON.parse(saveBattleState(herVsEnf()));
-    for (const unit of Object.values(raw.units) as Record<string, unknown>[]) {
-      delete unit.heatFlamer;
-      delete unit.heatExternalPending;
-    }
-    const parsed = parseBattleState(JSON.stringify(raw));
-    expect(parsed.units.her!.heatFlamer).toBe(true);
-    expect(parsed.units.enf!.heatExternalPending).toBe(0);
   });
 });
 

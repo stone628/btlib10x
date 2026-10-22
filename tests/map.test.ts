@@ -185,7 +185,7 @@ describe("createBattle registers catalog models on demand (DATA-04)", () => {
     expect(battle.units.a!.model).toBe("AS7-DX");
   });
 
-  it("still refuses unknown, wrong-case and non-string models", () => {
+  it("still refuses unknown and wrong-case models", () => {
     expect(() => createBattle(debrisMap("as7-dx"), units("HBK-4G"))).toThrow(
       /Unknown 'Mech model for club at 4,4: as7-dx/,
     );

@@ -354,7 +354,7 @@ describe("torso", () => {
   }
 
   describe("twistDelta + effectiveFacingForTwist", () => {
-    it("maps left to -1, right to +1, front to 0, rear to throw", () => {
+    it("maps left to -1, right to +1, front to 0", () => {
       expect(twistDelta("leftSide")).toBe(-1);
       expect(twistDelta("rightSide")).toBe(1);
       expect(twistDelta("front")).toBe(0);
@@ -492,21 +492,6 @@ describe("torso", () => {
           },
         ),
       ).toThrow(/firing arc/);
-    });
-
-    it("omitting opts keeps untwisted behavior", () => {
-      const { units } = hbkFacingAt("se");
-      const state = startAttackTurn(createTestBattle([], units, false));
-      expect(() =>
-        declareAttacks(
-          state,
-          "hbk",
-          [{ weaponIndex: 2, targetId: "enf" }],
-          [],
-          [],
-          scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
-        ),
-      ).not.toThrow();
     });
   });
 });

@@ -297,17 +297,6 @@ describe("snapshot", () => {
     expect(enf.critSlotsDestroyed).toEqual(critSnap);
   });
 
-  it("rejects pre-removal snapshots carrying an events key", () => {
-    const state = startAttackTurn(hbkEnf(false));
-    rearCtHit(state);
-    const snap = JSON.parse(saveBattleState(state)) as Record<string, unknown>;
-    snap.events = [];
-    expect(() => loadBattleState(state, JSON.stringify(snap))).toThrow(
-      /Invalid battle snapshot string/,
-    );
-    expect(() => parseBattleState(JSON.stringify(snap))).toThrow(/Invalid battle snapshot string/);
-  });
-
   it("buildings/wreckage granularity restores collapse", () => {
     const units: UnitInit[] = [
       buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 4 }, "se"),

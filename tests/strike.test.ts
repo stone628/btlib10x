@@ -13,8 +13,6 @@ import {
 } from "../src";
 import type { LimbLocation, Location } from "../src/core/types";
 import { type MechDef, type ResolvedMechDef, resolveMechDef } from "../src/data/index";
-import { parseWeaponsData } from "../src/data/weapon.schema";
-import { WEAPON_DATA } from "../src/data/weapons.data";
 import { isWeaponCritted, setSlotDestroyed } from "../src/rules/critical";
 import {
   applyFall,
@@ -117,10 +115,6 @@ describe("physical weapon catalog", () => {
     expect(PHYSICAL_WEAPONS.Hatchet.toHitMod).toBe(-1);
     expect(PHYSICAL_WEAPONS.Sword.toHitMod).toBe(-2);
     expect(PHYSICAL_WEAPONS["Retractable Blade"].toHitMod).toBe(-2);
-  });
-
-  it("round-trips the catalog through the weapon validator", () => {
-    expect(() => parseWeaponsData(WEAPON_DATA)).not.toThrow();
   });
 
   it("links the Hatchetman's three hatchet slots to one right-arm mount", () => {

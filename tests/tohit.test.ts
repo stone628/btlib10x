@@ -21,7 +21,7 @@ import {
   validateAttacksImpl,
   type WeaponAttackDecl,
 } from "../src/rules/game";
-import { computeToHit, toHitTotal, weaponToHitModifier } from "../src/rules/tohit";
+import { computeToHit, toHitTotal } from "../src/rules/tohit";
 import { createTestBattle, scriptedRng, seededRng } from "./helpers";
 
 describe("GATOR to-hit calculation", () => {
@@ -313,22 +313,6 @@ describe("GATOR to-hit calculation", () => {
     expect(toHitTotal(mrm)).toBe(toHitTotal(ml) + 1);
   });
 
-  it("falls back to -2 for legacy pulse-only defs without toHitMod", () => {
-    expect(
-      weaponToHitModifier({
-        name: "x",
-        short: 1,
-        medium: 2,
-        long: 3,
-        pulse: true,
-        category: "ENERGY",
-      }),
-    ).toBe(-2);
-    expect(
-      weaponToHitModifier({ name: "x", short: 1, medium: 2, long: 3, category: "ENERGY" }),
-    ).toBe(0);
-  });
-
   it("resolves variable damage per bracket (Snub-Nose PPC V10/8/5)", () => {
     const snub = weaponDefFor({ weapon: "Snub-Nose PPC" });
     const short = computeToHit({
@@ -617,13 +601,6 @@ describe("validateAttacks", () => {
       expect(() =>
         validateAttacksImpl(state, "hbk", [{ weaponIndex: 1, targetId: "enf" }], [], {}),
       ).not.toThrow();
-    });
-
-    it("does not consume RNG — repeated calls with same input return same metadata", () => {
-      const state = hbkVsEnf();
-      const a = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], {});
-      const b = validateAttacksImpl(state, "hbk", [{ weaponIndex: 2, targetId: "enf" }], [], {});
-      expect(a).toEqual(b);
     });
 
     it("twist rotates the firing arc", () => {

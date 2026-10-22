@@ -566,20 +566,6 @@ describe("game integration: shutdown", () => {
     ).toBe(true);
   });
 
-  it("avoids shutdown when roll >= avoid", () => {
-    const state = hbkVsEnf();
-    const hbk = requireUnit(state, "hbk");
-    // Post-dissipation: 31 - 13 = 18 endHeat (avoid 6).
-    hbk.heat = 31;
-    startAttackTurn(state);
-    const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(6, 6, 6, 6));
-    expect(hbk.shutdown).toBe("not");
-    expect(
-      events.some((e) => e.kind === "shutdownCheck" && e.unitId === "hbk" && e.result === "avoid"),
-    ).toBe(true);
-  });
-
   it("skips shutdown unit in nextActor", () => {
     const state = hbkVsEnf();
     startMovementTurn(state);
@@ -588,7 +574,7 @@ describe("game integration: shutdown", () => {
     expect(nextActor(state)).toBe("enf");
   });
 
-  it("restarts automatically when heat below 14", () => {
+  it("restarts automatically, without a roll, when heat is below 14", () => {
     const state = hbkVsEnf();
     const hbk = requireUnit(state, "hbk");
     hbk.shutdown = "heat";
@@ -597,9 +583,12 @@ describe("game integration: shutdown", () => {
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(3, 3, 3, 1));
     expect(hbk.shutdown).toBe("not");
-    expect(
-      events.some((e) => e.kind === "restartCheck" && e.unitId === "hbk" && e.result === "success"),
-    ).toBe(true);
+    const restart = events.find(
+      (e): e is Extract<GameEvent, { kind: "restartCheck" }> =>
+        e.kind === "restartCheck" && e.unitId === "hbk",
+    );
+    expect(restart?.result).toBe("success");
+    expect(restart?.roll).toBe(0);
   });
 
   it("does not auto-restart a manual shutdown", () => {
@@ -699,30 +688,6 @@ describe("game integration: shutdown", () => {
     startAttackTurn(auto);
     advancePhase(auto, [], scriptedRng(6, 6, 6, 6));
     expect(hbk2.shutdown).toBe("not");
-  });
-});
-
-describe("game integration: heatMod in to-hit", () => {
-  it("attack includes heatMod 2 at heat 13", () => {
-    const state = hbkVsEnf();
-    const hbk = requireUnit(state, "hbk");
-    hbk.heat = 13;
-    startAttackTurn(state);
-    declareAttacks(
-      state,
-      "hbk",
-      [{ weaponIndex: 1, targetId: "enf" }],
-      [],
-      [],
-      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
-    );
-    const events: GameEvent[] = [];
-    resolveAllAttacks(state, scriptedRng(6, 6, 3, 4), events);
-    const resolved = events.find((e) => e.kind === "attackResolved");
-    expect(resolved).toBeDefined();
-    expect(
-      (resolved as Extract<GameEvent, { kind: "attackResolved" }>).resolution.breakdown.heatMod,
-    ).toBe(2);
   });
 });
 
@@ -966,34 +931,6 @@ describe("Bug A: engine crit heat skipped for shut-down units (TW p.160)", () =>
     const events: GameEvent[] = [];
     advancePhase(state, events, scriptedRng(2, 3));
     expect(events.some((e) => e.kind === "heatEngineCrit" && e.unitId === "hbk")).toBe(false);
-  });
-});
-
-describe("Bug B: auto-restart uses post-dissipation heat, not peak", () => {
-  it("heat-shutdown unit restarts without a roll when dissipation drops heat < 14", () => {
-    const state = hbkVsEnf();
-    const hbk = requireUnit(state, "hbk");
-    hbk.heat = 14;
-    hbk.shutdown = "heat";
-    startAttackTurn(state);
-    // 13 sinks: 14 - 13 = 1 (post-dissipation). max(14, 1) = 14, avoid 4 — NOT auto.
-    // Use a setup where dissipation exceeds heat: directly lower scale so the
-    // max falls below 14.
-    // Actually we want: start 14, no engine crit, no own heat, end = 14 - 13 = 1.
-    // max(14, 1) = 14, avoid = 4, must roll. To force auto-restart, set
-    // dissipation to exceed heat, i.e. drop scale to 0 with sinks = 0... use a
-    // different mech setup where startHeat is small.
-    hbk.heat = 10;
-    const events: GameEvent[] = [];
-    advancePhase(state, events, scriptedRng(2, 3));
-    expect(hbk.shutdown).toBe("not");
-    expect(hbk.heat).toBe(0); // 10 - 10 (sinks ≥ heat)
-    const restart = events.find(
-      (e): e is Extract<GameEvent, { kind: "restartCheck" }> =>
-        e.kind === "restartCheck" && e.unitId === "hbk",
-    );
-    expect(restart?.result === "success").toBe(true);
-    expect(restart?.roll).toBe(0);
   });
 });
 

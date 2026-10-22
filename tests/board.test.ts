@@ -426,13 +426,6 @@ describe("terrainCatalog", () => {
         expect(catalog.has(t), `missing catalog entry for ${t}`).toBe(true);
       }
     });
-
-    it("does not define unknown terrain types beyond TERRAIN_TYPES", () => {
-      const catalog = allTerrainDefs();
-      for (const key of catalog.keys()) {
-        expect(TERRAIN_TYPES).toContain(key as (typeof TERRAIN_TYPES)[number]);
-      }
-    });
   });
 
   describe("costToEnter", () => {

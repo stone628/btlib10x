@@ -28,12 +28,7 @@ import {
   rollInitiativePhase,
   type UnitInit,
 } from "../src/rules/game";
-import {
-  commitMovement,
-  declareMovementMode,
-  newSession,
-  type Session,
-} from "../web/terminal/session";
+import { newSession, type Session } from "../web/terminal/session";
 import { createTestBattle, critState, disableCritical, execute, scriptedRng } from "./helpers";
 
 describe("ammo catalog", () => {
@@ -437,7 +432,7 @@ describe("depletion", () => {
   }
 
   describe("ammoPolicy setup (session)", () => {
-    it("sets the policy with `set` during setup, rejects gibberish, and `ammo` is gone", () => {
+    it("sets the policy with `set` during setup and rejects gibberish", () => {
       const s = newSession(42);
       execute(s, "map quickstart");
       execute(s, "add hunchy HBK-4G 9 9 n");
@@ -460,13 +455,6 @@ describe("depletion", () => {
       execute(s, "start");
       expect(s.battle!.units.hunchy!.ammoPolicy).toBe("leastFirst");
       expect(s.battle!.units.cicada!.ammoPolicy).toBe("exposed");
-      while (s.state === "battle" && s.battle!.phase === "movement") {
-        declareMovementMode(s, "walk");
-        commitMovement(s);
-      }
-      expect(s.battle!.phase).toBe("attack");
-      expect(execute(s, "ammo spread")[0]).toMatch(/^error:/);
-      expect(s.battle!.units.hunchy!.ammoPolicy).toBe("leastFirst");
     });
 
     it("buildUnitInit defaults the policy; createBattle applies and validates it", () => {

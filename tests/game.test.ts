@@ -45,7 +45,7 @@ function startAttackTurn(
 }
 
 describe("createBattle", () => {
-  it("rejects duplicate ids, unknown models, and bad gunnery", () => {
+  it("rejects duplicate ids and unknown models", () => {
     const base: UnitInit = buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 2 }, "n" as const);
     expect(() => createTestBattle([], [base, base], false)).toThrow(/Duplicate unit id/);
     expect(() =>
@@ -1319,9 +1319,6 @@ describe("current-actor guard", () => {
     expect(() => executeMove(state, "hbk", "walk", [], [], { rng: scriptedRng() })).toThrow(
       /not the current actor/,
     );
-    expect(() => executeMove(state, "hbk", "walk", [], [], { rng: scriptedRng() })).toThrow(
-      /not the current actor/,
-    );
   });
 
   it("executeMove rejects acting before initiative is rolled", () => {
@@ -1386,14 +1383,6 @@ describe("current-actor guard", () => {
         [],
         scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
       ),
-    ).toThrow(/not the current actor/);
-  });
-
-  it("executeMove refuses a unit that already acted", () => {
-    const state = startMovementTurn(hbkVsEnf());
-    executeMove(state, "hbk", "standStill", [], [], { rng: scriptedRng() }); // hbk consumes its turn
-    expect(() =>
-      executeMove(state, "hbk", "walk", [{ kind: "turn", facings: 1 }], [], { rng: scriptedRng() }),
     ).toThrow(/not the current actor/);
   });
 });

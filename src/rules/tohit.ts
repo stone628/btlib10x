@@ -106,14 +106,9 @@ const PRONE_TARGET_ADJACENT_MOD = -2;
 const PRONE_TARGET_DISTANT_MOD = 1;
 /** Max distance counting as adjacent for the prone-target modifier. */
 const PRONE_ADJACENT_MAX_DISTANCE = 1;
-/** To-hit bonus for pulse weapons without an explicit `toHitMod` (TW p.303). */
-const PULSE_MOD = -2;
-
-/** Weapon modifier: explicit `toHitMod`, falling back to -2 for legacy
- *  pulse-only defs that predate the generic column. */
+/** Weapon modifier: the To-Hit Mod column (TW p.303-304), 0 when absent. */
 export function weaponToHitModifier(weapon: WeaponDef): number {
-  if (weapon.toHitMod !== undefined) return weapon.toHitMod;
-  return weapon.pulse === true ? PULSE_MOD : 0;
+  return weapon.toHitMod ?? 0;
 }
 
 /** Prone-target modifier by range (TW p.113): −2 adjacent, +1 otherwise. */
