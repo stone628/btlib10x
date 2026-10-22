@@ -342,8 +342,9 @@ stated elsewhere in this document or the codebase:
   All falls (combat PSRs, shutdowns, stand-up attempts, building crashes,
   accidental falls from above) happen in place; only ground-movement falls
   across levels use the `levelsFallen` term (lower-hex rule). A faller
-  landing on an occupied hex stays in the hex it came from. Charge / DFA
-  are implemented without displacement (see above).
+  landing on an occupied hex stays in the hex it came from, or, when another
+  unit holds that hex too, in the nearest free hex it passed through.
+  Charge / DFA are implemented without displacement (see above).
 - **Minimum movement** (TW p.49) — a standing unit with at least 1 MP may
   always enter the single hex directly ahead, whatever the terrain/climb
   cost, as its only expenditure (no facing change). Declared as `mode run`

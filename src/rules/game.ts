@@ -2650,6 +2650,21 @@ function moveUnit(
   let curFacing: Facing = unit.facing;
   let curSpent = 0;
   const curDirs: ("forward" | "backward")[] = [];
+  // Hexes the 'Mech has stood in on this path, start first. A jump passes
+  // over its path, so only its start counts.
+  const stoodIn: HexCoord[] = [{ ...cur }];
+  /** Where a move cut short ends. Without displacement (VISION §2.5) a
+   *  faller that cannot keep its hex goes back along its own path to the
+   *  newest hex no other unit holds, so it never ends stacked (TW p.57).
+   *  The start hex is always free: the mover has just left it. */
+  const freeStop = (hex: HexCoord): HexCoord => {
+    if (!isUnitOnBoard(unit) || occupantAt(state, hex, unitId) === undefined) return hex;
+    for (let k = stoodIn.length - 1; k >= 0; k--) {
+      const back = stoodIn[k]!;
+      if (occupantAt(state, back, unitId) === undefined) return back;
+    }
+    return hex;
+  };
   for (let i = 0; i < steps.length; i++) {
     const step = steps[i]!;
     const isFinal = i === lastEnterIdx;
@@ -2675,6 +2690,7 @@ function moveUnit(
     // unit stays in the hex before it (MP for the step is still paid).
     if (isFinal && meleeKind !== null) break;
     cur = to;
+    if (!jumping) stoodIn.push({ ...to });
     // Terrain-entry PSRs (TW p.60): ground checks every entered hex, jump
     // only its landing. A fall, crash-kill, or shutdown ends the move here,
     // committed at the hex the fall rule leaves the 'Mech in (the lower
@@ -2701,12 +2717,12 @@ function moveUnit(
       );
       // A move cut short still uses up the unit's activation (TW p.59).
       if (fellAt !== null) {
-        commitAt({ ...fellAt }, unit.facing, mode, curSpent, curDirs);
+        commitAt({ ...freeStop(fellAt) }, unit.facing, mode, curSpent, curDirs);
         if (posture === null) state.actedThisPhase.push(unitId);
         return;
       }
       if (unit.prone || unit.destroyed !== "not") {
-        commitAt({ ...cur }, unit.facing, mode, curSpent, curDirs);
+        commitAt({ ...freeStop(cur) }, unit.facing, mode, curSpent, curDirs);
         if (posture === null) state.actedThisPhase.push(unitId);
         return;
       }
@@ -5760,7 +5776,8 @@ function movementTerrainPsr(
     return { lower, levels: Math.max(0, fromLevel - cellAt(state, lower).level) };
   };
   /** A faller that lands on another unit cannot share its hex: it stays in
-   *  the hex it came from. Accidental Falls From Above (TW p.152): two or more
+   *  the hex it came from (`moveUnit` steps it further back when that hex
+   *  is held too). Accidental Falls From Above (TW p.152): two or more
    *  levels down onto the occupant; a hit damages it like a DFA, and the
    *  faller still ends in the hex it fell from unless the occupant is gone.
    *  Returns the hex the faller ends in. */

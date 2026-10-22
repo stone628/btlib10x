@@ -140,10 +140,12 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   (pavement skids fall in place) and displacement from charge / DFA are
   intentionally absent. Falls always happen in place (ground-movement falls
   across levels use the lower-hex rule); a faller landing on an occupied
-  hex stays in the hex it came from. Charge / DFA resolve without moving
-  either unit: the attacker stops in the hex before the target (the one
-  exception to "nobody moves" is an attacker advancing into the hex its
-  target vacated before the physical phase, after paying for the move).
+  hex stays in the hex it came from, or, when another unit holds that hex
+  too, in the nearest free hex it passed through. Charge / DFA resolve
+  without moving either unit: the attacker stops in the hex before the
+  target (the one exception to "nobody moves" is an attacker advancing into
+  the hex its target vacated before the physical phase, after paying for
+  the move).
 - **Scenario and campaign rules (TW ch. 13):** victory conditions, forced
   withdrawal, crippling damage. The caller owns these (§1).
 

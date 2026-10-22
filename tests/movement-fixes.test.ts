@@ -2,7 +2,8 @@
  * Movement and piloting fixes: jump path validation (MOV-02), no jump after a
  * stand (MOV-04), destroyed-gyro prone turning (MOV-08), fall position
  * (MOV-10), combined phase PSR modifiers (PSR-01), stand-up free facing
- * (MOV-07, 261018) and move legality (MOV-02, 261018).
+ * (MOV-07, 261018), move legality (MOV-02, 261018) and the fall-back hex
+ * when the origin is occupied (MOV-04, 261018).
  */
 
 import { describe, expect, it } from "vitest";
@@ -358,6 +359,88 @@ describe("movement fall onto an occupied hex (MOV-09)", () => {
       expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 9 });
       expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 8 });
     });
+  });
+});
+
+describe("fall with the origin hex occupied (MOV-04, 261018)", () => {
+  // a walks north through c (5,9) into rubble (5,8) held by d. A faller
+  // that cannot share d's hex goes back the way it came; c holds the hex
+  // it came from, so it ends one hex further back, in its start hex.
+  function throughFriend() {
+    const state = createTestBattle(
+      [{ col: 5, row: 8, type: "rubble" }],
+      [
+        buildUnitInit("a", "HBK-4G", 1, { col: 5, row: 10 }, "n"),
+        buildUnitInit("c", "HBK-4G", 1, { col: 5, row: 9 }, "n"),
+        buildUnitInit("d", "HBK-4G", 1, { col: 5, row: 8 }, "n"),
+        buildUnitInit("b", "HBK-4G", 2, { col: 1, row: 1 }, "s"),
+      ],
+      true,
+      9,
+      10,
+    );
+    state.phase = "movement";
+    state.initiativeWinnerTeam = 1;
+    state.actorQueue = ["a", "c", "d", "b"];
+    state.actedThisPhase = [];
+    return state;
+  }
+  const path = [
+    { kind: "enter" as const, to: { col: 5, row: 9 } },
+    { kind: "enter" as const, to: { col: 5, row: 8 } },
+    { kind: "enter" as const, to: { col: 5, row: 7 } },
+  ];
+
+  it("goes back to the newest free hex of its path, never onto a friend", () => {
+    const state = throughFriend();
+    const events: GameEvent[] = [];
+    // rubble PSR 1+1 fails; fall direction, location and seatbelt.
+    executeMove(state, "a", "walk", path, events, {
+      rng: scriptedRng(1, 1, 1, 3, 4, 6, 6, 6, 6, 6, 6, 6, 6),
+    });
+    const a = requireUnit(state, "a");
+    expect(a.prone).toBe(true);
+    expect(a.position).toEqual({ col: 5, row: 10 });
+    expect(requireUnit(state, "c").position).toEqual({ col: 5, row: 9 });
+    expect(requireUnit(state, "d").position).toEqual({ col: 5, row: 8 });
+    expect(events).toContainEqual(
+      expect.objectContaining({ kind: "moved", unitId: "a", position: { col: 5, row: 10 } }),
+    );
+  });
+
+  it("a crash fall in a building a friend stands in ends outside it", () => {
+    const state = createTestBattle(
+      [{ col: 2, row: 3, type: "heavyBuilding" }],
+      [
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 8, row: 8 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 4 }, "n"),
+        buildUnitInit("ally", "ENF-4R", 2, { col: 2, row: 3 }, "n"),
+      ],
+      true,
+    );
+    state.phase = "movement";
+    state.initiativeWinnerTeam = 1;
+    state.actorQueue = ["enf", "ally", "hbk"];
+    state.actedThisPhase = [];
+    const enf = requireUnit(state, "enf");
+    enf.damage.armor.rightLeg = 0;
+    enf.damage.internalStructure.rightLeg = 1;
+    // Building entry PSR 1+1 fails; crash groups hit the right leg (1+4)
+    // and right arm (1+3); the lost leg drops the 'Mech in the building.
+    executeMove(
+      state,
+      "enf",
+      "run",
+      [
+        { kind: "enter", to: { col: 2, row: 3 } },
+        { kind: "enter", to: { col: 2, row: 2 } },
+      ],
+      [],
+      { rng: scriptedRng(1, 1, 1, 4, 1, 3, 1, 3, 4, 4, 5, 6, 6) },
+    );
+    expect(enf.prone).toBe(true);
+    expect(enf.position).toEqual({ col: 2, row: 4 });
+    expect(requireUnit(state, "ally").position).toEqual({ col: 2, row: 3 });
   });
 });
 
