@@ -34,7 +34,7 @@ export const AUTOPLAY_MAX_TURNS = 100;
 
 /**
  * Roster the demo builds after 'reset' (mirrors freshSetup() in
- * tests/webcli.test.ts): adjacent foes facing each other along the n/s axis.
+ * tests/session.test.ts): adjacent foes facing each other along the n/s axis.
  */
 const SCRIPT_SETUP: ReadonlyArray<{ id: string; command: string }> = [
   { id: "AT", command: "add AT AS7-D 3 4 ne" },

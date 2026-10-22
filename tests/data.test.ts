@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
-import type { MechDef, ResolvedMechDef } from "../src/data/index";
-import { mechDef, registeredMechDefs, resolveMechDef, validateMechDef } from "../src/data/index";
+import {
+  type MechDef,
+  mechDef,
+  type ResolvedMechDef,
+  registeredMechDefs,
+  resolveMechDef,
+  validateMechDef,
+} from "../src/data/index";
 import { parseWeaponsData, weaponDefFor } from "../src/data/weapon.schema";
 import { WEAPON_DATA } from "../src/data/weapons.data";
+import { HEAD_STRUCTURE, internalStructureForTonnage } from "../src/rules/internalStructure";
 
 /** Strip engine-resolved fields to recover a MechDef (for testing). */
 function toMechDef(d: ResolvedMechDef): MechDef {
@@ -426,5 +433,78 @@ describe("construction limits (DATA-02)", () => {
         weapons: base.weapons.map((w, j) => (j === i ? { ...w, shots: 10 } : w)),
       } as MechDef),
     ).toThrow('weapon.shots on "Medium Laser", which uses no ammunition');
+  });
+});
+
+describe("internalStructure", () => {
+  describe("internal structure derivation", () => {
+    it("head is always 3 regardless of tonnage", () => {
+      expect(HEAD_STRUCTURE).toBe(3);
+      for (const tonnage of [20, 40, 50, 55, 90, 100]) {
+        expect(internalStructureForTonnage(tonnage).head).toBe(3);
+      }
+    });
+
+    it("matches canonical record sheets for shipped tonnages", () => {
+      const cases: Array<
+        [number, { centerTorso: number; sideTorso: number; arm: number; leg: number }]
+      > = [
+        [40, { centerTorso: 12, sideTorso: 10, arm: 6, leg: 10 }],
+        [50, { centerTorso: 16, sideTorso: 12, arm: 8, leg: 12 }],
+        [55, { centerTorso: 18, sideTorso: 13, arm: 9, leg: 13 }],
+        [90, { centerTorso: 29, sideTorso: 19, arm: 15, leg: 19 }],
+        [100, { centerTorso: 31, sideTorso: 21, arm: 17, leg: 21 }],
+      ];
+      for (const [tonnage, expected] of cases) {
+        const is = internalStructureForTonnage(tonnage);
+        expect(is.centerTorso).toBe(expected.centerTorso);
+        expect(is.rightTorso).toBe(expected.sideTorso);
+        expect(is.leftTorso).toBe(expected.sideTorso);
+        expect(is.rightArm).toBe(expected.arm);
+        expect(is.leftArm).toBe(expected.arm);
+        expect(is.rightLeg).toBe(expected.leg);
+        expect(is.leftLeg).toBe(expected.leg);
+      }
+    });
+
+    it("throws for unsupported tonnages", () => {
+      expect(() => internalStructureForTonnage(58)).toThrow();
+      expect(() => internalStructureForTonnage(0)).toThrow();
+    });
+  });
+});
+
+describe("data-fixes", () => {
+  describe("internal structure table matches the TechManual (DATA-01)", () => {
+    it.each([
+      [30, 10, 7, 5, 7],
+      [60, 20, 14, 10, 14],
+      [65, 21, 15, 10, 15],
+      [85, 27, 18, 14, 18],
+    ])("%i t", (tons, ct, side, arm, leg) => {
+      const is = internalStructureForTonnage(tons as number);
+      expect([is.centerTorso, is.rightTorso, is.rightArm, is.rightLeg]).toEqual([
+        ct,
+        side,
+        arm,
+        leg,
+      ]);
+    });
+  });
+
+  describe("catalog loadouts match their records (DATA-02, DATA-03)", () => {
+    const mounts = (model: string, weapon: string, location: string) =>
+      Object.values(mechDef(model)!.weapons).filter(
+        (w) => w.weapon === weapon && w.location === location,
+      ).length;
+
+    it("Warhawk Prime carries two ER PPCs per arm", () => {
+      expect(mounts("WHK-Prime", "CL ER PPC", "leftArm")).toBe(2);
+      expect(mounts("WHK-Prime", "CL ER PPC", "rightArm")).toBe(2);
+    });
+
+    it("Centurion CN9-YLW2 carries two Medium Pulse Lasers in the left arm", () => {
+      expect(mounts("CN9-YLW2", "Medium Pulse Laser", "leftArm")).toBe(2);
+    });
   });
 });

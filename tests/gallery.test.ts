@@ -1,5 +1,8 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { cleanImage, cleanName, parseMulPage } from "../functions/api/ag/_lib/mul";
+// @ts-expect-error -- plain .mjs build helper, no type declarations
+import { stripHomeLink } from "../scripts/standalone-strip.mjs";
 import {
   avatarLines,
   canonicalAvatar,
@@ -9,6 +12,7 @@ import {
   prettifySlug,
   publicId,
 } from "../web/avatar/avatar.gallery";
+import { keyFromText } from "../web/avatar/gallery.key";
 import { afterSubmit } from "../web/avatar/gallery.submit";
 
 const BASE = "head=sq&shoulder=no&torso=no&arms=no&legs=no";
@@ -157,5 +161,60 @@ describe("afterSubmit", () => {
     });
     // A lost insert race can come back without an id.
     expect(afterSubmit({ id: null, existing: true }, "")).toMatchObject({ view: "sort=new" });
+  });
+});
+
+describe("home-link", () => {
+  const page = (name: string) => readFileSync(new URL(`../web/${name}`, import.meta.url), "utf8");
+
+  describe("landing page link", () => {
+    for (const name of ["terminal.html", "avatar.html", "gallery.html", "glyphart.html"]) {
+      it(`${name} links home as the last item of its top row`, () => {
+        const html = page(name);
+        const link = html.match(
+          /<a id="home-link" class="link-button" href="\.\/"[^>]*>(.*?)<\/a>/,
+        );
+        expect(link).not.toBeNull();
+        expect(link?.[1]).toContain("← bt10x");
+        expect(link?.[1]).toContain('<span lang="en">bt10x home</span>');
+        expect(link?.[1]).toContain('<span lang="ko">bt10x 홈</span>');
+        // Rightmost: nothing but the closing marker comes before the row ends.
+        const after = html.slice((link?.index ?? 0) + (link?.[0].length ?? 0));
+        expect(after).toMatch(/^\s*(<!-- \/home-link -->\s*)?<\/(header|div)>/);
+      });
+    }
+
+    it("is stripped from the standalone terminal", () => {
+      const html = page("terminal.html");
+      const out = stripHomeLink(html);
+      expect(out).not.toContain("home-link");
+      expect(out).toContain('id="motd-open"');
+      expect(() => stripHomeLink(out)).toThrow(/markers not found/);
+    });
+  });
+});
+
+describe("gallery-key", () => {
+  /** Reading a moved device key from what the player pasted (web/avatar/gallery.key.ts). */
+  describe("keyFromText", () => {
+    const key = "Ab-_0123456789abcdefghijklmnopqrstuvwxyzABC";
+
+    it("takes a bare key, trimmed", () => {
+      expect(key).toHaveLength(43);
+      expect(keyFromText(`  ${key}\n`)).toBe(key);
+    });
+
+    it("takes a copied key link", () => {
+      expect(keyFromText(`https://bt10x.stoneworks.dev/gallery#key=${key}`)).toBe(key);
+      expect(keyFromText(`gallery.html?lang=ko#key=${key}`)).toBe(key);
+    });
+
+    it("refuses anything else", () => {
+      expect(keyFromText("")).toBeNull();
+      expect(keyFromText(key.slice(1))).toBeNull();
+      expect(keyFromText(`${key}!`)).toBeNull();
+      expect(keyFromText(`https://bt10x.stoneworks.dev/gallery#key=${key.slice(2)}`)).toBeNull();
+      expect(keyFromText("https://bt10x.stoneworks.dev/gallery#id=3")).toBeNull();
+    });
   });
 });

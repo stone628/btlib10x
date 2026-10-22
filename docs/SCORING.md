@@ -175,7 +175,7 @@ Also exported: `unitScore(unit)`, `crippleReasons(unit)`,
 `damagedFraction(unit)`, `bvSkillMultiplier(gunnery, piloting)`, and the
 constants `BV_SKILL_MULTIPLIER`, `SCORE_ENEMY_WEIGHT` (2),
 `SCORE_OWN_WEIGHT` (1), `SCORE_CRIPPLED_LOST` (0.5). Source:
-`src/rules/score.ts`; tests: `tests/score.test.ts`.
+`src/rules/score.ts`; tests: `tests/salvage.test.ts` (`score` block).
 
 ## 6. Kill credit
 

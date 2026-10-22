@@ -243,7 +243,7 @@ penalties) unless `critsDisabled` was set.
 
 ## Worked example
 
-`tests/exampleGame.test.ts` plays exactly this scenario with fully scripted
+`tests/turn.test.ts` (the `exampleGame` block) plays exactly this scenario with fully scripted
 dice and asserts every rulebook number along the way (Wolverine TN 11 on
 turn 1, then a 10-turn duel where the Griffin loses its center torso). Use
 it as the canonical end-to-end reference.

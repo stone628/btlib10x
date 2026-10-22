@@ -1,14 +1,9 @@
-/**
- * Weapon-then-physical sub-pass ordering (TW pp.37-38,59-61,144,147).
- * Declarations stay merged for playability (one attack activation per unit
- * per turn); resolution splits into a weapon sub-pass, a weapon PSR sweep,
- * then the melee, then a physical sweep.
- */
 import { describe, expect, it } from "vitest";
 import type { HexCoord } from "../src/core/types";
-import type { BattleState, TeamId, UnitInit } from "../src/rules/game";
+import { mechDefFor } from "../src/data/index";
 import {
   advancePhase,
+  type BattleState,
   buildUnitInit,
   declareAttacks,
   type GameEvent,
@@ -16,8 +11,30 @@ import {
   requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
+  type TeamId,
+  type UnitInit,
+  validateAttacks,
 } from "../src/rules/game";
-import { createTestBattle, scriptedRng, sweepPiloting } from "./helpers";
+import { resolvePhysicalAttack, validatePhysicalAttack } from "../src/rules/physical";
+import {
+  commitMovement,
+  declareMovementMode,
+  newSession,
+  queueDrop,
+  queuePhysicalAttack,
+  queueWeaponAttacks,
+  type Session,
+  setTorsoTwist,
+} from "../web/terminal/session";
+import { physicalResolutionLines } from "../web/terminal/session.attack";
+import { createTestBattle, disableCritical, execute, scriptedRng, sweepPiloting } from "./helpers";
+
+/**
+ * Weapon-then-physical sub-pass ordering (TW pp.37-38,59-61,144,147).
+ * Declarations stay merged for playability (one attack activation per unit
+ * per turn); resolution splits into a weapon sub-pass, a weapon PSR sweep,
+ * then the melee, then a physical sweep.
+ */
 
 const HIGH_RNG = {
   d6: () => 6,
@@ -293,5 +310,326 @@ describe("critsDisabled covers physical attacks", () => {
     expect(off.punch.crits).toEqual([]);
     expect(off.slotsAfter).toEqual(off.slotsBefore);
     expect(off.rolls).toBeLessThan(on.rolls);
+  });
+});
+
+describe("combined-attacks", () => {
+  /** Head-to-head adjacency: hunchy (9,9) facing n, cicada (9,8) facing s. */
+  function attackSetup(): { s: Session; actor: string; enemy: string } {
+    const s = newSession(42);
+    expect(execute(s, "map quickstart")[0]).toContain("15x16");
+    expect(execute(s, "add hunchy HBK-4G 9 9 n")).toHaveLength(1);
+    expect(execute(s, "add cicada CDA-3MA 9 8 s")).toHaveLength(1);
+    execute(s, "start");
+    disableCritical(s);
+    while (s.state === "battle" && s.battle!.phase === "movement") {
+      declareMovementMode(s, "walk");
+      commitMovement(s);
+    }
+    expect(s.battle!.phase).toBe("attack");
+    const actor = s.attack!.actorId;
+    const enemy = actor === "hunchy" ? "cicada" : "hunchy";
+    return { s, actor, enemy };
+  }
+
+  /** Engine-0-based right-arm and torso weapon indices for the actor's 'Mech. */
+  function armAndTorso(s: Session, actor: string): { arm: number; torso: number } {
+    const def = mechDefFor(requireUnit(s.battle!, actor));
+    const arm = Number(
+      Object.keys(def.weapons).find((k) => def.weapons[Number(k)]?.location === "rightArm"),
+    );
+    const torso = Number(
+      Object.keys(def.weapons).find((k) => {
+        const loc = def.weapons[Number(k)]?.location;
+        return loc === "centerTorso" || loc === "leftTorso" || loc === "rightTorso";
+      }),
+    );
+    expect(Number.isInteger(arm)).toBe(true);
+    expect(Number.isInteger(torso)).toBe(true);
+    return { arm, torso };
+  }
+
+  describe("stacked weapon + physical declarations", () => {
+    it("rejects firing the punching arm's weapons (punch first)", () => {
+      const { s, enemy } = attackSetup();
+      const { arm } = armAndTorso(s, s.attack!.actorId);
+      queuePhysicalAttack(s, "punch", enemy, "rightArm");
+      expect(() => queueWeaponAttacks(s, enemy, [arm])).toThrow(/rightArm/);
+      expect(s.attack!.physicalDecls.length).toBe(1);
+      expect(s.attack!.weaponDecls).toEqual([]);
+    });
+
+    it("rejects punching with an arm whose weapons already fire (fire first)", () => {
+      const { s, enemy } = attackSetup();
+      const { arm } = armAndTorso(s, s.attack!.actorId);
+      queueWeaponAttacks(s, enemy, [arm]);
+      expect(() => queuePhysicalAttack(s, "punch", enemy, "rightArm")).toThrow(/rightArm/);
+      expect(s.attack!.weaponDecls.length).toBe(1);
+      expect(s.attack!.physicalDecls).toEqual([]);
+    });
+
+    it("accepts a torso weapon plus punch and resolves both on done", () => {
+      const { s, enemy } = attackSetup();
+      const { torso } = armAndTorso(s, s.attack!.actorId);
+      queueWeaponAttacks(s, enemy, [torso]);
+      queuePhysicalAttack(s, "punch", enemy, "rightArm");
+      expect(s.attack!.weaponDecls.length).toBe(1);
+      expect(s.attack!.physicalDecls.length).toBe(1);
+      for (const line of execute(s, "done")) expect(line).not.toMatch(/^error:/);
+    });
+
+    it("locks the twist after punch or club, but not after kick", () => {
+      const first = attackSetup();
+      queuePhysicalAttack(first.s, "punch", first.enemy, "rightArm");
+      expect(() => setTorsoTwist(first.s, "leftSide")).toThrow(/locked/);
+
+      const second = attackSetup();
+      queuePhysicalAttack(second.s, "kick", second.enemy, "rightLeg");
+      expect(setTorsoTwist(second.s, "leftSide")).toBe("front");
+      expect(second.s.attack!.torsoTwist).toBe("leftSide");
+    });
+  });
+
+  describe("club commands reach the engine (DEAD-01)", () => {
+    it("a queued drop is committed: the held club lands in the hex", () => {
+      const { s, actor } = attackSetup();
+      requireUnit(s.battle!, actor).club = { kind: "tree" };
+      queueDrop(s);
+      for (const line of execute(s, "done")) expect(line).not.toMatch(/^error:/);
+      expect(requireUnit(s.battle!, actor).club).toBeNull();
+    });
+
+    it("after a drop, arm weapons fire and the arm punches", () => {
+      const { s, actor, enemy } = attackSetup();
+      requireUnit(s.battle!, actor).club = { kind: "girder" };
+      const { arm } = armAndTorso(s, actor);
+      expect(() => queueWeaponAttacks(s, enemy, [arm])).toThrow(/club/);
+      queueDrop(s);
+      queueWeaponAttacks(s, enemy, [arm]);
+      queuePhysicalAttack(s, "punch", enemy, "leftArm");
+      for (const line of execute(s, "done")) expect(line).not.toMatch(/^error:/);
+      expect(requireUnit(s.battle!, actor).club).toBeNull();
+    });
+  });
+});
+
+describe("physical-fixes", () => {
+  /**
+   * Physical-combat fixes (TW pp.38,144-151): missing actuators, simultaneous
+   * physical-phase pilot damage, and declaration rules.
+   */
+
+  const HIGH_RNG = { d6: () => 6, snapshot: () => "", load: () => {} };
+
+  type Facing = "n" | "ne" | "se" | "s" | "sw" | "nw";
+  const mech = (
+    id: string,
+    team: TeamId,
+    pos: HexCoord,
+    facing: Facing,
+    model = "HBK-4G",
+  ): UnitInit => buildUnitInit(id, model, team, pos, facing);
+
+  function toAttack(state: BattleState): void {
+    rollInitiativePhase(state, scriptedRng(4, 4, 2, 2), []);
+    advancePhase(state, [], scriptedRng());
+  }
+
+  describe("missing arm actuators (PHY-05)", () => {
+    it("an MC-MKII-2 punch ignores the lower arm and hand it does not have", () => {
+      const state = createTestBattle(
+        [],
+        [mech("a", 1, { col: 2, row: 2 }, "s", "MC-MKII-2"), mech("b", 2, { col: 2, row: 3 }, "n")],
+        true,
+      );
+      const res = resolvePhysicalAttack(
+        state,
+        "a",
+        { type: "punch", targetId: "b", limb: "rightArm" },
+        HIGH_RNG,
+      );
+      expect(res.toHit).toBe(8);
+      expect(res.damageToTarget.reduce((n, g) => n + g.damage, 0)).toBe(4);
+    });
+  });
+
+  describe("declaration rules (PHY-10, PHY-11)", () => {
+    it("allows two punches at two targets but not mixed types", () => {
+      const state = createTestBattle(
+        [],
+        [
+          mech("a", 2, { col: 2, row: 2 }, "s"),
+          mech("b", 1, { col: 2, row: 3 }, "n"),
+          mech("c", 1, { col: 3, row: 2 }, "n"),
+        ],
+        true,
+      );
+      expect(
+        validatePhysicalAttack(state, "a", { type: "punch", targetId: "b", limb: "rightArm" }).ok,
+      ).toBe(true);
+      toAttack(state);
+      state.actorQueue = ["a", "b", "c"];
+      expect(() =>
+        declareAttacks(
+          state,
+          "a",
+          [],
+          [
+            { type: "punch", targetId: "b", limb: "leftArm" },
+            { type: "kick", targetId: "c", limb: "rightLeg" },
+          ],
+          [],
+          scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+        ),
+      ).toThrow(/one type/);
+      expect(() =>
+        declareAttacks(
+          state,
+          "a",
+          [],
+          [
+            { type: "punch", targetId: "b", limb: "rightArm" },
+            { type: "punch", targetId: "c", limb: "leftArm" },
+          ],
+          [],
+          scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+        ),
+      ).not.toThrow();
+    });
+  });
+
+  describe("one physical attack per turn", () => {
+    it("rejects a second kick, with either leg", () => {
+      const state = createTestBattle(
+        [],
+        [mech("a", 2, { col: 2, row: 2 }, "s"), mech("b", 1, { col: 2, row: 3 }, "n")],
+        true,
+      );
+      const kick = (limb: "leftLeg" | "rightLeg") => ({
+        type: "kick" as const,
+        targetId: "b",
+        limb,
+      });
+      expect(() => validateAttacks(state, "a", [], [kick("leftLeg")])).not.toThrow();
+      expect(() => validateAttacks(state, "a", [], [kick("leftLeg"), kick("leftLeg")])).toThrow(
+        /only one kick/,
+      );
+      expect(() => validateAttacks(state, "a", [], [kick("leftLeg"), kick("rightLeg")])).toThrow(
+        /only one kick/,
+      );
+    });
+  });
+
+  describe("simultaneous physical phase (PHY-07)", () => {
+    it("a head hit does not stop the victim's own declared punch", () => {
+      const state = createTestBattle(
+        [],
+        [mech("a", 1, { col: 2, row: 2 }, "s"), mech("b", 2, { col: 2, row: 3 }, "n")],
+        true,
+      );
+      toAttack(state);
+      declareAttacks(
+        state,
+        "b",
+        [],
+        [{ type: "punch", targetId: "a", limb: "rightArm" }],
+        [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+      );
+      declareAttacks(
+        state,
+        "a",
+        [],
+        [{ type: "punch", targetId: "b", limb: "rightArm" }],
+        [],
+        scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+      );
+      const events: GameEvent[] = [];
+      resolveAllAttacks(state, HIGH_RNG, events);
+      const resolved = events.filter((e) => e.kind === "physicalAttackResolved");
+      expect(resolved).toHaveLength(2);
+      for (const e of resolved) {
+        if (e.kind === "physicalAttackResolved") expect(e.resolution.missReason).toBeUndefined();
+      }
+    });
+  });
+});
+
+describe("physical-detail", () => {
+  /**
+   * Physical-attack damage detail + crit rendering (weapon parity).
+   * A kick that lands must print the armor `before->after` chain via the
+   * shared `blastDetail` formatter, and internal-structure damage must attach
+   * crits rendered with the same `critLines` formatter as weapon hits.
+   */
+
+  function unit(
+    id: string,
+    team: TeamId,
+    pos: HexCoord,
+    facing: "n" | "ne" | "se" | "s" | "sw" | "nw",
+  ): UnitInit {
+    return buildUnitInit(id, "HBK-4G", team, pos, facing);
+  }
+
+  /** hbk (team 1) at (2,2)/s facing enf (team 2) at (2,3)/n, crits enabled. */
+  function faceToFace(): BattleState {
+    const state = createTestBattle(
+      [],
+      [unit("hbk", 1, { col: 2, row: 2 }, "s"), unit("enf", 2, { col: 2, row: 3 }, "n")],
+      false,
+    );
+    state.phase = "attack";
+    return state;
+  }
+
+  function kickEvents(state: BattleState, rng: ReturnType<typeof scriptedRng>): GameEvent[] {
+    state.units.hbk!.declaredPhysicalAttacks.push({ type: "kick", targetId: "enf" });
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, rng, events);
+    return events;
+  }
+
+  function meleeResolution(events: GameEvent[]) {
+    const melee = events.find((e) => e.kind === "physicalAttackResolved");
+    expect(melee?.kind).toBe("physicalAttackResolved");
+    if (melee?.kind !== "physicalAttackResolved") throw new Error("unreachable");
+    return melee.resolution;
+  }
+
+  describe("physical damage detail lines", () => {
+    it("kick hit prints the armor before->after chain like weapon hits", () => {
+      const state = faceToFace();
+      // To-hit (4,4)=8 vs 3, location (2)=rightLeg front, kick PSR (4,4).
+      // 10 dmg vs 20 armor: no IS stripped, so no determining roll.
+      const events = kickEvents(state, scriptedRng(4, 4, 2, 4, 4));
+      const res = meleeResolution(events);
+      expect(res.hit).toBe(true);
+      expect(res.damageToTarget).toHaveLength(1);
+      expect(res.applications).toHaveLength(1);
+
+      const text = physicalResolutionLines(res).join("\n");
+      expect(text).toContain("hits: RL(10)");
+      expect(text).toMatch(/RLA 20->10\b/);
+      expect(res.crits).toEqual([]);
+      expect(text).not.toContain("crit roll");
+    });
+
+    it("kick that strips IS attaches crits rendered with the weapon crit formatter", () => {
+      const state = faceToFace();
+      requireUnit(state, "enf").damage.armor.rightLeg = 4;
+      // To-hit (4,4)=8, location (2)=rightLeg, determining (3,4)=7 none,
+      // kick PSR (4,4).
+      const events = kickEvents(state, scriptedRng(4, 4, 2, 3, 4, 4, 4));
+      const res = meleeResolution(events);
+      expect(res.hit).toBe(true);
+      expect(res.applications).toHaveLength(1);
+      expect(res.crits).toHaveLength(1);
+
+      const text = physicalResolutionLines(res).join("\n");
+      expect(text).toMatch(/RLA 4->0\*/);
+      expect(text).toMatch(/RLI \d+->\d+/);
+      expect(text).toContain("crit roll 2D6 = 7");
+    });
   });
 });
