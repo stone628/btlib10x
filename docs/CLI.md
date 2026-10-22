@@ -285,7 +285,8 @@ are listed here. Rule text lives in the rulebook.
   wreckage stays as it is, and a standing building charges nothing until it
   collapses. The board marks it `%`. A 'Mech destroyed while standing first
   takes the salvage fall (TW p.128) on its record; a living MechWarrior still
-  in the cockpit takes the fall's pilot hit, and an ejected pilot (auto-eject
+  in the cockpit takes the fall's pilot hit and a consciousness roll, and an
+  ejected pilot (auto-eject
   or a hull) takes none. `salvageReport` lists every hull and destroyed frame
   at battle end.
 - **Battle flow** — initiative, sequential movement, attack phase (weapons

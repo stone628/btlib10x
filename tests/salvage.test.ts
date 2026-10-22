@@ -72,7 +72,11 @@ function movement(state: BattleState, rng = scriptedRng(1, 1, 4, 4)): BattleStat
 }
 
 /** Zero the center torso and run the attack -> end destruction sweep. */
-function destroyBySweep(state: BattleState, id: string, rng = scriptedRng(1, 3, 4)): GameEvent[] {
+function destroyBySweep(
+  state: BattleState,
+  id: string,
+  rng = scriptedRng(1, 3, 4, 3, 3),
+): GameEvent[] {
   if (state.phase === "movement") advancePhase(state, [], scriptedRng());
   const unit = requireUnit(state, id);
   unit.damage = {
@@ -203,15 +207,16 @@ describe("wreckage (TO:AR p.155)", () => {
     ];
     expect(mechDef("LCT-1V")!.tonnage).toBeLessThan(WRECKAGE_TONNAGE_MIN);
     const state = movement(createTestBattle([], units, true));
-    destroyBySweep(state, "lct", scriptedRng(1, 3, 4));
+    destroyBySweep(state, "lct", scriptedRng(1, 3, 4, 3, 3));
     expect(requireUnit(state, "lct").removed).toBe("destroyed");
     expect(state.wreckage).toEqual({});
   });
 
   it("a standing 'Mech takes the salvage fall on its record (TW p.128)", () => {
     const state = movement(hbkVsEnf());
-    // Fall direction 1 (front), one 5-point group at 3+3 (right torso).
-    const events = destroyBySweep(state, "enf", scriptedRng(1, 3, 3));
+    // Fall direction 1 (front), one 5-point group at 3+3 (right torso),
+    // then the pilot's consciousness roll 3+3 (SALV-09).
+    const events = destroyBySweep(state, "enf", scriptedRng(1, 3, 3, 3, 3));
     const enf = requireUnit(state, "enf");
     expect(enf.prone).toBe(true);
     expect(enf.damage.armor.rightTorso).toBe(mechDef("ENF-4R")!.armor.rightTorso - 5);
@@ -220,6 +225,63 @@ describe("wreckage (TO:AR p.155)", () => {
     expect(events).toContainEqual(
       expect.objectContaining({ kind: "unitFell", unitId: "enf", cause: { kind: "salvageFall" } }),
     );
+  });
+
+  it("the fall's pilot hit forces a consciousness roll (TW p.41-42, SALV-09)", () => {
+    const pass = movement(hbkVsEnf());
+    requireUnit(pass, "enf").pilotHits = 3;
+    // Fall 1, 3+3; then 5+5 against TN 10 at 4 hits: stays awake.
+    const passEvents = destroyBySweep(pass, "enf", scriptedRng(1, 3, 3, 5, 5));
+    const enf = requireUnit(pass, "enf");
+    expect(enf.pilotHits).toBe(4);
+    expect(pilotRecord(enf).status).toBe("active");
+    expect(passEvents).toContainEqual({
+      kind: "consciousnessCheck",
+      unitId: "enf",
+      cause: "fall",
+      rolls: [{ roll: 10, target: 10, hits: 4 }],
+      required: 1,
+      failedAt: null,
+      success: true,
+      consciousBefore: true,
+    });
+
+    const fail = movement(hbkVsEnf());
+    requireUnit(fail, "enf").pilotHits = 3;
+    // 4+5 = 9 misses TN 10: knocked out on the record.
+    const failEvents = destroyBySweep(fail, "enf", scriptedRng(1, 3, 3, 4, 5));
+    expect(pilotRecord(requireUnit(fail, "enf")).status).toBe("unconscious");
+    expect(failEvents).toContainEqual(
+      expect.objectContaining({
+        kind: "consciousnessCheck",
+        unitId: "enf",
+        success: false,
+        failedAt: 1,
+      }),
+    );
+  });
+
+  it("a fall hit that kills the pilot takes no consciousness roll", () => {
+    const state = movement(hbkVsEnf());
+    const enf = requireUnit(state, "enf");
+    enf.pilotHits = enf.pilotHitMax - 1;
+    const rng = scriptedRng(1, 3, 3);
+    const events = destroyBySweep(state, "enf", rng);
+    expect(rng.remaining()).toBe(0);
+    expect(pilotRecord(enf).status).toBe("dead");
+    expect(events.some((e) => e.kind === "consciousnessCheck")).toBe(false);
+  });
+
+  it("an unconscious pilot rolls no more for the fall", () => {
+    const state = movement(hbkVsEnf());
+    const enf = requireUnit(state, "enf");
+    enf.pilotHits = 1;
+    enf.unconsciousSinceTurn = state.turn;
+    const rng = scriptedRng(1, 3, 3);
+    const events = destroyBySweep(state, "enf", rng);
+    expect(rng.remaining()).toBe(0);
+    expect(enf.pilotHits).toBe(2);
+    expect(events.some((e) => e.kind === "consciousnessCheck")).toBe(false);
   });
 
   it("a prone 'Mech takes no salvage fall", () => {
@@ -276,7 +338,7 @@ describe("wreckage (TO:AR p.155)", () => {
 
   it("round-trips through snapshots", () => {
     const state = movement(hbkVsEnf());
-    destroyBySweep(state, "enf", scriptedRng(1, 3, 4));
+    destroyBySweep(state, "enf", scriptedRng(1, 3, 4, 3, 3));
     const snap = saveBattleState(state);
     state.wreckage["5,4"]!.push({ model: "X", unitId: "bogus" });
     loadBattleState(state, snap);
@@ -288,7 +350,7 @@ describe("salvageReport", () => {
   it("lists hulls and destroyed frames with what is left", () => {
     const state = movement(hbkVsEnf());
     ejectPilot(state, "hbk", scriptedRng(6, 6), []);
-    destroyBySweep(state, "enf", scriptedRng(1, 3, 4));
+    destroyBySweep(state, "enf", scriptedRng(1, 3, 4, 3, 3));
     const report = salvageReport(state);
     expect(report.map((r) => [r.unitId, r.kind, r.reason, r.destroyReason])).toEqual([
       ["hbk", "hull", "pilotEjected", null],

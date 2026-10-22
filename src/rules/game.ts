@@ -1445,7 +1445,7 @@ export const WRECKAGE_TONNAGE_MIN = 40;
  *  - Salvage fall (TW p.128): a 'Mech that was standing when destroyed falls
  *    automatically; the falling damage (and its criticals) marks its record,
  *    and a MechWarrior still alive in the cockpit takes the fall's pilot
- *    hit. An ejected pilot (auto-eject at this destruction, or a hull's pilot
+ *    hit and its consciousness roll. An ejected pilot (auto-eject at this destruction, or a hull's pilot
  *    who left earlier) is outside the 'Mech and takes none.
  *  - Wreckage (TO:AR p.155): a 'Mech of {@link WRECKAGE_TONNAGE_MIN} t or
  *    more turns its hex into Rough (`state.wreckage`); a hex already holding
@@ -1476,9 +1476,10 @@ function leaveDestroyedRemains(
  *  with criticals for struck structure (their blasts only mark the record).
  *  Severed limbs drop in the hex. A pilot still in the cockpit (`removed`
  *  is `"destroyed"`), if alive, takes the fall's hit automatically (no
- *  seatbelt roll for a dead 'Mech) and no consciousness roll: the
- *  MechWarrior is out of the battle. A pilot who ejected or abandoned is
- *  outside the 'Mech and takes none, as in `applyFall`. */
+ *  seatbelt roll for a dead 'Mech) and, surviving it, a consciousness roll
+ *  (TW p.41-42, SALV-09): the outcome only marks the pilot record, since
+ *  the MechWarrior is out of the battle. A pilot who ejected or abandoned
+ *  is outside the 'Mech and takes none, as in `applyFall`. */
 function salvageFall(state: BattleState, unit: UnitState, rng: Rng, sink: GameEvent[]): void {
   const def = mechDefFor(unit);
   const dir = rollFallDirection(rng);
@@ -1552,7 +1553,35 @@ function salvageFall(state: BattleState, unit: UnitState, rng: Rng, sink: GameEv
       totalHits: unit.pilotHits,
       hpRemaining: Math.max(0, unit.pilotHitMax - unit.pilotHits),
     });
+    salvageFallConsciousness(state, unit, rng, sink);
   }
+}
+
+/** Consciousness roll for the salvage fall's pilot hit (TW p.41-42).
+ *  `applyPilotHits` ends bookkeeping for a destroyed unit, so the roll is
+ *  made here. A killing hit (`consciousnessTarget` null) or a pilot
+ *  already out takes no roll. */
+function salvageFallConsciousness(
+  state: BattleState,
+  unit: UnitState,
+  rng: Rng,
+  sink: GameEvent[],
+): void {
+  if (isPilotUnconscious(unit)) return;
+  const target = consciousnessTarget(unit.pilotHits, unit.pilotHitMax);
+  if (target === null) return;
+  const { roll, success } = rollConsciousness(rng, target);
+  if (!success) unit.unconsciousSinceTurn = state.turn;
+  sink.push({
+    kind: "consciousnessCheck",
+    unitId: unit.id,
+    cause: "fall",
+    rolls: [{ roll, target, hits: unit.pilotHits }],
+    required: 1,
+    failedAt: success ? null : 1,
+    success,
+    consciousBefore: true,
+  });
 }
 
 /** True while a destruction sweep may still record a kill on `unit`: it is

@@ -137,8 +137,9 @@ describe("weapon sweep lands before the melee", () => {
       scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
     );
     const events: GameEvent[] = [];
-    // Then the salvage fall of the destroyed Enforcer (TW p.128).
-    resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 1, 3, 3), events);
+    // Then the salvage fall of the destroyed Enforcer (TW p.128) and its
+    // pilot's consciousness roll (3+3, SALV-09).
+    resolveAllAttacks(state, scriptedRng(3, 3, 1, 1, 1, 3, 3, 3, 3), events);
 
     // Destroyed units still fire (TW p.38 simultaneity).
     const shots = events.filter((e) => e.kind === "attackResolved");

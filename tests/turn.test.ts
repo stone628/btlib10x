@@ -492,8 +492,9 @@ describe("exampleGame", () => {
           );
           const finalEvents: GameEvent[] = [];
           // Then the salvage fall (TW p.128): direction 1, 55 t = 6 points in
-          // two groups (5 + 1), both at 3+3 (right torso).
-          resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 1, 3, 3, 3, 3), finalEvents);
+          // two groups (5 + 1), both at 3+3 (right torso), then the pilot's
+          // consciousness roll for the fall's hit (3+3, SALV-09).
+          resolveAllAttacks(state, scriptedRng(6, 6, 3, 4, 1, 3, 3, 3, 3, 3, 3), finalEvents);
           expect(grfCt()).toBe(0);
           expect(requireUnit(state, "grf").destroyed).toBe("centerTorsoDestroyed"); // killed immediately
           expect(requireUnit(state, "grf").removed).toBe("destroyed");
