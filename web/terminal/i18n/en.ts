@@ -580,7 +580,7 @@ export const en = {
   "sheet.gunneryLineHeat": "gunnery: {gunnery} toHit+{toHit}(heat >= {threshold}) ",
   "sheet.at": "position: {pos} facing {facing} {posture}",
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
-  "sheet.removedId": " - REMOVED FROM PLAY({reason})",
+  "sheet.removedId": " - OUT({reason})",
   "sheet.idLine": "ID: {id}, team {team}",
   "sheet.statusHeader": "status: {status}, HEAT({currHeat}/{maxHeat})",
   "sheet.statusOnline": "ONLINE",

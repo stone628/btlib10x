@@ -568,7 +568,7 @@ export const ko: Catalog = {
   "sheet.gunneryLineHeat": "사격력: {gunnery} 판정+{toHit}(열 {threshold} 이상)",
   "sheet.at": "위치: {pos} {facing}향 {posture}",
   "sheet.modeSuffix": ", {mode} [MP {mp}]",
-  "sheet.removedId": " - 게임 제외됨({reason})",
+  "sheet.removedId": " - 제외({reason})",
   "sheet.idLine": "식별자: {id}, 팀 {team}",
   "sheet.statusHeader": "상태: {status}, 방열({currHeat}/{maxHeat})",
   "sheet.statusOnline": "온라인",
