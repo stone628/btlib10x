@@ -1,6 +1,4 @@
 import {
-  AMMO_POLICIES,
-  type AmmoPolicy,
   buildUnitInit,
   createBattle,
   FACINGS,
@@ -24,6 +22,7 @@ import { startReplay } from "./replay";
 import type { Session, SessionGameEvent } from "./session";
 import { drive } from "./session";
 import { ammoPolicyLabel } from "./session.common";
+import { findProp, POLICY_PROPS, type PolicyProp, parsePolicyValue } from "./session.policy";
 
 export interface SetupContext extends MapNameHolder {
   seed: number;
@@ -117,9 +116,7 @@ export type UnitProp =
   | "gunnery"
   | "piloting"
   | "pilotHitMax"
-  | "ammoPolicy"
-  | "autoEject"
-  | "heatFlamer";
+  | PolicyProp;
 
 export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "model",
@@ -130,23 +127,11 @@ export const UNIT_PROPS: ReadonlyArray<UnitProp> = [
   "gunnery",
   "piloting",
   "pilotHitMax",
-  "ammoPolicy",
-  "autoEject",
-  "heatFlamer",
+  ...POLICY_PROPS,
 ];
 
 export function parseUnitProp(word: string): UnitProp {
-  const lower = word.toLowerCase();
-  const prop = UNIT_PROPS.find((p) => p.toLowerCase() === lower);
-  if (prop !== undefined) return prop;
-  throw new Error(i18n("err.unknownProp", { name: word, list: UNIT_PROPS.join(", ") }));
-}
-
-/** Parse a CLI word into a policy. Case-insensitive; `least-first` and
- *  `leastfirst` are accepted for `leastFirst`. Null when unrecognized. */
-function resolveAmmoPolicy(word: string): AmmoPolicy | null {
-  const normalized = word.toLowerCase().replaceAll("-", "");
-  return AMMO_POLICIES.find((p) => p.toLowerCase() === normalized) ?? null;
+  return findProp(word, UNIT_PROPS);
 }
 
 function isUnitSkillRange(n: number): n is UnitSkillRange {
@@ -225,23 +210,12 @@ export function setupSetUnitProp(
       unit.pilotHitMax = n;
       return { prop, value: String(n) };
     }
-    case "ammoPolicy": {
-      const policy = resolveAmmoPolicy(raw);
-      if (policy === null) throw new Error(i18n("err.badAmmoPolicy"));
-      unit.policy = { ...unit.policy, ammoPolicy: policy };
-      return { prop, value: ammoPolicyLabel(policy) };
-    }
-    case "autoEject": {
-      const word = raw.toLowerCase();
-      if (word !== "on" && word !== "off") throw new Error(i18n("err.badAutoEject"));
-      unit.policy = { ...unit.policy, autoEject: word === "on" };
-      return { prop, value: word };
-    }
+    case "ammoPolicy":
+    case "autoEject":
     case "heatFlamer": {
-      const word = raw.toLowerCase();
-      if (word !== "on" && word !== "off") throw new Error(i18n("err.badHeatFlamer"));
-      unit.policy = { ...unit.policy, heatFlamer: word === "on" };
-      return { prop, value: word };
+      const { patch, value } = parsePolicyValue(prop, raw);
+      unit.policy = { ...unit.policy, ...patch };
+      return { prop, value };
     }
   }
 }

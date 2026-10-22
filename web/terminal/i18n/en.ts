@@ -129,6 +129,11 @@ export const en = {
   "cmd.salvage.arg.id": "show one unit's salvage detail only",
   "cmd.heat.help": "show a unit's heat scale status (default: acting unit)",
   "cmd.heat.arg.id": "unit to inspect; defaults to the acting unit",
+  "cmd.policy.help":
+    "show or change the acting unit's policies (ammoPolicy, autoEject, heatFlamer); takes effect at once",
+  "cmd.policy.arg.prop": "policy name: ammoPolicy, autoEject, heatFlamer",
+  "cmd.policy.arg.value":
+    "new value: exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer",
   "cmd.candidateMove.help": "show movement candidate, drawn on the ASCII battle grid",
   "cmd.candidateAttack.help": "show possible target with available weapons",
   "cmd.punch.help": "queue a punch attack against an adjacent enemy (TW p.145)",
@@ -249,6 +254,7 @@ export const en = {
   "ok.mapLoaded": "map {name}: {w}x{h}",
   "ok.added": "{id} ({model}) placed at ({col},{row}) facing {facing} on team {team}",
   "ok.set": "{id}: {prop} set to {value}",
+  "policy.summary": "{id}: ammo {ammo}, auto-eject {eject}, flamer-heat {flamer}",
   "ok.removed": "removed {id}",
   "ok.started": "=== BATTLE STARTED ===",
   "ok.modeDeclared":

@@ -35,6 +35,7 @@ K                                 CreateBattleOptions.critsDisabled = true (omit
 U<team><id>:<model>:<place>[:<armor>[:<crit>[:<ammo>[:<policy>]]]]    unit registration (setup only)
 M<move>                           one movement activation (one unit), in activation order
 A<attack>                         one attack activation (one unit), in activation order
+P<idx><policy>                    mid-battle policy change by the acting unit, before its M / A
 W<teamId><rng>                    winner: team still standing (`W-` = nobody) + final Rng state; ends play
 E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 ```
@@ -69,8 +70,9 @@ E<idx><hits>[:<armor>[:<crit>[:<ammo>]]]    final state per unit, idx order
 | ammo | shots **used**: `<loc><slot><n>` repeated (`L13L22` = LT slot 1 used 3, LT slot 2 used 2); `n` is decimal, runs to the next letter. In `E` records a bin exports `full - shots left` whatever its fate, so shots stranded in a location lost to plain damage come back as unused and salvage can read them |
 | policy | this unit's ammo policy, one char: `e` exposed / `c` core / `s` spread / `l` leastFirst, followed by `x` when auto-eject is off (`set <id> autoEject off`), then `f` when heat-mode flamers are off (`set <id> heatFlamer off`). Omit the field when all are the default (`e`, auto-eject on, heatFlamer on). Replays written before `f` existed decode with heatFlamer on, so a flamer hit in such a replay now resolves as heat |
 
-Index = registration order (first `U` is `0`). Ammo policy is **setup-only** (`UnitInit.policy`, edited with `set <id> ammoPolicy <policy>`); the
-attack phase has no ammo command or policy item. `set`/`rm` edits made during setup are not
+Index = registration order (first `U` is `0`). The policy field is the starting policy
+(`UnitInit.policy`, edited with `set <id> ammoPolicy|autoEject|heatFlamer <value>`); changes made
+during the battle with `policy` are `P` records. `set`/`rm` edits made during setup are not
 recorded — only the final roster is.
 
 Starting damage is `UnitInit.damage?: UnitInitDamage` (`src/rules/initialDamage.ts`),
@@ -202,12 +204,22 @@ arm/leg conflicts with fired weapons, club bars arm weapons) are enforced by
 **No attack** is the bare header: `A1F` (`passAttack`). `A1F-` is a
 drop-only activation.
 
+### `P` — policy change (→ `setUnitPolicy`)
+
+`P<idx><policy>`: the acting unit `idx` changed a policy with `policy <prop> <value>` at its movement
+or attack prompt. `<policy>` is the unit's whole policy after the change, in the `U` policy alphabet
+but always written (`P0c` = core, auto-eject on, flamer heat on; `P0exf` = exposed, auto-eject off,
+flamer heat off). The record comes before that unit's `M` / `A` record of the same activation, and
+the unit must be the one due to act. Setting the current value writes nothing. No dice are drawn, so
+`W` is unaffected; replays without `P` play as before, and builds without `P` reject it as an
+unknown record. The pretty layout keeps a `P` on the line of the `M` / `A` it precedes.
+
 ### `E` — final state (checksum)
 
 `E<idx><hits>[H|X]` (after `W`) + armor / crit / ammo in the same notation as `U`, cumulative
 vs. model default (starting damage included). The remains tag follows the hits: `H` for a hull
 (pilot ejected, killed or abandoned with the frame intact), `X` for a destroyed frame
-(wreckage), none for a unit still active. The policy field is setup-only and is not repeated here.
+(wreckage), none for a unit still active. There is no policy field here.
 Replaying and diffing against it detects engine-version drift. The crit field never lists `empty`
 slots (the engine never marks them), so `E` crits can be pasted into a `U` line as starting damage. Dead/removed units
 need no other flag (`destroyed` follows from the structure).
@@ -237,7 +249,8 @@ Every CLI command and where it lands. "UI" = no effect on battle state, never re
 | `mode shutdown` / `startup` / `eject` / `abandon` + `done` | `X` / `O` / `E` / `A` |
 | `done` with nothing declared in movement (pass) | `.` |
 | `cancel` | not recorded (pre-commit) |
-| `set <id> ammoPolicy <policy>` | setup only: the `U` policy field (`e` `c` `s` `l`); the attack-phase `ammo` command no longer exists |
+| `set <id> ammoPolicy\|autoEject\|heatFlamer <value>` | setup: the `U` policy field |
+| `policy <prop> <value>` | movement / attack prompt of the acting unit: `P<idx><policy>` (only when the value changes; `policy` with no argument is UI) |
 | `torso <front\|left\|right>` | header char `F` `L` `R` (always written) |
 | `fire <tgt> <weapons…>` + `done` | `:<tgt><wpns>`, `!` for rapid-fire |
 | `punch <tgt> [left\|right]` | `P` / `Q` (default right = `Q`; limb is always written) |

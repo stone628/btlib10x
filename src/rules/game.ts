@@ -48,6 +48,7 @@ import {
   type AmmoPolicy,
   binsForWeaponName,
   consumeAmmoForName,
+  isAmmoPolicy,
   pooledShotsLeft,
 } from "./ammo";
 import {
@@ -189,14 +190,16 @@ import { computeToHit, DEFAULT_GUNNERY, type RangeBracket, toHitTotal } from "./
 
 export type UnitSkillRange = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
-/** Per-unit behavior settings fixed at setup (before the battle starts). */
+/** Per-unit behavior settings, chosen at setup and changeable by the acting
+ *  unit during the movement and attack phases ({@link setUnitPolicy}). */
 export interface UnitPolicy {
   /** Which ammo bin a shot is drawn from (see `src/rules/ammo.ts`). */
   ammoPolicy: AmmoPolicy;
   /** Auto-eject system engaged (TO:AR p. 165; players may disable it per
-   *  'Mech before the battle). On: losing the head, or a center torso to an
-   *  ammo/weapon blast, ejects the pilot. Off: those kill the MechWarrior
-   *  (TW p. 128). */
+   *  'Mech before the battle, and here also switch it at the unit's own
+   *  movement or attack activation). On: losing the head, or a center torso
+   *  to an ammo/weapon blast, ejects the pilot. Off: those kill the
+   *  MechWarrior (TW p. 128). */
   autoEject: boolean;
   /** Flamer-family (`asHeat`) weapons apply their Damage Value as heat
    *  instead of damage (TW p.303 footnote ‡). On: every flamer hit heats the
@@ -6247,6 +6250,37 @@ export function abandonPilot(state: BattleState, unitId: string, sink: GameEvent
   state.currentDealt = { before: { damage: {}, crit: {} }, total: {}, byAttacker: {} };
   leaveHull(state, unit, "pilotAbandoned", sink);
   state.actedThisPhase.push(unitId);
+}
+
+/** The unit's live policy (the `UnitState` copies of its `UnitPolicy`). */
+export function unitPolicyOf(unit: UnitState): UnitPolicy {
+  return { ammoPolicy: unit.ammoPolicy, autoEject: unit.autoEject, heatFlamer: unit.heatFlamer };
+}
+
+/** Change the current actor's policy before its activation commits, in the
+ *  movement or attack phase. Draws no dice and records no event; the change
+ *  applies from now on (ammo drawn at its `declareAttacks`, flamer mode at
+ *  that phase's resolution, auto-eject at the next head / center torso loss).
+ *  Limiting it to the current actor keeps already-declared shots of other
+ *  units unchanged. Returns the resulting policy. */
+export function setUnitPolicy(
+  state: BattleState,
+  unitId: string,
+  patch: Partial<UnitPolicy>,
+): UnitPolicy {
+  if (state.phase !== "movement" && state.phase !== "attack") {
+    throw new Error(`${unitId} cannot change policy in the ${state.phase} phase`);
+  }
+  requireCurrentActor(state, unitId, state.phase);
+  const unit = requireUnit(state, unitId);
+  if (isUnitRemoved(unit)) throw new Error(`${unitId} is removed from play`);
+  if (patch.ammoPolicy !== undefined && !isAmmoPolicy(patch.ammoPolicy)) {
+    throw new Error(`bad ammo policy ${JSON.stringify(patch.ammoPolicy)}`);
+  }
+  if (patch.ammoPolicy !== undefined) unit.ammoPolicy = patch.ammoPolicy;
+  if (patch.autoEject !== undefined) unit.autoEject = patch.autoEject;
+  if (patch.heatFlamer !== undefined) unit.heatFlamer = patch.heatFlamer;
+  return unitPolicyOf(unit);
 }
 
 /** Voluntary shutdown declaration, resolved during the movement phase: the

@@ -129,6 +129,11 @@ export const ko: Catalog = {
   "cmd.salvage.arg.id": "한 유닛의 회수 상세만 표시",
   "cmd.heat.help": "유닛의 발열 게이지 상태 표시 (기본: 행동 유닛)",
   "cmd.heat.arg.id": "확인할 유닛\n기본은 행동 유닛",
+  "cmd.policy.help":
+    "행동 유닛의 정책 표시 또는 변경 (ammoPolicy, autoEject, heatFlamer); 즉시 적용",
+  "cmd.policy.arg.prop": "정책 이름: ammoPolicy, autoEject, heatFlamer",
+  "cmd.policy.arg.value":
+    "새 값: ammoPolicy는 exposed|core|spread|least-first, autoEject와 heatFlamer는 on|off",
   "cmd.candidateMove.help": "이동 가능 영역을 ASCII 전장 격자로 표시",
   "cmd.candidateAttack.help": "공격 가능한 목표와 가용 무기를 표시",
   "cmd.punch.help": "인접한 적에 펀치 공격 예약 (TW p.145)",
@@ -246,6 +251,7 @@ export const ko: Catalog = {
   "ok.mapLoaded": "맵 {name}: {w}x{h}개",
   "ok.added": "{id} ({model}) 위치 ({col},{row}), 방향 {facing} 팀 {team}에 배치됨",
   "ok.set": "{id}: {prop}을(를) {value}(으)로 설정",
+  "policy.summary": "{id}: 탄약 {ammo}, 자동 탈출 {eject}, 화염방사 발열 {flamer}",
   "ok.removed": "{id} 제거됨",
   "ok.started": "=== 전투 시작 ===",
   "ok.modeDeclared": "{id}, {mode} 모드 선언: {budget} MP, 시작 ({col},{row}) {facing}향 {posture}",

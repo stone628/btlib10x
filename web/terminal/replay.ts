@@ -22,6 +22,7 @@ import {
   type ClubKind,
   type ClubPickupDecl,
   createBattle,
+  DEFAULT_UNIT_POLICY,
   declareAttacks,
   declarePickup,
   destroyedSlots,
@@ -53,10 +54,12 @@ import {
   passMovement,
   rotateFacing,
   sameHex,
+  setUnitPolicy,
   type TorsoLocationValue,
   type Twist,
   type UnitInit,
   type UnitInitDamage,
+  type UnitPolicy,
   type UnitState,
   VERSION,
   voluntaryShutdown,
@@ -73,7 +76,7 @@ import {
 } from "./session";
 
 export interface ReplayLog {
-  /** Finished records in order: `V B S U… M A … W E…`. */
+  /** Finished records in order: `V B S U… M A … W E…` (a `P` before the `M` / `A` it precedes). */
   lines: string[];
   /** Unit ids in registration order; the position is the unit index. */
   units: string[];
@@ -425,6 +428,21 @@ const POLICY_CHAR: Readonly<Record<string, string>> = {
   leastFirst: "l",
 };
 
+/** Policy text: ammo policy char, then `x` when auto-eject is off and `f`
+ *  when heat-mode flamers are off. Shared by the `U` policy field and `P`. */
+function policyText(policy: UnitPolicy): string {
+  return (
+    (POLICY_CHAR[policy.ammoPolicy] ?? "e") +
+    (policy.autoEject ? "" : "x") +
+    (policy.heatFlamer ? "" : "f")
+  );
+}
+
+/** `P<idx><policy>`: the acting unit's policy after a mid-battle change (always written in full). */
+export function encodePolicyEntry(idx: string, policy: UnitPolicy): string {
+  return `P${idx}${policyText(policy)}`;
+}
+
 /** `U<team><id>:<model>:<place>[:<armor>[:<crit>[:<ammo>[:<policy>]]]]` */
 export function encodeUnitLine(init: UnitInit): string {
   const hits = init.damage?.pilotHits ?? 0;
@@ -436,12 +454,8 @@ export function encodeUnitLine(init: UnitInit): string {
     init.pilotHitMax.toString(36) +
     (hits > 0 ? hits.toString(36) : "");
   const f = fieldsOfInit(init);
-  // Policy field: ammo policy char, then `x` when auto-eject is off and `f`
-  // when heat-mode flamers are off; omitted at the defaults.
-  const policy =
-    (POLICY_CHAR[init.policy.ammoPolicy] ?? "e") +
-    (init.policy.autoEject ? "" : "x") +
-    (init.policy.heatFlamer ? "" : "f");
+  // Policy field: omitted at the defaults.
+  const policy = policyText(init.policy);
   return `U${init.team}${init.id}:${init.model}:${place}${joinFields([
     armorField(f),
     critField(f),
@@ -565,6 +579,14 @@ export function recordAttack(s: Session, decl: AttackDeclaration, actorId: strin
   });
 }
 
+/** Record a mid-battle policy change of the acting unit (after the engine call). */
+export function recordPolicy(s: Session, actorId: string, policy: UnitPolicy): void {
+  if (!usable(s)) return;
+  guarded(s, (log) => {
+    log.lines.push(encodePolicyEntry(indexOfUnit(log, actorId), policy));
+  });
+}
+
 /** Close the log when the battle is over: winner + rng checksum, then final unit states. */
 export function finishReplay(s: Session, victory: SessionVictoryResult): void {
   if (!usable(s) || s.battle === null) return;
@@ -589,6 +611,14 @@ export function finishReplay(s: Session, victory: SessionVictoryResult): void {
  *   W…                      winner line
  *   E…                      one line per unit's final state
  */
+/** Kind of the record at `i`; a `P` takes the kind of the `M` / `A` after it. */
+function activationKindFrom(records: readonly string[], i: number): string {
+  let j = i;
+  while (records[j]?.[0] === "P") j++;
+  const next = records[j]?.[0];
+  return next === "M" || next === "A" ? next : records[i]![0]!;
+}
+
 export function replayPrettifier(records: readonly string[]): string[] {
   const out: string[] = [];
   const setup: string[] = [];
@@ -607,12 +637,14 @@ export function replayPrettifier(records: readonly string[]): string[] {
       setup.push(records[i]!);
       i++;
     } else {
-      // M and A merge with their neighbours of the same kind; anything
-      // unknown stands alone on its own line.
+      // M and A merge with their neighbours of the same kind; a P joins the
+      // line of the activation that follows it. Anything unknown stands
+      // alone on its own line.
       flushSetup();
-      const merge = kind === "M" || kind === "A";
+      const lineKind = activationKindFrom(records, i);
+      const merge = lineKind === "M" || lineKind === "A";
       let j = i + 1;
-      while (merge && j < records.length && records[j]![0] === kind) j++;
+      while (merge && j < records.length && activationKindFrom(records, j) === lineKind) j++;
       out.push(records.slice(i, j).join(";"));
       i = j;
     }
@@ -679,6 +711,15 @@ function locOf(c: string | undefined): Location {
 }
 
 /** Inverse of {@link encodeUnitLine}. Throws a plain `Error` describing what is wrong. */
+/** Inverse of `policyText`. */
+function decodePolicy(text: string): UnitPolicy {
+  const pm = /^([a-z])(x?)(f?)$/.exec(text);
+  if (pm === null) throw new Error(`bad policy ${JSON.stringify(text)}`);
+  const ammoPolicy = POLICY_BY_CHAR.get(pm[1]!);
+  if (ammoPolicy === undefined) throw new Error(`bad ammo policy ${JSON.stringify(text)}`);
+  return { ammoPolicy, autoEject: pm[2] === "", heatFlamer: pm[3] === "" };
+}
+
 export function decodeUnitLine(line: string): UnitInit {
   if (line[0] !== "U") throw new Error("not a unit record");
   const parts = line.slice(1).split(":");
@@ -733,12 +774,8 @@ export function decodeUnitLine(line: string): UnitInit {
       [`${locOf(mm[1])}:${slotNumber(mm[2])}`]: Number(mm[3]),
     };
   }
-  const pm = /^([a-z])(x?)(f?)$/.exec(policy);
-  if (policy !== "" && pm === null) throw new Error(`bad policy ${JSON.stringify(policy)}`);
-  const ammoPolicy = pm === null ? "exposed" : POLICY_BY_CHAR.get(pm[1]!);
-  if (ammoPolicy === undefined) throw new Error(`bad ammo policy ${JSON.stringify(policy)}`);
-  const autoEject = pm === null || pm[2] === "";
-  const heatFlamer = pm === null || pm[3] === "";
+  const { ammoPolicy, autoEject, heatFlamer } =
+    policy === "" ? DEFAULT_UNIT_POLICY : decodePolicy(policy);
   const init = buildUnitInit(
     id,
     model,
@@ -1024,6 +1061,14 @@ export function replayPlayer(text: string): void {
           if (kind === "M") move(b, id, rec.slice(1));
           else attack(b, id, rec.slice(1));
           advance();
+          break;
+        }
+        case "P": {
+          const b = begin();
+          if (over !== null) throw new Error("the battle is already over");
+          const id = unitAt(rec[1] ?? "");
+          if (id !== actor) throw new Error(`${id} changes policy but ${actor} is due`);
+          setUnitPolicy(b, id, decodePolicy(rec.slice(2)));
           break;
         }
         case "W": {

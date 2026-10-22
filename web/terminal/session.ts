@@ -33,7 +33,8 @@ import type { SetupContext } from "./session.setup";
 export * from "./session.attack";
 /**
  * Public barrel for the session layer: everything below is implemented in
- * `session.common` / `session.move` / `session.over` / `session.setup` /
+ * `session.common` / `session.move` / `session.over` / `session.policy` /
+ * `session.setup` /
  * `session.weapon` and re-exported here, so callers outside `web/session.*`
  * import from this module only. The sub-modules deliberately import each
  * other (and this file) directly — going through the barrel would turn
@@ -42,6 +43,7 @@ export * from "./session.attack";
 export * from "./session.common";
 export * from "./session.move";
 export * from "./session.over";
+export * from "./session.policy";
 export * from "./session.setup";
 
 export type SessionState = "setup" | "battle" | "over";

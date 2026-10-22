@@ -64,7 +64,7 @@ Examples:
 |---|---|
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`, `testground`) |
 | `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
-| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional), `autoEject` (`on` default / `off`: TO:AR p. 165 auto-eject; off means losing the head, or the center torso to an ammo/weapon blast, kills the pilot, TW p. 128), `heatFlamer` (`on` default / `off`: on, the unit's flamers apply their Damage Value as heat instead of damage, TW p. 303; `status` shows `flamer-heat off` only when off); property names are case-insensitive; cannot modify `id`) |
+| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional), `autoEject` (`on` default / `off`: TO:AR p. 165 auto-eject; off means losing the head, or the center torso to an ammo/weapon blast, kills the pilot, TW p. 128), `heatFlamer` (`on` default / `off`: on, the unit's flamers apply their Damage Value as heat instead of damage, TW p. 303; `status` shows `flamer-heat off` only when off); property names are case-insensitive; cannot modify `id`; in battle the acting unit changes these three with `policy`) |
 | `seed <n>` | set the dice seed (setup only; a battle in progress keeps its generator) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
@@ -88,6 +88,7 @@ The prompt names the acting unit; commands act on that 'Mech.
 | `place <col> <row> <facing>` | place the 'Mech at a final hex + facing in one step; `col row` are 1-based, `facing` is an absolute word (`n\|ne\|se\|s\|sw\|nw`). The (hex, facing) must be a reachable landing shown by `mode` (validated against the movement candidate); replaces any previously queued steps. Jump landing facing is chosen freely, so any facing at a reachable hex is legal for `jump` |
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `heat [id]` | heat scale status of a unit (default: the acting unit); also available in the attack phase |
+| `policy [<prop> <value>]` | show (no argument) or change one policy of the acting unit: `ammoPolicy`, `autoEject` or `heatFlamer`, same names, values and errors as `set` (other properties are rejected). Takes effect at once (ammo is drawn at this unit's `done`, flamer heat mode applies at this attack phase's resolution, auto-eject at the next head / center torso loss); `cancel` keeps it, `rollback` undoes it. Only the acting unit, so other units' declared shots never change. Recorded in the replay as a `P` record. Movement and attack phases only |
 | `candidate` | list attack candidates, also printed when a unit becomes the attacker. `weapon attacks` has one group per torso twist (`twist right, by "torso right"`; only the current twist once prone or locked), one block per target, and one line per fireable weapon with TN, 2D6 hit chance, damage, heat and its `fire` command. Weapons that cannot fire are not shown, nor is equipment (TAG, AMS, physical weapons: not fireable); once a fire is queued only that target remains. `physical attacks` (only when an enemy is adjacent) lists each legal punch, both punches, kick, club and strike per target with TN, hit chance, damage and the commands, a needed twist first |
 | `status` | queued move steps with running MP cost per step |
 | `cancel` | clear mode + steps |
@@ -98,7 +99,7 @@ Shut-down units (including `starting`) act **first** in the movement phase,
 regardless of initiative: the log prints
 `{id} has movement priority — shut down, must attempt startup or pass`, and the
 only move-phase commands available to them are `mode startup` (or `done` to
-pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
+pass), plus `cancel`, `sheet`, `status`, `heat`, `policy` and the globals.
 
 ### turn(N):attack(team T, mech <id>)
 
@@ -110,6 +111,7 @@ pass), plus `cancel`, `sheet`, `status`, `heat` and the globals.
 | `sheet [id]` | with id: armor diagram + weapons for a unit (plus the critical slot chart, which on `sheet <id>` marks per-slot live state with [J](jam) / [-](destroyed) / per-bin ammo `(n left)` markers); without id: brief unit list (id, model, position+facing) grouped by team |
 | `punch` / `kick` / `club` / `strike` / `pickup` / `drop` | physical attacks and club handling, see "Implemented subset: physical attacks" below |
 | `heat [id]` | heat scale status |
+| `policy [<prop> <value>]` | show (no argument) or change one policy of the acting unit: `ammoPolicy`, `autoEject` or `heatFlamer`, same names, values and errors as `set` (other properties are rejected). Takes effect at once (ammo is drawn at this unit's `done`, flamer heat mode applies at this attack phase's resolution, auto-eject at the next head / center torso loss); `cancel` keeps it, `rollback` undoes it. Only the acting unit, so other units' declared shots never change. Recorded in the replay as a `P` record. Movement and attack phases only |
 | `status` | queued attack declarations |
 | `cancel` | clear declarations |
 | `rollback` | undo the last completed `done`: back to the previous actor's prompt (half-declared input is discarded; dice state and replay log are restored too). At most `MAX_SNAPSHOT_COUNT` (10) prompt snapshots are kept (`web/terminal/rollback.ts`); no redo |

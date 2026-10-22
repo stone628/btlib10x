@@ -36,9 +36,11 @@ import {
   overRematch,
   overStatusChunk,
   parseMoveMode,
+  parsePolicyProp,
   parseTorsoTwist,
   parseUnitProp,
   placeLanding,
+  policySummaryLine,
   queueDrop,
   queuedMoveChunk,
   queuePhysicalAttack,
@@ -48,6 +50,7 @@ import {
   requireBattle,
   resetSession,
   salvageChunks,
+  setActorPolicy,
   setConfigLocale,
   setSeed,
   setTorsoTwist,
@@ -368,6 +371,22 @@ const SETUP_CMDS: Record<string, CmdDef> = {
 
 /** In-battle maintenance/status commands shared by both battle phases. */
 const BATTLE_CMDS: Record<string, CmdDef> = {
+  policy: {
+    helpKey: "cmd.policy.help",
+    usage: "policy [<prop> <value>]",
+    argsDoc: [
+      ["prop", "cmd.policy.arg.prop"],
+      ["value", "cmd.policy.arg.value"],
+    ],
+    run: (s, a) => {
+      const actor = currentActor(s);
+      if (actor === null) throw new Error(i18n("err.needsActor"));
+      if (a.length === 0) return cmdRunChunks(policySummaryLine(actor));
+      expectArgs(a, 2, "policy [<prop> <value>]");
+      const { prop, value } = setActorPolicy(s, actor, parsePolicyProp(a[0]!), a[1]!);
+      return cmdRunChunks(i18n("ok.set", { id: actor.id, prop, value }));
+    },
+  },
   heat: {
     helpKey: "cmd.heat.help",
     usage: "heat [id]",
