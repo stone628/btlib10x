@@ -2,6 +2,7 @@ node_modules/
 dist/
 web/terminal.js
 web/btlib10x.js
+web/btlib10x.d.ts
 web/btlib10x.jsonl
 web/btlib10x.sw.jsonl
 web/VISION.md

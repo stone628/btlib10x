@@ -10,6 +10,7 @@
       "functions/**",
       "!web/terminal.js",
       "!web/btlib10x.js",
+      "!web/btlib10x.d.ts",
       "!web/avatar.js",
       "!web/gallery.js",
       "!web/gallery-admin.js",

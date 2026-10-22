@@ -14,6 +14,7 @@ const FILES = [
   "bt10x.css",
   "terminal.css",
   "btlib10x.js",
+  "btlib10x.d.ts",
   "btlib10x.jsonl",
   "btlib10x.sw.jsonl",
   "terminal.js",
