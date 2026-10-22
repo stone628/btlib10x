@@ -767,7 +767,7 @@ web session) hold a serializable snapshot and roll back on failure (see
 the caller's boundary.
 
 ```ts
-createBattle(map: MapDef, units: UnitInit[], options?: CreateBattleOptions): BattleState
+createBattle(map: MapDef, units: UnitInit[], options?: CreateBattleOptions): BattleState  // throws on duplicate ids, unknown models, a bad pilotHitMax, and a start hex that is non-integer, off the board or shared with another unit; team, facing and skills are trusted to their types
 executeMove(state, unitId, mode, steps, sink: GameEvent[], { finalFacing, rng }): void  // declares mode + walks steps in one call; refuses off-board hexes and ending stacked in the last hex entered (trailing turns included) or after a charge / DFA hex, and a jump that ends (or stops for a DFA) in a building hex (TW p.168); `finalFacing` only for a jump landing or a stand-up that enters no hex
 executePostureMove(state, unitId, "standUp" | "drop", locomotion, steps, sink: GameEvent[], { finalFacing, rng }): boolean  // stand-up or drop plus the movement after it: one activation, one MP pool (TW pp.49-50); the posture cost and a Minimum Movement stand count against the locomotion budget; no steps taken after a failed stand; after a successful stand, turns before the first hex entry are free (TW p.50); returns whether the posture change succeeded
 postureMoveBudget(unit, "standUp" | "drop", budget): number           // MP left for the movement after a posture change, out of the locomotion budget (for reachability displays)

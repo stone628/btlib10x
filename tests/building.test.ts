@@ -193,10 +193,12 @@ describe("battle building integration", () => {
         buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 3 }, "ne"),
         buildUnitInit("c", "HBK-4G", 1, { col: 4, row: 3 }, "nw"),
         buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 3 }, "sw"),
-        buildUnitInit("d", "ENF-4R", 2, { col: 3, row: 3 }, "ne"),
+        buildUnitInit("d", "ENF-4R", 2, { col: 3, row: 2 }, "ne"),
       ],
       true,
     );
+    // createBattle rejects stacked starts; put d in the building hex with b.
+    battle.units.d!.position = { col: 3, row: 3 };
     // RNG: initiative; a to-hit + location; c to-hit + location; one 20+
     // damage PSR per target; padding for pilot/consciousness rolls.
     const rng = scriptedRng(1, 2, 3, 3, 3, 3, 3, 4, 3, 3, 3, 4, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3, 3);

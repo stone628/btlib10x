@@ -139,8 +139,8 @@ describe("suggestFireTargets", () => {
 
   it("marks weapons out of range", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: -38 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 41 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 1 }, "s"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     const reasons = blockedReasons(state, "hbk", "enf");
@@ -233,8 +233,8 @@ describe("suggestFireTargets", () => {
 
   it("marks weapons that auto-miss", () => {
     const units: UnitInit[] = [
-      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "n"),
-      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: -7 }, "s"),
+      buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 10 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 1 }, "s"),
     ];
     const state = startAttackTurn(createTestBattle([], units, false));
     state.units.enf!.hexesMovedThisTurn = 30;

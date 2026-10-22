@@ -41,10 +41,12 @@ function attackPhase(terrain: Array<{ col: number; row: number; terrain: string 
     },
     [
       buildUnitInit("a", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
-      buildUnitInit("b", "HBK-4G", 2, { col: 5, row: 5 }, "n"),
+      buildUnitInit("b", "HBK-4G", 2, { col: 6, row: 5 }, "n"),
       buildUnitInit("far", "HBK-4G", 2, { col: 1, row: 1 }, "n"),
     ],
   );
+  // createBattle rejects stacked starts; these tests want a and b sharing a hex.
+  battle.units.b!.position = { col: 5, row: 5 };
   battle.phase = "attack";
   battle.initiativeWinnerTeam = 2;
   battle.actorQueue = ["a", "b", "far"];

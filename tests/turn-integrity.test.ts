@@ -20,10 +20,10 @@ import { createTestBattle, scriptedRng } from "./helpers";
 function queueOrder(winners: number, losers: number): string {
   const units: UnitInit[] = [];
   for (let i = 0; i < losers; i++) {
-    units.push(buildUnitInit(`l${i}`, "HBK-4G", 1, { col: i, row: 0 }, "s"));
+    units.push(buildUnitInit(`l${i}`, "HBK-4G", 1, { col: i + 1, row: 1 }, "s"));
   }
   for (let i = 0; i < winners; i++) {
-    units.push(buildUnitInit(`w${i}`, "HBK-4G", 2, { col: i, row: 5 }, "n"));
+    units.push(buildUnitInit(`w${i}`, "HBK-4G", 2, { col: i + 1, row: 6 }, "n"));
   }
   const state = createTestBattle([], units, true);
   rollInitiativePhase(state, scriptedRng(1, 1, 3, 3), []);

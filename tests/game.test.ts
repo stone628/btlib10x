@@ -53,6 +53,29 @@ describe("createBattle", () => {
     ).toThrow(/Unknown 'Mech model/);
   });
 
+  it("rejects unit starts off the board, at fractional hexes, or stacked (API-06)", () => {
+    const a = buildUnitInit("a", "HBK-4G", 1, { col: 2, row: 2 }, "n");
+    const b = buildUnitInit("b", "ENF-4R", 2, { col: 3, row: 3 }, "s");
+    const at = (col: number, row: number): UnitInit => ({ ...b, position: { col, row } });
+    const battle = (u: UnitInit) => createTestBattle([], [a, u], false, 4, 4);
+
+    expect(() => battle(b)).not.toThrow();
+    expect(() => battle(at(1, 1))).not.toThrow();
+    expect(() => battle(at(4, 4))).not.toThrow();
+
+    expect(() => battle(at(0, 3))).toThrow("Unit b starts off the 4x4 board at 0,3");
+    expect(() => battle(at(3, 0))).toThrow(/Unit b starts off the 4x4 board/);
+    expect(() => battle(at(5, 3))).toThrow(/Unit b starts off the 4x4 board/);
+    expect(() => battle(at(3, 5))).toThrow(/Unit b starts off the 4x4 board/);
+    expect(() => battle(at(-1, -1))).toThrow(/Unit b starts off the 4x4 board/);
+
+    expect(() => battle(at(1.5, 3))).toThrow("Unit b starts at a non-integer hex 1.5,3");
+    expect(() => battle(at(3, Number.NaN))).toThrow(/Unit b starts at a non-integer hex/);
+    expect(() => battle(at(Number.POSITIVE_INFINITY, 3))).toThrow(/non-integer hex/);
+
+    expect(() => battle(at(2, 2))).toThrow("Units a and b start in the same hex 2,2");
+  });
+
   it("rejects duplicate terrain hex definitions", () => {
     const base: UnitInit = /* temporary */ /* temporary */ buildUnitInit(
       "temp",
@@ -63,7 +86,7 @@ describe("createBattle", () => {
     );
     const units: UnitInit[] = [
       { ...base, id: "a", team: 1 },
-      { ...base, id: "b", team: 2 },
+      { ...base, id: "b", team: 2, position: { col: 1, row: 4 } },
     ];
     expect(() =>
       createTestBattle(
@@ -344,11 +367,11 @@ describe("nextActor with unequal forces", () => {
   function fourVsTwo(teamOfFour: 1 | 2): BattleState {
     const units: UnitInit[] = [];
     for (let i = 0; i < 4; i++) {
-      units.push(buildUnitInit(`a${i}`, "HBK-4G", teamOfFour, { col: i, row: 0 }, "ne"));
+      units.push(buildUnitInit(`a${i}`, "HBK-4G", teamOfFour, { col: i + 1, row: 1 }, "ne"));
     }
     for (let i = 0; i < 2; i++) {
       units.push(
-        buildUnitInit(`b${i}`, "ENF-4R", (3 - teamOfFour) as 1 | 2, { col: 5 + i, row: 0 }, "sw"),
+        buildUnitInit(`b${i}`, "ENF-4R", (3 - teamOfFour) as 1 | 2, { col: 6 + i, row: 1 }, "sw"),
       );
     }
     return createTestBattle([], units, true);
@@ -409,10 +432,10 @@ describe("actorQueue", () => {
   function fourVsTwoState(): BattleState {
     const units: UnitInit[] = [];
     for (let i = 0; i < 4; i++) {
-      units.push(buildUnitInit(`a${i}`, "HBK-4G", 1, { col: i, row: 0 }, "ne"));
+      units.push(buildUnitInit(`a${i}`, "HBK-4G", 1, { col: i + 1, row: 1 }, "ne"));
     }
     for (let i = 0; i < 2; i++) {
-      units.push(buildUnitInit(`b${i}`, "ENF-4R", 2, { col: 5 + i, row: 0 }, "sw"));
+      units.push(buildUnitInit(`b${i}`, "ENF-4R", 2, { col: 6 + i, row: 1 }, "sw"));
     }
     return startMovementTurn(createTestBattle([], units, true), scriptedRng(1, 1, 3, 3));
   }
