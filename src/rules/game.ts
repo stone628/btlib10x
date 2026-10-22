@@ -6515,7 +6515,8 @@ function pendingActors(state: BattleState): string[] {
  *  alternate initiative-loser-first. Before every step the ratio is
  *  recounted from the units each team still has to place: each team places
  *  ⌊left/minLeft⌋ units (TW p.39 unequal-force activation, e.g. 8 v 5 →
- *  1/1, 1/1, 1/2, 1/2, 1/2). */
+ *  1/1, 1/1, 1/2, 1/2, 1/2). In the attack phase only units that can
+ *  declare are counted (GAME-02). */
 function buildActorQueue(state: BattleState): string[] {
   const alive = Object.values(state.units).filter((u) => !isUnitRemoved(u));
   const teams = [...new Set(alive.map((u) => u.team))];
@@ -6532,7 +6533,11 @@ function buildActorQueue(state: BattleState): string[] {
   // Shut-down units are front-loaded and stay outside the alternation.
   const queue: string[] = alive.filter((u) => downIds.has(u.id)).map((u) => u.id);
 
-  const nominal = alive.filter((u) => !downIds.has(u.id));
+  // In the attack phase shut-down units and unconscious pilots cannot declare,
+  // so they stay out of the ratio (TW p.39 counts units "still to declare for").
+  const canDeclare = (u: UnitState): boolean =>
+    state.phase !== "attack" || (isNominal(u) && !isPilotUnconscious(u));
+  const nominal = alive.filter((u) => !downIds.has(u.id) && canDeclare(u));
   const nextIndex = new Map<number, number>();
   for (const t of teams) nextIndex.set(t, 0);
   const left = (team: number): number =>

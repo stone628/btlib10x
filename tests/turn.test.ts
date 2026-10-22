@@ -26,6 +26,7 @@ import {
   resolveAllAttacks,
   rollInitiativePhase,
   type UnitInit,
+  type UnitState,
   voluntaryShutdown,
 } from "../src/rules/game";
 import {
@@ -542,6 +543,39 @@ describe("turn-integrity", () => {
       [1, 1, "LW"],
     ])("%i winners v %i losers -> %s", (w, l, expected) => {
       expect(queueOrder(w as number, l as number)).toBe(expected);
+    });
+  });
+
+  describe("attack-phase ratio counts only units that can declare (TW p.39, GAME-02)", () => {
+    /** 2 losers v 4 winners, w2 and w3 disabled; `phase` picks the queue. */
+    function disabledOrder(phase: "movement" | "attack", disable: (u: UnitState) => void): string {
+      const units: UnitInit[] = [];
+      for (let i = 0; i < 2; i++)
+        units.push(buildUnitInit(`l${i}`, "HBK-4G", 1, { col: i + 1, row: 1 }, "s"));
+      for (let i = 0; i < 4; i++)
+        units.push(buildUnitInit(`w${i}`, "HBK-4G", 2, { col: i + 1, row: 6 }, "n"));
+      const state = createTestBattle([], units, true);
+      rollInitiativePhase(state, scriptedRng(1, 1, 3, 3), []);
+      disable(requireUnit(state, "w2"));
+      disable(requireUnit(state, "w3"));
+      state.phase = phase;
+      state.actorQueue = null;
+      return actorQueue(state)
+        .pending.map((v) => v.id)
+        .join(" ");
+    }
+
+    it("alternates 2 v 2 when two of the four winners are shut down", () => {
+      expect(disabledOrder("attack", (u) => (u.shutdown = "manual"))).toBe("l0 w0 l1 w1");
+    });
+
+    it("alternates 2 v 2 when two of the four winners have unconscious pilots", () => {
+      expect(disabledOrder("attack", (u) => (u.unconsciousSinceTurn = 1))).toBe("l0 w0 l1 w1");
+    });
+
+    it("keeps the movement phase as before: shut-down units first, unconscious ones still counted", () => {
+      expect(disabledOrder("movement", (u) => (u.shutdown = "manual"))).toBe("w2 w3 l0 w0 l1 w1");
+      expect(disabledOrder("movement", (u) => (u.unconsciousSinceTurn = 1))).toBe("l0 w0 w1 l1");
     });
   });
 
