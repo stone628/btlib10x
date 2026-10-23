@@ -716,7 +716,9 @@ ammo AMS draws one shot from its pool under the unit's `ammoPolicy`.
 - `suggestFireTargets(state, unitId, twist?, dropClub = false): FireSuggestion` — for every enemy,
   lists the weapons that could reach it (arc, LOS, range, ammo, not
   jammed/destroyed, not auto-missing, not leg-blocked while prone) with their
-  computed TN and expected damage, plus per-weapon block reasons
+  computed TN and expected damage (cluster launchers count the expected
+  missiles that hit per the Cluster Hits Table, TW p.116; Streak the full
+  volley), plus per-weapon block reasons
   (`FireBlockerReason`: `jammed` / `destroyed` / `outOfRange` / `outOfArc` /
   `noLos` / `outOfAmmo` / `autoMiss` / `prone` / `noSensor` — blind after
   the second destroyed sensor slot / `clubHeld` — arm mount while a club

@@ -14,6 +14,7 @@ import {
   mountCanFireIntoArc,
   type Twist,
 } from "./arcs";
+import { expectedClusterHits } from "./cluster";
 import { countDestroyedSensor, isWeaponCritted } from "./critical";
 import { canFireMount, isUnitLocationDestroyed } from "./damage";
 import {
@@ -63,6 +64,8 @@ export interface FireWeapon {
    *  minimum range; `tn` already includes it. */
   readonly minRangePenalty?: number;
   readonly heat: number;
+  /** Damage of one hit: cluster launchers count the expected missiles that
+   *  hit (Cluster Hits Table, TW p.116), Streak the whole volley. */
   readonly expectedDamage: number;
   readonly cluster?: { shots: number; perMissile: number };
 }
@@ -358,7 +361,8 @@ export function suggestFireTargets(
           heat: weapon.heat ?? 0,
           expectedDamage:
             weapon.missiles !== undefined
-              ? (weapon.missileDamage ?? 1) * weapon.missiles
+              ? (weapon.missileDamage ?? 1) *
+                (weapon.streak === true ? weapon.missiles : expectedClusterHits(weapon.missiles))
               : damageForBracket(weapon, breakdown.rangeBracket),
           ...(weapon.missiles !== undefined
             ? {

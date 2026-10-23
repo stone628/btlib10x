@@ -11,6 +11,7 @@ import {
   effectiveFacingForTwist,
   twistDelta,
 } from "../src/rules/arcs";
+import { expectedClusterHits } from "../src/rules/cluster";
 import { canFireFromLocation } from "../src/rules/damage";
 import { bestFireTarget, hitProbability, suggestFireTargets } from "../src/rules/fireability";
 import {
@@ -307,6 +308,37 @@ describe("suggestFireTargets", () => {
     // Only matching side arm bears; rear impossible without rear mounts.
     expect(enf.weapons.map((w) => w.weaponIndex)).toEqual([2]);
     expect(enf.weapons[0]!.arc).toBe("rightSide");
+  });
+});
+
+describe("API-F01 cluster expectedDamage", () => {
+  it("scores a cluster launcher by its expected hits, not the full volley", () => {
+    const units: UnitInit[] = [
+      buildUnitInit("as7", "AS7-D", 1, { col: 2, row: 4 }, "n"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 1 }, "s"),
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    const enf = suggestFireTargets(state, "as7").targets.find((t) => t.targetId === "enf")!;
+    const lrm = enf.weapons.find((w) => w.weapon === "LRM 20")!;
+    expect(lrm.expectedDamage).toBeCloseTo(expectedClusterHits(20), 10);
+    expect(lrm.cluster).toEqual({ shots: 20, perMissile: 1 });
+    const srm = enf.weapons.find((w) => w.weapon === "SRM 6")!;
+    expect(srm.expectedDamage).toBeCloseTo(2 * expectedClusterHits(6), 10);
+    expect(srm.cluster).toEqual({ shots: 6, perMissile: 2 });
+  });
+
+  it("keeps the full volley for Streak launchers (every missile hits)", () => {
+    const units: UnitInit[] = [
+      buildUnitInit("mad", "MC-MKII-2", 1, { col: 2, row: 4 }, "ne"),
+      buildUnitInit("enf", "ENF-4R", 2, { col: 3, row: 4 }, "nw"),
+    ];
+    const state = startAttackTurn(createTestBattle([], units, false));
+    const enf = suggestFireTargets(state, "mad").targets.find((t) => t.targetId === "enf")!;
+    const streaks = enf.weapons.filter((w) => w.weapon === "CL Streak SRM 4");
+    expect(streaks).toHaveLength(4);
+    for (const w of streaks) {
+      expect(w.expectedDamage).toBe(8);
+    }
   });
 });
 
