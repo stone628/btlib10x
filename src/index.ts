@@ -46,6 +46,9 @@ export {
   type AmmoNameHolder,
   appendCatalog,
   type CatalogManifest,
+  CRIT_SLOT_COUNTS,
+  CRIT_SOAK_NAMES,
+  CRIT_STRUCTURE_NAMES,
   catalogMaps,
   catalogMechs,
   ensureMapRegistered,
@@ -73,9 +76,6 @@ export {
 } from "./data/index";
 export type { MapClubSrc, MapDef, MapDefSrc, MapWreckageSrc } from "./data/map.schema";
 export type {
-  CRIT_SLOT_COUNTS,
-  CRIT_SOAK_NAMES,
-  CRIT_STRUCTURE_NAMES,
   CritSlot,
   CritSlots,
   CritSoakName,
