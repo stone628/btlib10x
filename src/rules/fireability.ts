@@ -2,6 +2,7 @@ import { hexDistance } from "../core/hex";
 import { cellAt } from "../core/terrain";
 import { isArm, isLeg, type Location } from "../core/types";
 import { mechDefFor } from "../data/index";
+import type { ResolvedMechDef } from "../data/mech.schema";
 import { isFireableWeapon, weaponDefFor } from "../data/weapon.schema";
 import { armWeaponToHitModifier, targetingComputerModifier } from "./actuators";
 import { binsForWeaponName, pooledShotsLeft } from "./ammo";
@@ -141,9 +142,13 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
  * weapons that could reach it (within arc, LOS, range, ammo, not jammed or
  * destroyed, and not auto-missing). Weapons that cannot fire list the reason.
  * Ammo checks read the shared per-weapon-name pool (`pooledShotsLeft`), so
- * every mount of a pooled weapon reports the same remaining shots. Mirrors
- * the checks made by `declareAttacks` so any suggested combination is
- * guaranteed to be accepted there. Targets sort best-first (most fireable
+ * every mount of a pooled weapon reports the same remaining shots; a target
+ * never lists more non-streak mounts of one pooled weapon than the pool
+ * holds (the rest are blocked `outOfAmmo`). Mirrors the checks made by
+ * `declareAttacks` so any suggested combination for one target is
+ * guaranteed to be accepted there. The suggestion is a per-target query:
+ * `declareAttacks` claims the pool across every target of a declaration, so
+ * splitting pooled mounts over several targets can still exceed it. Targets sort best-first (most fireable
  * weapons, then hit-weighted damage, then shortest distance), so callers
  * picking `targets[0]` engage with most firepower.
  *
@@ -157,6 +162,30 @@ export function bestFireTarget(sugg: FireSuggestion): FireTarget | null {
  * `clubHeld` unless `dropClub` asks for the volley after the drop, matching
  * `DeclareAttacksOptions.dropClub`. `dropClub` is ignored when no club is held.
  */
+function capByPool(def: ResolvedMechDef, list: FireWeapon[], blocked: FireBlocked[]): void {
+  const offered = new Map<string, number>();
+  for (let i = 0; i < list.length; ) {
+    const w = list[i];
+    const mount = w === undefined ? undefined : def.weapons[w.weaponIndex];
+    if (w === undefined || mount === undefined || w.shots === null) {
+      i++;
+      continue;
+    }
+    if (weaponDefFor(mount).streak === true) {
+      i++;
+      continue;
+    }
+    const count = offered.get(w.weapon) ?? 0;
+    if (count < w.shots) {
+      offered.set(w.weapon, count + 1);
+      i++;
+      continue;
+    }
+    list.splice(i, 1);
+    blocked.push({ weaponIndex: w.weaponIndex, weapon: w.weapon, reason: "outOfAmmo" });
+  }
+}
+
 export function suggestFireTargets(
   state: BattleState,
   unitId: string,
@@ -353,6 +382,13 @@ export function suggestFireTargets(
         weaponsIfPropLeft.push(weaponSugg);
         weaponsIfPropRight.push(weaponSugg);
       });
+
+      // API-F05: `declareAttacks` claims one shared shot per non-streak
+      // mount of a pooled weapon name, so offer no more mounts than the pool
+      // holds; later mounts move to the blocked list as `outOfAmmo`. Streaks
+      // claim nothing up front (ammo is spent on a hit) and stay uncapped.
+      capByPool(def, weaponsIfPropLeft, blockedIfPropLeft);
+      capByPool(def, weaponsIfPropRight, blockedIfPropRight);
 
       return {
         targetId: enemy.id,

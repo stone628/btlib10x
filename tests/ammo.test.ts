@@ -19,6 +19,7 @@ import {
   usableShots,
 } from "../src/rules/ammo";
 import { setSlotDestroyed } from "../src/rules/critical";
+import { suggestFireTargets } from "../src/rules/fireability";
 import {
   advancePhase,
   buildUnitInit,
@@ -415,9 +416,47 @@ describe("depletion", () => {
           [],
           scriptedRng(6),
         ),
-      ).toThrow(/needs 1 shot\(s\) but only 1 remain/);
+      ).toThrow(/needs 2 shot\(s\) \(1 already claimed by other mounts\) but only 1 remain/);
       // Nothing was spent: the failed volley leaves the pool intact.
       expect(pooledShotsLeft(def, requireUnit(state, "bsw")!, "Machine Gun")).toBe(1);
+    });
+
+    describe("API-F05: suggestions cap pooled mounts at the shared pool", () => {
+      it("offers one twin for the last shot and the suggested set declares", () => {
+        const unboundMg = mountIndex("BSW-X1", "Machine Gun", "leftTorso");
+        const boundMg = mountIndex("BSW-X1", "Machine Gun", "rightTorso");
+        const def = mechDef("BSW-X1")!;
+        const mgBin = collectAmmoBins(def).find((b) => b.weapon === "Machine Gun")!.id;
+        const state = bswBattle();
+        attackPhase(state);
+        zeroAllBins(state, "bsw");
+        requireUnit(state, "bsw")!.ammoBins[mgBin] = 1;
+        const target = suggestFireTargets(state, "bsw").targets.find((t) => t.targetId === "enf")!;
+        const offered = target.weapons.filter((w) => w.weapon === "Machine Gun");
+        expect(offered.map((w) => w.weaponIndex)).toEqual([Math.min(unboundMg, boundMg)]);
+        expect(target.blocked).toContainEqual({
+          weaponIndex: Math.max(unboundMg, boundMg),
+          weapon: "Machine Gun",
+          reason: "outOfAmmo",
+        });
+        expect(() =>
+          declareAttacks(
+            state,
+            "bsw",
+            target.weapons.map((w) => ({ weaponIndex: w.weaponIndex, targetId: "enf" })),
+            [],
+            [],
+            scriptedRng(6),
+          ),
+        ).not.toThrow();
+      });
+
+      it("offers every twin while the pool covers them", () => {
+        const state = bswBattle();
+        attackPhase(state);
+        const target = suggestFireTargets(state, "bsw").targets.find((t) => t.targetId === "enf")!;
+        expect(target.weapons.filter((w) => w.weapon === "Machine Gun")).toHaveLength(2);
+      });
     });
   });
 

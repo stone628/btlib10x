@@ -3285,7 +3285,9 @@ export function validateAttacksImpl(
       } else {
         const claimed = claimedByWeaponName.get(mount.weapon) ?? 0;
         if (left < claimed + needed) {
-          throw new Error(`${mount.weapon}: needs ${needed} shot(s) but only ${left} remain`);
+          throw new Error(
+            `${mount.weapon}: needs ${claimed + needed} shot(s)${claimed > 0 ? ` (${claimed} already claimed by other mounts)` : ""} but only ${left} remain`,
+          );
         }
         claimedByWeaponName.set(mount.weapon, claimed + needed);
       }

@@ -283,8 +283,8 @@ describe("css-grid glyphs", () => {
   const map: MapDef = { name: "glyphs", width: 2, height: 3, terrain: [], legends: [] };
   const model = createBoardModel({ map, units: null, reachable: null, clubHexes: null });
 
-  // Reference art: outer edges `>──<`, shared edges `>==<`, `╱ ╲` diagonals
-  // and `< >` belly walls. Coordinate labels / elevation digits are blanked.
+  // Reference art: outer edges `⧽--⧼`, shared edges `⧽==⧼`, `╱ ╲` diagonals
+  // and `⧼ ⧽` belly walls. Coordinate labels / elevation digits are blanked.
   it("matches the reference 2x3 layout", () => {
     const skeleton = boardToChars(model, CSS_GRID_GLYPHS)
       .map((l) =>
@@ -297,21 +297,21 @@ describe("css-grid glyphs", () => {
       .join("\n");
     expect(skeleton).toBe(
       [
-        "  >──<",
+        "  ⧽--⧼",
         " ╱    ╲",
-        "<      >>──<",
+        "⧼      ⧽⧽--⧼",
         " ╲    ╱╱    ╲",
-        "  >==<<      >",
+        "  ⧽==⧼⧼      ⧽",
         " ╱    ╲╲    ╱",
-        "<      >>==<",
+        "⧼      ⧽⧽==⧼",
         " ╲    ╱╱    ╲",
-        "  >==<<      >",
+        "  ⧽==⧼⧼      ⧽",
         " ╱    ╲╲    ╱",
-        "<      >>==<",
+        "⧼      ⧽⧽==⧼",
         " ╲    ╱╱    ╲",
-        "  >──<<      >",
+        "  ⧽--⧼⧼      ⧽",
         "       ╲    ╱",
-        "        >──<",
+        "        ⧽--⧼",
       ].join("\n"),
     );
   });
