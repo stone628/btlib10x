@@ -18,6 +18,7 @@ import {
   type Canvas,
   type CharStyle,
   CLUB_MARKER,
+  CSS_GRID_GLYPHS,
   createBoardModel,
   eachHex,
   FACING_GLYPH,
@@ -275,6 +276,51 @@ describe("club marker", () => {
     );
     expect(hexesWithClub([])).toBe(plain);
     expect(plain).not.toContain(CLUB_MARKER);
+  });
+});
+
+describe("css-grid glyphs", () => {
+  const map: MapDef = { name: "glyphs", width: 2, height: 3, terrain: [], legends: [] };
+  const model = createBoardModel({ map, units: null, reachable: null, clubHexes: null });
+
+  // Reference art: outer edges `>──<`, shared edges `>==<`, `╱ ╲` diagonals
+  // and `< >` belly walls. Coordinate labels / elevation digits are blanked.
+  it("matches the reference 2x3 layout", () => {
+    const skeleton = boardToChars(model, CSS_GRID_GLYPHS)
+      .map((l) =>
+        l
+          .map((sp) => sp.text)
+          .join("")
+          .replace(/[0-9]/g, " ")
+          .trimEnd(),
+      )
+      .join("\n");
+    expect(skeleton).toBe(
+      [
+        "  >──<",
+        " ╱    ╲",
+        "<      >>──<",
+        " ╲    ╱╱    ╲",
+        "  >==<<      >",
+        " ╱    ╲╲    ╱",
+        "<      >>==<",
+        " ╲    ╱╱    ╲",
+        "  >==<<      >",
+        " ╱    ╲╲    ╱",
+        "<      >>==<",
+        " ╲    ╱╱    ╲",
+        "  >──<<      >",
+        "       ╲    ╱",
+        "        >──<",
+      ].join("\n"),
+    );
+  });
+
+  it("leaves the flat text renderer on the classic glyphs", () => {
+    const text = boardToText(model);
+    expect(text.split("\n")[0]).toBe(`  ${GRID_GLYPHS.edgeTop.repeat(4)}`);
+    expect(text).toContain(`${GRID_GLYPHS.edgeNW}0101${GRID_GLYPHS.edgeNE}`);
+    expect(text).not.toContain(CSS_GRID_GLYPHS.edgeNW);
   });
 });
 

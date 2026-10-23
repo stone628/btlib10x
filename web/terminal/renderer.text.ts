@@ -43,7 +43,7 @@ export interface BoardModel {
   /** Absolute (1-based) column/row of the crop anchor. Hex at `(col,row)` renders at `(col - anchorCol, row - anchorRow)`. */
   readonly anchorCol: number;
   readonly anchorRow: number;
-  /** Cell text drawn inside `/...\ ` (unit ids, overlay glyphs). */
+  /** Cell text drawn inside `/...\\ ` (unit ids, overlay glyphs). */
   readonly cells: Readonly<Record<string, string>>;
   /** Glyphs drawn at the hex bottom center (e.g. terrain markers). */
   readonly marks: Readonly<Record<string, string>>;
@@ -187,27 +187,58 @@ const ROW_STRIDE = 4;
 const STAGGER = 2;
 
 /**
- * Structural characters of the hex grid itself: the three horizontal edge
- * glyphs, the four diagonal wall segments (named by the direction they face
- * from the hex center) and the west/east belly walls. Content glyphs live in
- * {@link TERRAIN_GLYPHS} / `FACING_GLYPH`.
+ * Structural characters of the hex grid: the three horizontal edge glyphs,
+ * optional west/east edge corners (`null` fills the corner with the edge
+ * glyph itself), the four diagonal wall segments (named by the direction
+ * they face from the hex center) and the west/east belly walls. Content
+ * glyphs live in {@link TERRAIN_GLYPHS} / `FACING_GLYPH`.
  */
-export const GRID_GLYPHS = {
+export interface GridGlyphs {
+  readonly edgeTop: string;
+  readonly edgeShared: string;
+  readonly edgeBottom: string;
+  readonly cornerW: string | null;
+  readonly cornerE: string | null;
+  readonly edgeNW: string;
+  readonly edgeNE: string;
+  readonly edgeSE: string;
+  readonly edgeSW: string;
+  readonly vertW: string;
+  readonly vertE: string;
+}
+
+/** Classic grid glyphs (`⎼⎼⎼⎼` / `/XXYY\` / `(  )`), used by the text renderer. */
+export const GRID_GLYPHS: GridGlyphs = {
   edgeTop: "⎼",
   edgeShared: "=",
   edgeBottom: "⎻",
+  cornerW: null,
+  cornerE: null,
   edgeNW: "/",
   edgeNE: "\\",
   edgeSE: "/",
   edgeSW: "\\",
   vertW: "(",
   vertE: ")",
-} as const;
-/** Characters allowed on an edge line. */
-type EdgeGlyph =
-  | typeof GRID_GLYPHS.edgeTop
-  | typeof GRID_GLYPHS.edgeShared
-  | typeof GRID_GLYPHS.edgeBottom;
+};
+
+/**
+ * CSS-grid renderer glyphs: outer edges `>──<`, shared edges `>==<`, `╱ ╲`
+ * diagonals and `<      >` belly walls.
+ */
+export const CSS_GRID_GLYPHS: GridGlyphs = {
+  edgeTop: "-",
+  edgeShared: "=",
+  edgeBottom: "-",
+  cornerW: "⧽",
+  cornerE: "⧼",
+  edgeNW: "╱",
+  edgeNE: "╲",
+  edgeSE: "╱",
+  edgeSW: "╲",
+  vertW: "⧼",
+  vertE: "⧽",
+};
 
 /** Arrow drawn for each {@link Facing}, replacing the matching wall/edge char. */
 // facing | arrow | triangle | triangle simple
@@ -309,12 +340,16 @@ function setChar(canvas: Canvas, x: number, y: number, ch: string, st: CharStyle
   canvas.styles[y]![x] = st;
 }
 
-/** Fill a hexside edge with `ch`, never overwriting glyphs already there. */
-function stampEdge(canvas: Canvas, x: number, y: number, ch: EdgeGlyph): void {
+/**
+ * Fill a hexside edge with `ch` (corners at x+2 / x+5 take the glyph set's
+ * corner glyphs when present), never overwriting glyphs already there.
+ */
+function stampEdge(canvas: Canvas, x: number, y: number, ch: string, g: GridGlyphs): void {
   const line = canvas.rows[y];
   if (!line) return;
   for (let i = x + 2; i <= x + 5 && i < line.length; i++) {
-    if (line[i] === " ") line[i] = ch;
+    if (line[i] !== " ") continue;
+    line[i] = (i === x + 2 ? g.cornerW : i === x + 5 ? g.cornerE : null) ?? ch;
   }
 }
 
@@ -377,10 +412,10 @@ export function* eachHex(model: BoardModel): Generator<HexContext, void, undefin
  * (upper hex's bottom winning over the lower hex's `_` top) relies on
  * {@link stampEdge} only filling spaces, not on layer batching.
  */
-function drawCanvas(model: BoardModel): Canvas {
+function drawCanvas(model: BoardModel, glyphs: GridGlyphs): Canvas {
   const canvas = makeCanvas(model);
   for (const hex of eachHex(model)) {
-    drawHexGrid(canvas, hex);
+    drawHexGrid(canvas, hex, glyphs);
     drawUnitIds(canvas, hex);
     drawTerrainMarks(canvas, hex);
     drawElevationDigits(canvas, hex);
@@ -393,25 +428,13 @@ function drawCanvas(model: BoardModel): Canvas {
 }
 
 /** Layer 1 — one hex's walls, coordinate labels, and shared/outer edges. */
-function drawHexGrid(canvas: Canvas, hex: HexContext): void {
+function drawHexGrid(canvas: Canvas, hex: HexContext, g: GridGlyphs): void {
   const { coord, x, y, style, lastRow } = hex;
-  stampEdge(canvas, x, y, GRID_GLYPHS.edgeTop);
-  stampInto(
-    canvas,
-    x + 1,
-    y + 1,
-    `${GRID_GLYPHS.edgeNW}${coordLabel(coord)}${GRID_GLYPHS.edgeNE}`,
-    style,
-  );
-  stampInto(
-    canvas,
-    x,
-    y + 2,
-    `${GRID_GLYPHS.vertW}${" ".repeat(BELLY_WIDTH)}${GRID_GLYPHS.vertE}`,
-    style,
-  );
-  stampInto(canvas, x + 1, y + 3, `${GRID_GLYPHS.edgeSW}    ${GRID_GLYPHS.edgeSE}`, style);
-  stampEdge(canvas, x, y + ROW_STRIDE, lastRow ? GRID_GLYPHS.edgeBottom : GRID_GLYPHS.edgeShared);
+  stampEdge(canvas, x, y, g.edgeTop, g);
+  stampInto(canvas, x + 1, y + 1, `${g.edgeNW}${coordLabel(coord)}${g.edgeNE}`, style);
+  stampInto(canvas, x, y + 2, `${g.vertW}${" ".repeat(BELLY_WIDTH)}${g.vertE}`, style);
+  stampInto(canvas, x + 1, y + 3, `${g.edgeSW}    ${g.edgeSE}`, style);
+  stampEdge(canvas, x, y + ROW_STRIDE, lastRow ? g.edgeBottom : g.edgeShared, g);
 }
 
 /** Layer 2 — one hex's occupant id centered inside its belly. */
@@ -482,9 +505,12 @@ function styleEquals(a: CharStyle | null, b: CharStyle | null): boolean {
 
 // ---- exported text renderers ----
 
-/** Flat text form of a model — identical to the historic renderer output. */
-export function boardToText(model: BoardModel): string {
-  return drawCanvas(model)
+/**
+ * Flat text form of a model — identical to the historic renderer output
+ * with the default {@link GRID_GLYPHS}.
+ */
+export function boardToText(model: BoardModel, glyphs: GridGlyphs = GRID_GLYPHS): string {
+  return drawCanvas(model, glyphs)
     .rows.map((line) => line.join("").trimEnd())
     .join("\n");
 }
@@ -492,10 +518,10 @@ export function boardToText(model: BoardModel): string {
 /**
  * Styled form: per line, runs of characters sharing a style become one
  * {@link Span}. Concatenating span texts reproduces {@link boardToText}
- * exactly (including per-line trailing-space trimming).
+ * with the same `glyphs` exactly (including per-line trailing-space trimming).
  */
-export function boardToSpans(model: BoardModel): Span[][] {
-  const canvas = drawCanvas(model);
+export function boardToSpans(model: BoardModel, glyphs: GridGlyphs = GRID_GLYPHS): Span[][] {
+  const canvas = drawCanvas(model, glyphs);
   return canvas.rows.map((line, y) => {
     const spans: Span[] = [];
     let text = "";
@@ -543,8 +569,8 @@ export function boardToSpans(model: BoardModel): Span[][] {
  * glyphs. Trailing whitespace per line is trimmed to match
  * {@link boardToText}.
  */
-export function boardToChars(model: BoardModel): Span[][] {
-  return boardToSpans(model).map((line) => {
+export function boardToChars(model: BoardModel, glyphs: GridGlyphs = GRID_GLYPHS): Span[][] {
+  return boardToSpans(model, glyphs).map((line) => {
     const spans: Span[] = [];
     for (const sp of line) {
       if (sp.style === undefined) {
@@ -871,7 +897,7 @@ export const cssGridRenderer: BoardRenderer = (info, el) => {
   renderLegend(info.map, el, info);
   const grid = document.createElement("div");
   grid.className = "board-grid board-rows";
-  for (const line of boardToChars(createBoardModel(info))) {
+  for (const line of boardToChars(createBoardModel(info), CSS_GRID_GLYPHS)) {
     const row = document.createElement("div");
     let run: HTMLSpanElement | null = null;
     let runCls = "";
