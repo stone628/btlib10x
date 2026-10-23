@@ -720,7 +720,9 @@ ammo AMS draws one shot from its pool under the unit's `ammoPolicy`.
   (`FireBlockerReason`: `jammed` / `destroyed` / `outOfRange` / `outOfArc` /
   `noLos` / `outOfAmmo` / `autoMiss` / `prone` / `noSensor` — blind after
   the second destroyed sensor slot / `clubHeld` — arm mount while a club
-  occupies both hands, TW p.146). `dropClub` suggests the volley after
+  occupies both hands, TW p.146 / `legCover` — leg mount firing through a
+  hex that gives the shooter partial cover, or from Depth 1 water, TW p.105;
+  `declareAttacks` refuses the same mount). `dropClub` suggests the volley after
   dropping the club, as the same option on `declareAttacks` does; it is
   ignored when no club is held. Each `FireTarget` carries the
   classified `arc` (twisted torso facing) and each `FireWeapon` its own

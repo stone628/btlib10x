@@ -1295,6 +1295,37 @@ function partialCoverDetail(
   return buildingHex !== undefined ? { mod: terrain, buildingHex } : { mod: terrain };
 }
 
+/**
+ * Whether `attacker` fires at `target` through a hex that gives the attacker
+ * itself partial cover: the shooter-side mirror of `partialCoverDetail`, on
+ * the same locked hexside chain. Leg-mounted weapons may not fire through
+ * such a hex (TW p.105). Depth 1 water around the shooter counts: a 'Mech
+ * standing in it fires its leg weapons only underwater (TW p.102), which is
+ * not modeled (VISION §4).
+ */
+export function shooterInPartialCover(
+  state: BattleState,
+  attacker: UnitState,
+  target: UnitState,
+  side: LosSide = losSideFor(state, attacker, target),
+): boolean {
+  if (attacker.prone) return false;
+  const cell = cellAt(state, attacker.position);
+  if (cell.terrain === "water1") return true;
+  // A target whose LOS level is above the shooter's is fired at uphill: the
+  // shooter is not behind cover from it (TW p.102, mirrored).
+  const attackerLos = unitLosLevel(state, attacker.position, false);
+  const targetLos = unitLosLevel(state, target.position, target.prone);
+  if (targetLos > attackerLos) return false;
+  for (const h of interveningHexes(attacker.position, target.position, side)) {
+    if (!isAdjacent(h, attacker.position)) continue;
+    const c = cellAt(state, h);
+    const effectiveLevel = isBuildingTerrain(c.terrain) ? c.level + 2 : c.level;
+    if (effectiveLevel >= cell.level + 1) return true;
+  }
+  return false;
+}
+
 function requirePhase(state: BattleState, phase: Phase): void {
   if (state.phase !== phase) {
     throw new Error(`Expected phase ${phase}, but battle is in ${state.phase}`);
@@ -3187,6 +3218,12 @@ export function validateAttacksImpl(
         throw new Error("Line of sight is blocked by intervening elevation");
       }
       throw new Error("Line of sight is blocked by intervening woods");
+    }
+
+    if (isLeg(mount.location) && shooterInPartialCover(state, unit, target, losSide)) {
+      throw new Error(
+        `${mount.weapon} on ${unitId} cannot fire: leg-mounted weapons may not fire through a hex that gives the firing 'Mech partial cover`,
+      );
     }
 
     if (dist > weapon.long) {

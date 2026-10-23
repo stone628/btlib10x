@@ -24,6 +24,7 @@ import {
   losEnds,
   losSideFor,
   partialCoverMod,
+  shooterInPartialCover,
 } from "./game";
 import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
@@ -43,7 +44,8 @@ export type FireBlockerReason =
   | "autoMiss"
   | "prone"
   | "noSensor"
-  | "clubHeld";
+  | "clubHeld"
+  | "legCover";
 
 export interface FireWeapon {
   readonly weaponIndex: number;
@@ -276,6 +278,12 @@ export function suggestFireTargets(
         // (`losBlockedByElevation`/`losBlockedByBuilding` fold into the ray).
         if (!losClear(state, unit.position, enemy.position, losProne)) {
           blockBoth("noLos");
+          return;
+        }
+        // Same gate as `declareAttacks`: leg mounts may not fire through a
+        // hex that gives the shooter partial cover (TW p.105).
+        if (isLeg(mount.location) && shooterInPartialCover(state, unit, enemy, losSide)) {
+          blockBoth("legCover");
           return;
         }
         const breakdown = computeToHit({

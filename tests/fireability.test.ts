@@ -631,6 +631,82 @@ describe("leg-weapon", () => {
       );
     });
   });
+
+  /**
+   * TW p.105: leg-mounted weapons may not fire through a hex that gives the
+   * firing 'Mech partial cover (TW p.102 conditions, mirrored to the shooter;
+   * Depth 1 water around the shooter counts). CRD-3R at (5,5) facing north,
+   * target three hexes ahead at (5,2).
+   */
+  describe("leg-mounted weapons through the shooter's own partial cover (FIRE-02)", () => {
+    function battleOn(terrain: readonly TerrainHexDef[], targetLevel = 0): BattleState {
+      const target: TerrainHexDef[] =
+        targetLevel > 0 ? [{ col: 5, row: 2, type: "clear", level: targetLevel }] : [];
+      const battle = createBattle(
+        { name: "leg", width: 20, height: 20, terrain: [...terrain, ...target], legends: [] },
+        [
+          buildUnitInit("a", CRD, 1, { col: 5, row: 5 }, "n"),
+          buildUnitInit("t", "HBK-4G", 2, { col: 5, row: 2 }, "s"),
+        ],
+        { critsDisabled: true },
+      );
+      battle.phase = "attack";
+      battle.initiativeWinnerTeam = 2;
+      battle.actorQueue = ["a", "t"];
+      battle.actedThisPhase = [];
+      return battle;
+    }
+
+    function legState(battle: BattleState) {
+      const target = suggestFireTargets(battle, "a").targets.find((t) => t.targetId === "t")!;
+      return {
+        offered: target.weapons.some((w) => w.weaponIndex === RL_SRM6),
+        blocked: target.blocked.find((b) => b.weaponIndex === RL_SRM6)?.reason,
+        armOffered: target.weapons.some((w) => w.weaponIndex === RA_MEDIUM_LASER),
+      };
+    }
+
+    const declareLeg = (battle: BattleState) => () =>
+      validateAttacksImpl(battle, "a", [{ weaponIndex: RL_SRM6, targetId: "t" }]);
+
+    it("open ground: the leg SRM fires", () => {
+      const battle = battleOn([]);
+      expect(legState(battle)).toEqual({ offered: true, blocked: undefined, armOffered: true });
+      expect(declareLeg(battle)).not.toThrow();
+    });
+
+    it("a one-level hill adjacent to the shooter, between it and the target, blocks it", () => {
+      const battle = battleOn([{ col: 5, row: 4, type: "clear", level: 1 }]);
+      expect(legState(battle)).toEqual({ offered: false, blocked: "legCover", armOffered: true });
+      expect(declareLeg(battle)).toThrow(/leg-mounted weapons may not fire through a hex/);
+    });
+
+    it("an adjacent building one level below the shooter's hex still blocks it (+2)", () => {
+      const battle = battleOn([
+        { col: 5, row: 5, type: "clear", level: 1 },
+        { col: 5, row: 4, type: "lightBuilding", level: 0 },
+      ]);
+      expect(legState(battle).blocked).toBe("legCover");
+    });
+
+    it("the shooter standing in Depth 1 water cannot fire it", () => {
+      const battle = battleOn([{ col: 5, row: 5, type: "water1" }]);
+      expect(legState(battle)).toMatchObject({ offered: false, blocked: "legCover" });
+      expect(declareLeg(battle)).toThrow(/leg-mounted weapons may not fire through a hex/);
+    });
+
+    it("no cover when the target stands higher (fired at uphill)", () => {
+      const battle = battleOn([{ col: 5, row: 4, type: "clear", level: 1 }], 2);
+      expect(legState(battle)).toMatchObject({ offered: true, blocked: undefined });
+      expect(declareLeg(battle)).not.toThrow();
+    });
+
+    it("a hill behind the shooter gives no cover toward the target", () => {
+      const battle = battleOn([{ col: 5, row: 6, type: "clear", level: 1 }]);
+      expect(legState(battle)).toMatchObject({ offered: true, blocked: undefined });
+      expect(declareLeg(battle)).not.toThrow();
+    });
+  });
 });
 
 describe("equipment-fire", () => {
