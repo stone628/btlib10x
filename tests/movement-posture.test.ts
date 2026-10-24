@@ -341,6 +341,40 @@ describe("stand in place keeps the declared mode (MOV-06, 261022)", () => {
   });
 });
 
+describe("stand attempt needs 1 MP (PSR-M3, 261022)", () => {
+  it("refuses a 0-MP stand with no roll and no heat", () => {
+    const hot = movementBattle("HBK-4G", true);
+    requireUnit(hot, "a").heat = 25;
+    const hips = movementBattle("HBK-4G", true);
+    const legs = mechDef("HBK-4G")!.critSlots;
+    for (const loc of ["leftLeg", "rightLeg"] as const) {
+      legs[loc].forEach((slot, i) => {
+        if (slot.kind === "structure" && slot.type === "hip")
+          setSlotDestroyed(requireUnit(hips, "a").critSlotsDestroyed, loc, i);
+      });
+    }
+    for (const state of [hot, hips]) {
+      const sink: GameEvent[] = [];
+      expect(() =>
+        executePostureMove(state, "a", "standUp", "walk", [], sink, { rng: scriptedRng(6, 6) }),
+      ).toThrow(/no MP to attempt a stand/);
+      const a = requireUnit(state, "a");
+      expect(a.prone).toBe(true);
+      expect(a.heatPending).toBe(0);
+      expect(sink).toEqual([]);
+    }
+  });
+
+  it("still lets a 1-MP 'Mech attempt one stand", () => {
+    const state = movementBattle("GRF-1N", true);
+    requireUnit(state, "a").heat = 20; // walking 5 - 4 = 1
+    executePostureMove(state, "a", "standUp", "walk", [], [], { rng: scriptedRng(6, 6) });
+    const a = requireUnit(state, "a");
+    expect(a.prone).toBe(false);
+    expect(a.mpSpent).toBe(1);
+  });
+});
+
 describe("movement fall onto an occupied hex (MOV-09)", () => {
   function occupiedBattle() {
     const state = createTestBattle(

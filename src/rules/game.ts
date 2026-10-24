@@ -6419,8 +6419,8 @@ function movementTerrainPsr(
  * rolls a PSR with preexisting-damage modifiers only. On success the 'Mech
  * is left standing facing the direction it had been prone in; on failure it
  * crashes back down for fresh falling damage. A 'Mech with a destroyed gyro,
- * both legs gone, or one leg + both arms gone cannot attempt to stand (TW
- * p.50).
+ * both legs gone, one leg + both arms gone, or no walking MP cannot attempt
+ * to stand (TW pp.49-50).
  *
  * Returns the MP cost actually charged for the stand. The stand ends the
  * activation; to move after it in the same activation, use
@@ -6446,6 +6446,8 @@ export function attemptStandUp(
   if (pre.gyroHits >= GYRO_DESTROYED_HITS)
     throw new Error(`${unitId} has a destroyed gyro and cannot stand up`);
   if (!canAttemptStandUp(unit.damage)) throw new Error(`${unitId} cannot stand up in this state`);
+  // TW pp.49-50: an attempt needs at least 1 MP (Minimum Movement).
+  if (budget < 1) throw new Error(`${unitId} has no MP to attempt a stand`);
   const standCost = standUpCost(unit);
   // The declared mode sets the attacker movement modifier (TW p.49), even
   // when the 'Mech stands in place and moveUnit never re-sets it.
