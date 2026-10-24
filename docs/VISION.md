@@ -42,7 +42,12 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   (on by default, per-unit opt-out) when the head is lost or the center
   torso is destroyed by an explosion. A center torso whose structure is
   simply shot out collapses with the pilot aboard and alive. A cockpit-slot
-  kill still kills the pilot (no eject).
+  kill still kills the pilot (no eject). The pilot's fate reads the frame,
+  not the first kill rolled: a cockpit slot lost kills, else a lost head
+  ejects (or kills), whatever other kill landed in the same step. Eject
+  comes first: a head loss sets the pilot to one hit short of death
+  "regardless of prior condition", absorbing that step's other pilot hits,
+  and an ejected pilot takes only the ejection roll and blast feedback.
   *Why:* TW gives a doomed pilot no way out, and ejection is what turns a
   fight into salvage. *Not adopted:* planetary-condition modifiers and the
   submerged-cockpit ban.

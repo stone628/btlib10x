@@ -1175,6 +1175,19 @@ export function countDestroyedEngine(
   return destroyed;
 }
 
+/** A cockpit slot is destroyed: the MechWarrior is killed (TW p.125). */
+export function isCockpitDestroyed(
+  def: ResolvedMechDef,
+  critSlotsDestroyed: Readonly<CritMask>,
+): boolean {
+  return def.critSlots.head.some(
+    (slot, i) =>
+      slot.kind === "structure" &&
+      slot.type === COCKPIT &&
+      isSlotDestroyed(critSlotsDestroyed, "head", i),
+  );
+}
+
 function countDestroyedHeadStructure(
   def: ResolvedMechDef,
   damage: UnitDamageState,

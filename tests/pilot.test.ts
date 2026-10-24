@@ -635,3 +635,164 @@ describe("pilot-killed-destroyed", () => {
     });
   });
 });
+
+describe("DMG-08: pilot fate reads the frame, eject first (TW p.128, TO:AR p.165)", () => {
+  // HBK fires two Medium Lasers at the adjacent prone ENF (no salvage fall):
+  // ML #1 at the bare CT crits the third engine slot (two already gone), ML
+  // #2 strikes the head. The engine kill resolves first, so the destroy
+  // reason is "engineDestroyed", yet the head decides the pilot.
+  function engineThenHead(opts: { autoEject?: boolean; preHits?: number; headArmor?: number }) {
+    const enfInit = buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "n");
+    const state = createTestBattle(
+      [],
+      [
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        opts.autoEject === false
+          ? { ...enfInit, policy: { ...enfInit.policy!, autoEject: false } }
+          : enfInit,
+      ],
+      false,
+    );
+    rollInitiativePhase(state, scriptedRng(2, 2, 5, 5), []);
+    advancePhase(state, [], scriptedRng());
+    const enf = requireUnit(state, "enf");
+    enf.pilotHits = opts.preHits ?? 0;
+    enf.prone = true;
+    enf.damage.armor.centerTorso = 0;
+    enf.damage.armor.head = opts.headArmor ?? 0;
+    setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", 0);
+    setSlotDestroyed(enf.critSlotsDestroyed, "centerTorso", 1);
+    declareAttacks(
+      state,
+      "hbk",
+      [
+        { weaponIndex: 1, targetId: "enf" },
+        { weaponIndex: 2, targetId: "enf" },
+      ],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
+    return { state, enf };
+  }
+
+  // ML #1: to-hit 3+3, CT 3+4, one crit 4+4, upper half 1, slot 3 (engine).
+  // ML #2: to-hit 3+3, head 6+6; its crit roll (2+2 below, none) unless set.
+  const ENGINE_THEN_HEAD = [3, 3, 3, 4, 4, 4, 1, 3, 3, 3, 6, 6] as const;
+
+  it("auto-eject on: the head loss ejects though the engine kill came first", () => {
+    const { state, enf } = engineThenHead({});
+    const events: GameEvent[] = [];
+    // Ejection PSR 6+6.
+    resolveAllAttacks(state, scriptedRng(...ENGINE_THEN_HEAD, 2, 2, 6, 6), events);
+    expect(enf.destroyed).toBe("engineDestroyed");
+    expect(enf.removed).toBe("pilotEjected");
+    expect(enf.pilotHits).toBe(enf.pilotHitMax - 1);
+    expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "ejection")).toBe(true);
+  });
+
+  it("auto-eject off: the head loss kills the MechWarrior", () => {
+    const { state, enf } = engineThenHead({ autoEject: false });
+    // Not ejecting, the head hit lands aboard: consciousness roll 6+6.
+    resolveAllAttacks(state, scriptedRng(...ENGINE_THEN_HEAD, 2, 2, 6, 6), []);
+    expect(enf.destroyed).toBe("engineDestroyed");
+    expect(enf.removed).toBe("destroyed");
+    expect(enf.pilotHits).toBe(enf.pilotHitMax);
+  });
+
+  it("a cockpit crit after the engine kill kills the MechWarrior, no eject", () => {
+    // Head armor 3 leaves the head standing at 1 structure; ML #2's crit
+    // 4+4 (one) on slot 3 is the cockpit; the head hit's consciousness roll
+    // is 6+6.
+    const { state, enf } = engineThenHead({ headArmor: 3 });
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(...ENGINE_THEN_HEAD, 4, 4, 3, 6, 6), events);
+    expect(enf.damage.internalStructure.head).toBeGreaterThan(0);
+    expect(enf.destroyed).toBe("engineDestroyed");
+    expect(enf.removed).toBe("destroyed");
+    expect(enf.pilotHits).toBe(enf.pilotHitMax);
+    expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "ejection")).toBe(false);
+  });
+
+  it("eject first: the killing volley's head hit folds into the five", () => {
+    // Five prior hits: tallied first, the head hit would be the sixth.
+    const { state, enf } = engineThenHead({ preHits: 5 });
+    resolveAllAttacks(state, scriptedRng(...ENGINE_THEN_HEAD, 2, 2, 6, 6), []);
+    expect(enf.removed).toBe("pilotEjected");
+    expect(enf.pilotHits).toBe(enf.pilotHitMax - 1);
+  });
+
+  // ML #1 at the bare right torso crits its AC/10 bin: the blast takes the
+  // RT and the CT. ML #2 then strikes the head.
+  function blastThenHead(headArmor: number) {
+    const state = createTestBattle(
+      [],
+      [
+        buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
+        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "n"),
+      ],
+      false,
+    );
+    rollInitiativePhase(state, scriptedRng(2, 2, 5, 5), []);
+    advancePhase(state, [], scriptedRng());
+    const enf = requireUnit(state, "enf");
+    enf.prone = true;
+    enf.damage.armor.rightTorso = 0;
+    enf.damage.armor.head = headArmor;
+    declareAttacks(
+      state,
+      "hbk",
+      [
+        { weaponIndex: 1, targetId: "enf" },
+        { weaponIndex: 2, targetId: "enf" },
+      ],
+      [],
+      [],
+      scriptedRng(1, 1, 1, 1, 1, 1, 1, 1),
+    );
+    return { state, enf };
+  }
+
+  // ML #1: to-hit 3+3, right torso 3+3, crit 4+4, upper half 1, slot 3 (AC/10
+  // bin); the blast's crit rolls 2+2, 2+2 find nothing. ML #2: to-hit 3+3,
+  // head 6+6.
+  const BLAST_THEN_HEAD = [3, 3, 3, 3, 4, 4, 1, 3, 2, 2, 2, 2, 3, 3, 6, 6] as const;
+
+  it("head lost with a CT blast ejects at five, the feedback folded in", () => {
+    const { state, enf } = blastThenHead(0);
+    const events: GameEvent[] = [];
+    // Head crit roll 2+2 (none), then the ejection PSR 6+6.
+    resolveAllAttacks(state, scriptedRng(...BLAST_THEN_HEAD, 2, 2, 6, 6), events);
+    expect(enf.damage.internalStructure.head).toBe(0);
+    expect(enf.destroyed).toBe("centerTorsoDestroyed");
+    expect(enf.removed).toBe("pilotEjected");
+    expect(enf.pilotHits).toBe(enf.pilotHitMax - 1);
+    expect(events.some((e) => e.kind === "pilotDamaged" && e.reason === "ammoExplosion")).toBe(
+      false,
+    );
+  });
+
+  it("a cockpit lost with a CT blast kills the MechWarrior, no eject", () => {
+    // Head armor 3 leaves the head at 1 structure; its crit 4+4 (one) on
+    // slot 3 is the cockpit.
+    const { state, enf } = blastThenHead(3);
+    const events: GameEvent[] = [];
+    resolveAllAttacks(state, scriptedRng(...BLAST_THEN_HEAD, 4, 4, 3), events);
+    expect(enf.damage.internalStructure.head).toBeGreaterThan(0);
+    expect(enf.removed).toBe("destroyed");
+    expect(enf.pilotHits).toBe(enf.pilotHitMax);
+    expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "ejection")).toBe(false);
+  });
+
+  it("an ejected pilot takes the blast feedback but no hits aboard", () => {
+    const state = battle();
+    const hbk = requireUnit(state, "hbk");
+    hbk.destroyed = "centerTorsoDestroyed";
+    hbk.removed = "pilotEjected";
+    applyPilotHits(state, hbk, 1, "headHit", scriptedRng(), []);
+    applyPilotHits(state, hbk, 1, "fall", scriptedRng(), []);
+    expect(hbk.pilotHits).toBe(0);
+    applyPilotHits(state, hbk, 2, "ammoExplosion", scriptedRng(6, 6, 6, 6), []);
+    expect(hbk.pilotHits).toBe(2);
+  });
+});

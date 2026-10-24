@@ -19,13 +19,12 @@ import { armFor, isLocation, isTorso, LOCATIONS } from "../core/types";
 import type { ResolvedMechDef } from "../data/mech.schema";
 import { type AmmoBins, ammoBinId, loadAmmoBins } from "./ammo";
 import {
-  COCKPIT,
   type CritMask,
   countDestroyedEngine,
   countDestroyedGyro,
   ENGINE_SLOTS_KILL,
   emptyCritTable,
-  isSlotDestroyed,
+  isCockpitDestroyed,
   setSlotDestroyed,
 } from "./critical";
 import {
@@ -197,13 +196,7 @@ export function resolveInitialDamage(
   const unplayable = (reason: string): never => fail(id, `unit would start destroyed (${reason})`);
   if (damage.internalStructure.head <= 0) unplayable("headDestroyed");
   if (damage.internalStructure.centerTorso <= 0) unplayable("centerTorsoDestroyed");
-  const cockpit = def.critSlots.head.some(
-    (slot, i) =>
-      slot.kind === "structure" &&
-      slot.type === COCKPIT &&
-      isSlotDestroyed(critSlotsDestroyed, "head", i),
-  );
-  if (cockpit) unplayable("cockpitDestroyed");
+  if (isCockpitDestroyed(def, critSlotsDestroyed)) unplayable("cockpitDestroyed");
   if (countDestroyedEngine(def, damage, critSlotsDestroyed) >= ENGINE_SLOTS_KILL) {
     unplayable("engineDestroyed");
   }

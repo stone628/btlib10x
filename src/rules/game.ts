@@ -101,6 +101,7 @@ import {
   ENGINE_SLOTS_KILL,
   effectiveMovement,
   HIP,
+  isCockpitDestroyed,
   isSlotDestroyed,
   isWeaponCritted,
   markLocationCatastrophicallyDestroyed,
@@ -1485,7 +1486,10 @@ function markUnitDestroyed(
     return;
   }
   if (isUnitRemoved(unit)) return;
-  const headLoss = reason === "headDestroyed" || reason === "headBlownOff";
+  // The pilot's fate reads the frame, not `reason` (DMG-08): a kill crit
+  // resolved first (third engine slot) must not hide a lost head or cockpit.
+  const cockpit = reason === "cockpitDestroyed" || isCockpitKilled(unit);
+  const headLoss = !cockpit && unit.damage.internalStructure.head <= 0;
   // TO p.165: head destruction auto-ejects the pilot (cockpit crits still kill),
   // brought one hit short of death so the ejection roll decides survival.
   if (headLoss && unit.autoEject) {
@@ -1502,7 +1506,7 @@ function markUnitDestroyed(
   // TW p.128: the MechWarrior dies on loss of the head or cockpit (head loss
   // only reaches here with auto-eject off) or a CT lost to a blast without
   // auto-eject; any other destruction (engine, CT) leaves the pilot alive.
-  if (reason === "cockpitDestroyed" || headLoss || pilotDies) {
+  if (cockpit || headLoss || pilotDies) {
     unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax);
   }
   sink.push({
@@ -2133,18 +2137,37 @@ function resolveCenterTorsoBlast(
   // A hull has nobody to eject: the destruction sweep records the loss.
   if (isUnitRemoved(unit)) return;
   if (!applications.some((a) => a?.newlyDestroyed.includes("centerTorso"))) return;
-  if (!unit.autoEject) {
+  // A destroyed cockpit kills even with auto-eject armed (TO:AR p.165).
+  if (!unit.autoEject || isCockpitKilled(unit)) {
     markUnitDestroyed(state, unit, "centerTorsoDestroyed", rng, sink, true);
     return;
+  }
+  // The head lost in the same step: brought to one hit short of death
+  // "regardless of prior condition" (TO:AR p.165), the blast's feedback
+  // folded in (see `applyPilotHits`).
+  if (unit.damage.internalStructure.head <= 0) {
+    unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax - 1);
   }
   unit.destroyed = "centerTorsoDestroyed";
   resolveEjection(state, unit, rng, sink, "auto");
 }
 
-/** True when the pilot ejected because the head was destroyed: the blow that
- *  destroyed it is already folded into the raised pilot hits (TO p.165). */
-function headLossEjected(unit: UnitState): boolean {
-  return unit.removed === "pilotEjected" && unit.damage.internalStructure.head <= 0;
+/** A cockpit slot is destroyed: the MechWarrior dies, no ejection (TW p.125). */
+function isCockpitKilled(unit: UnitState): boolean {
+  return isCockpitDestroyed(mechDefFor(unit), unit.critSlotsDestroyed);
+}
+
+/** Head lost with auto-eject armed and the cockpit intact: the destruction
+ *  mark ejects the pilot at one hit short of death "regardless of prior
+ *  condition" (TO:AR p.165), so the pilot hits of the same step fold into
+ *  that total instead of landing first. */
+function headLossWillEject(unit: UnitState): boolean {
+  return (
+    !isUnitRemoved(unit) &&
+    unit.autoEject &&
+    unit.damage.internalStructure.head <= 0 &&
+    !isCockpitKilled(unit)
+  );
 }
 
 /** Pilot hits per failed seatbelt or fall. */
@@ -4251,6 +4274,15 @@ export function applyPilotHits(
   // blasts, falls) reach no MechWarrior.
   if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") return;
   if (isHull(unit) && reason !== "ejection") return;
+  // Eject first (TO:AR p.165): an ejected pilot is no longer aboard, so hits
+  // aboard (head hits, falls, life support) miss them; a head loss (about to
+  // auto-eject or already ejected) folds the step's hits into its raised total.
+  if (unit.removed === "pilotEjected" && reason !== "ejection") {
+    // Blast feedback still reaches an ejected pilot, unless a head loss in
+    // the same step already raised them to one short of death.
+    if (reason !== "ammoExplosion" || unit.damage.internalStructure.head <= 0) return;
+  }
+  if (headLossWillEject(unit)) return;
   const wasConscious = !isPilotUnconscious(unit);
   const rolls: ConsciousnessRoll[] = [];
   let failedAt: number | null = null;
@@ -4366,11 +4398,11 @@ function applyDamageGroups(
   }
   // TW p.41: every damaging head grouping injures the pilot, whatever the
   // source (falls, collapse, crashes, accidental falls). Same predicate as
-  // the weapon/physical paths; runs before the destruction sweep so a
-  // head-destroying blow still tallies the hit before auto-eject raises the
-  // pilot to one short of death, matching the weapon path ordering.
+  // the weapon/physical paths; runs before the destruction sweep, matching
+  // the weapon path ordering (a head loss about to auto-eject folds it into
+  // the raised total, see `applyPilotHits`).
   const headGroups = groups.filter((g) => g.location === "head" && g.damage >= 1).length;
-  if (headGroups > 0 && !headLossEjected(unit)) {
+  if (headGroups > 0) {
     applyPilotHits(state, unit, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
   }
   // Severed limbs stay where they were lost (TW p.146): record blow-offs
@@ -5057,7 +5089,7 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
       const headGroups = resolution.groups.filter(
         (g) => g.location === "head" && g.damage >= 1,
       ).length;
-      if (headGroups > 0 && !headLossEjected(target))
+      if (headGroups > 0)
         applyPilotHits(state, target, headGroups * HEAD_HIT_PILOT_HITS, "headHit", rng, sink);
       let ammoBlasts = 0;
       for (const crit of resolution.crits) {
@@ -5564,7 +5596,6 @@ export function resolveAllAttacks(state: BattleState, rng: Rng, sink: GameEvent[
   // injures the MechWarrior, TW p.125).
   for (const { unit, hits, reason } of pendingPilotHits) {
     if (isUnitRemoved(unit) && unit.removed !== "pilotEjected") continue;
-    if (reason === "headHit" && headLossEjected(unit)) continue;
     applyPilotHits(state, unit, hits, reason, rng, sink);
   }
   for (const unit of Object.values(state.units)) {
