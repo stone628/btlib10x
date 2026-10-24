@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
+import type { Facing, MoveMode } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import type { RevealedLanding } from "../src/index";
 import { setSlotDestroyed } from "../src/rules/critical";
@@ -9,6 +10,7 @@ import {
   executeMove,
   executePostureMove,
   type GameEvent,
+  type PostureChange,
   postureMoveBudget,
   requireUnit,
   rollInitiativePhase,
@@ -578,6 +580,67 @@ describe("move legality (MOV-02, 261018)", () => {
     const state = movementBattle();
     executeMove(state, "a", "jump", [enter(5, 4)], [], { finalFacing: "s", rng: scriptedRng() });
     expect(requireUnit(state, "a").facing).toBe("s");
+  });
+});
+
+describe("move input validation (MOV-08, 261022)", () => {
+  const north = { kind: "enter" as const, to: { col: 5, row: 4 } };
+
+  it("refuses an unknown movement mode instead of dropping the MP budget", () => {
+    for (const mode of ["fly", undefined, "WALK"]) {
+      const state = movementBattle();
+      expect(() =>
+        executeMove(state, "a", mode as unknown as MoveMode, [north], [], { rng: scriptedRng() }),
+      ).toThrow(/Unknown movement mode/);
+      expect(requireUnit(state, "a").position).toEqual({ col: 5, row: 5 });
+    }
+  });
+
+  it("refuses a finalFacing outside the six facings", () => {
+    for (const bad of ["x", "N", 2]) {
+      const state = movementBattle();
+      expect(() =>
+        executeMove(state, "a", "jump", [north], [], {
+          finalFacing: bad as unknown as Facing,
+          rng: scriptedRng(),
+        }),
+      ).toThrow(/Invalid finalFacing/);
+      expect(requireUnit(state, "a").facing).toBe("n");
+    }
+  });
+
+  it("refuses a bad posture move before the stand or drop resolves", () => {
+    const cases: [string, string, Facing | undefined][] = [
+      ["crouch", "walk", undefined],
+      ["standUp", "fly", undefined],
+      ["standUp", "walk", "zz" as Facing],
+    ];
+    for (const [posture, locomotion, finalFacing] of cases) {
+      const state = movementBattle("GRF-1N", true);
+      expect(() =>
+        executePostureMove(
+          state,
+          "a",
+          posture as PostureChange,
+          locomotion as MoveMode,
+          [],
+          [],
+          finalFacing === undefined
+            ? { rng: scriptedRng(6, 6) }
+            : { finalFacing, rng: scriptedRng(6, 6) },
+        ),
+      ).toThrow(/Unknown posture change|Unknown movement mode|Invalid finalFacing/);
+      const a = requireUnit(state, "a");
+      expect(a.prone).toBe(true);
+      expect(a.heat).toBe(0);
+    }
+    const standing = movementBattle();
+    expect(() =>
+      executePostureMove(standing, "a", undefined as unknown as PostureChange, "walk", [], [], {
+        rng: scriptedRng(),
+      }),
+    ).toThrow(/Unknown posture change/);
+    expect(requireUnit(standing, "a").prone).toBe(false);
   });
 });
 

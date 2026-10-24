@@ -2415,6 +2415,9 @@ export function executePostureMove(
   sink: GameEvent[],
   options: ExecuteMoveOptions,
 ): boolean {
+  if (posture !== "standUp" && posture !== "drop") {
+    throw new Error(`Unknown posture change: ${String(posture)}`);
+  }
   if (locomotion === "jump") {
     throw new Error(
       `${unitId} cannot jump in a turn it ${posture === "standUp" ? "stands up" : "drops prone"}`,
@@ -2423,6 +2426,12 @@ export function executePostureMove(
   if (posture === "drop" && locomotion === "run") {
     throw new Error(`${unitId} drops prone: walk (turn in place) or stand still only`);
   }
+  // Checked before the posture change resolves, so a refused call leaves the
+  // unit untouched (moveUnit repeats the checks for plain moves).
+  if (locomotion !== "standStill" && locomotion !== "walk" && locomotion !== "run") {
+    throw new Error(`Unknown movement mode: ${String(locomotion)}`);
+  }
+  requireValidFinalFacing(options.finalFacing);
   const rng = options.rng;
   // The posture change is a window of its own with nothing in scope: a
   // failed stand's fall rolls no sweep and earns no one credit.
@@ -2439,6 +2448,15 @@ export function executePostureMove(
     moveUnit(state, unitId, locomotion, steps, sink, options, posturePool(cost, posture));
   }
   return true;
+}
+
+/** Every `MoveMode`: an unknown mode would leave the move with no MP budget. */
+const MOVE_MODES: readonly MoveMode[] = ["standStill", "walk", "run", "jump", "prone"];
+
+function requireValidFinalFacing(finalFacing: Facing | undefined): void {
+  if (finalFacing !== undefined && !FACINGS.includes(finalFacing)) {
+    throw new Error(`Invalid finalFacing: ${String(finalFacing)}`);
+  }
 }
 
 /** `executeMove` body. With `posture`, the move continues the activation a
@@ -2488,6 +2506,8 @@ function moveUnit(
   if (unit.prone && mode === "walk" && steps.some((s) => s.kind === "enter")) {
     throw new Error(`${unitId} is prone: turn or pronestill only (no hex enters)`);
   }
+  if (!MOVE_MODES.includes(mode)) throw new Error(`Unknown movement mode: ${String(mode)}`);
+  requireValidFinalFacing(options.finalFacing);
   const startHex: HexCoord = unit.position;
   unit.moveMode = mode;
   unit.hexesMovedThisTurn = 0;
