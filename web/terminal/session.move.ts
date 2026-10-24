@@ -743,6 +743,7 @@ export function reachablesInfo(s: Session): BoardRenderReachableInfo {
       running,
       jumping,
       prone: proneFlag,
+      ...(proneFlag && isGyroDestroyed(actor) ? { proneTurnMax: 1 } : {}),
       grid: s.battle!,
       team: actor.team,
       ...(mode === "standup" ? { standup: true } : {}),

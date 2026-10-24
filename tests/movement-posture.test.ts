@@ -16,7 +16,7 @@ import {
   rollInitiativePhase,
   standUpCost,
 } from "../src/rules/game";
-import { pathMp } from "../src/rules/movement";
+import { pathMp, reachableLandings } from "../src/rules/movement";
 import {
   budgetFor,
   newSession,
@@ -267,6 +267,46 @@ describe("destroyed gyro while prone (MOV-08)", () => {
     ).toThrow(/one hexside/);
     executeMove(state, "a", "walk", [{ kind: "turn", facings: 1 }], [], { rng: scriptedRng() });
     expect(a.facing).toBe("ne");
+  });
+});
+
+describe("gyro-less prone turn landings (MOV-05, 261022)", () => {
+  const base = {
+    mode: "walk" as const,
+    walking: 4,
+    running: 6,
+    jumping: 0,
+    prone: true,
+    team: 1,
+    occupantTeam: () => undefined,
+  };
+
+  it("caps prone turns at proneTurnMax hexsides", () => {
+    const grid = movementBattle();
+    const start = { col: 5, row: 5 };
+    const all = reachableLandings(start, "n", { ...base, grid });
+    expect(new Set(all.map((l) => l.facing)).size).toBe(6);
+    const capped = reachableLandings(start, "n", { ...base, grid, proneTurnMax: 1 });
+    expect(capped.map((l) => l.facing).sort()).toEqual(["n", "ne", "nw"]);
+    expect(capped.every((l) => pathMp(l.path) <= 1)).toBe(true);
+  });
+
+  it("the shell offers a destroyed-gyro prone 'Mech only one hexside", () => {
+    const s = newSession(7);
+    execute(s, "map quickstart");
+    execute(s, "add hunchy HBK-4G 9 9 n");
+    execute(s, "add cicada HBK-4G 9 8 s");
+    execute(s, "start");
+    const actor = requireMovementActor(s);
+    actor.prone = true;
+    mechDef("HBK-4G")!.critSlots.centerTorso.forEach((slot, i) => {
+      if (slot.kind === "structure" && slot.type === "gyro")
+        setSlotDestroyed(actor.critSlotsDestroyed, "centerTorso", i);
+    });
+    execute(s, "mode turn");
+    const facings = s.move!.moveCandidate!.revealed.map((l) => l.facing);
+    expect(facings).toHaveLength(3);
+    expect(facings).toContain(actor.facing);
   });
 });
 

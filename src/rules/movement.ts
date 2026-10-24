@@ -197,6 +197,10 @@ export interface ReachabilityOptions {
    * `STAND_MP_COST` from the budget).
    */
   readonly standup?: boolean;
+  /** Caps the MP a prone turn (`prone` with `mode: "walk"`) may spend on
+   *  facing changes; pass 1 for a destroyed gyro, which allows one hexside
+   *  per turn (TW p.125). Omit for the whole walking budget. */
+  readonly proneTurnMax?: number;
 }
 
 /**
@@ -249,6 +253,10 @@ export function reachableLandings(
   const { width, height } = options.grid;
 
   const turnCost = jumping ? 0 : 1;
+  const turnLimit =
+    proneTurn && options.proneTurnMax !== undefined
+      ? Math.min(budget, options.proneTurnMax)
+      : budget;
   const wreckageAt = (hex: HexCoord): boolean => options.wreckageAt?.(hex) ?? false;
 
   const stepCost = (from: HexCoord, to: HexCoord): number => {
@@ -382,7 +390,7 @@ export function reachableLandings(
     ] as const) {
       const newFacing = rotateFacing(cur.facing, delta);
       const c = cur.cost + turnCost;
-      if (c <= budget) {
+      if (c <= turnLimit) {
         const turnStep: MovePathStep = {
           fragment: frag,
           baseMp: turnCost,

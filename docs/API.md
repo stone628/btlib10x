@@ -419,6 +419,8 @@ budget until the heat phase runs.
   `occupantTeam(hex)` reports a hull as `NEUTRAL_TEAM` (0): passable by every
   team, never a landing, and a charge / DFA target like an enemy;
   `occupantTeamAt(state, hex, excludeId?)` builds it from a battle.
+  `proneTurnMax` caps the MP a prone turn spends on facing changes: pass 1
+  for a destroyed gyro, which turns one hexside per turn (TW p.125).
 
 Types: `MoveFragment` (`"F" | "B" | "R" | "L" | "J" | "U"`),
 `MovePathStep` (`baseMp` per step), `RevealedLanding`, `ReachabilityOptions`.
