@@ -1,5 +1,5 @@
 import {
-  canAttemptStandUp,
+  canUnitStandUp,
   destroyedLegs,
   effectiveMoveBudget,
   effectiveMovement,
@@ -15,7 +15,6 @@ import {
   suggestFireTargets,
   type UnitState,
 } from "btlib10x";
-import { isGyroDestroyed } from "./misc";
 import { decide, promptPersona } from "./persona";
 import type { PersonaKey } from "./persona.data";
 import type { Session, SessionState } from "./session";
@@ -253,7 +252,7 @@ export function nextAutoPlayCommand(s: Session): string | null {
                 queueNextCommand("mode pronestill");
               }
               queueNextCommand("done");
-            } else if (!canAttemptStandUp(actor.damage) || isGyroDestroyed(actor)) {
+            } else if (!canUnitStandUp(actor)) {
               // Both legs gone (or one leg + both arms, or a destroyed gyro):
               // cannot stand, stay prone.
               queueNextCommand("mode pronestill");

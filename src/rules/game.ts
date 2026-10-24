@@ -6413,6 +6413,19 @@ function movementTerrainPsr(
 }
 
 /**
+ * True when `attemptStandUp` / `executePostureMove("standUp")` will not refuse
+ * the unit's condition: legs and arms (`canAttemptStandUp`, TW p.50) and a
+ * gyro that is not destroyed (TW p.125). Mobility (MP), heat, shutdown and
+ * consciousness are not tested.
+ */
+export function canUnitStandUp(unit: UnitState): boolean {
+  return (
+    canAttemptStandUp(unit.damage) &&
+    countDestroyedGyro(mechDefFor(unit), unit.damage, unit.critSlotsDestroyed) < GYRO_DESTROYED_HITS
+  );
+}
+
+/**
  * Stand-up attempt for a prone unit (TW p.50): spends `STAND_MP_COST` (or the
  * remaining walk budget, whichever is smaller — TW p.50 lets a 1-MP-prone
  * 'Mech like a one-leg unit still attempt to stand) and adds 1 heat, then

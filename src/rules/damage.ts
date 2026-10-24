@@ -273,8 +273,9 @@ export function isUnitImmobile(damage: UnitDamageState): boolean {
   return destroyedLegs(damage) === 2 && destroyedArms(damage) === 2;
 }
 
-/** True when the unit is allowed to attempt a stand-up (TW p.50):
- *  one leg + both arms = cannot stand; both legs = cannot stand. */
+/** Leg/arm stand-up test only (TW p.50): one leg + both arms = cannot stand;
+ *  both legs = cannot stand. It cannot see a destroyed gyro (TW p.125); use
+ *  `canUnitStandUp` for the full condition check. */
 export function canAttemptStandUp(damage: UnitDamageState): boolean {
   const legs = destroyedLegs(damage);
   const arms = destroyedArms(damage);

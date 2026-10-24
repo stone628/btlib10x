@@ -18,7 +18,7 @@
  */
 import {
   type BattleState,
-  canAttemptStandUp,
+  canUnitStandUp,
   destroyedLegs,
   effectiveMoveBudget,
   effectiveMovement,
@@ -32,7 +32,6 @@ import {
   STAND_MP_COST,
   type UnitState,
 } from "btlib10x";
-import { isGyroDestroyed } from "./misc";
 import { scoreAttacks } from "./persona.attack";
 import {
   type DecisionTrace,
@@ -327,8 +326,7 @@ function scriptedMovement(actor: UnitState, notes: TraceNote[]): string[] | null
   if (actor.prone) {
     if (
       isImmobile(actor) ||
-      !canAttemptStandUp(actor.damage) ||
-      isGyroDestroyed(actor) ||
+      !canUnitStandUp(actor) ||
       (destroyedLegs(actor.damage) === 0 && walkBudget(actor) < STAND_MP_COST) ||
       walkBudget(actor) < 1
     ) {

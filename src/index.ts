@@ -245,6 +245,7 @@ export {
   actorQueue,
   attemptVoluntaryStartup,
   buildUnitInit,
+  canUnitStandUp,
   clubTokensInHex,
   createBattle,
   DEFAULT_UNIT_POLICY,

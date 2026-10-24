@@ -4,9 +4,11 @@ import type { Facing, MoveMode } from "../src/core/types";
 import { mechDef } from "../src/data/index";
 import type { RevealedLanding } from "../src/index";
 import { setSlotDestroyed } from "../src/rules/critical";
+import { canAttemptStandUp } from "../src/rules/damage";
 import {
   attemptStandUp,
   buildUnitInit,
+  canUnitStandUp,
   executeMove,
   executePostureMove,
   type GameEvent,
@@ -28,7 +30,8 @@ import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpe
 
 /**
  * Movement and piloting fixes: jump path validation (MOV-02), no jump after a
- * stand (MOV-04), destroyed-gyro prone turning (MOV-08), fall position
+ * stand (MOV-04), destroyed-gyro prone turning (MOV-08), the gyro-aware
+ * stand-up predicate (MOV-09, 261022), fall position
  * (MOV-10), combined phase PSR modifiers (PSR-01), stand-up free facing
  * (MOV-07, 261018), move legality (MOV-02, 261018) and the fall-back hex
  * when the origin is occupied (MOV-04, 261018).
@@ -267,6 +270,46 @@ describe("destroyed gyro while prone (MOV-08)", () => {
     ).toThrow(/one hexside/);
     executeMove(state, "a", "walk", [{ kind: "turn", facings: 1 }], [], { rng: scriptedRng() });
     expect(a.facing).toBe("ne");
+  });
+});
+
+describe("stand-up predicate sees the gyro (MOV-09, 261022)", () => {
+  function proneWith(gyro: boolean, legs: number) {
+    const state = movementBattle("HBK-4G", true);
+    const a = requireUnit(state, "a");
+    if (gyro)
+      mechDef("HBK-4G")!.critSlots.centerTorso.forEach((slot, i) => {
+        if (slot.kind === "structure" && slot.type === "gyro")
+          setSlotDestroyed(a.critSlotsDestroyed, "centerTorso", i);
+      });
+    const is = a.damage.internalStructure as Record<string, number>;
+    for (const loc of ["leftLeg", "rightLeg"].slice(0, legs)) is[loc] = 0;
+    return state;
+  }
+
+  it("canAttemptStandUp stays a legs/arms test and misses the gyro", () => {
+    const a = requireUnit(proneWith(true, 0), "a");
+    expect(canAttemptStandUp(a.damage)).toBe(true);
+    expect(canUnitStandUp(a)).toBe(false);
+  });
+
+  it("canUnitStandUp matches what executePostureMove accepts", () => {
+    const expected = [
+      [false, 0, true],
+      [false, 1, true],
+      [false, 2, false],
+      [true, 0, false],
+      [true, 1, false],
+      [true, 2, false],
+    ] as const;
+    for (const [gyro, legs, ok] of expected) {
+      const state = proneWith(gyro, legs);
+      expect(canUnitStandUp(requireUnit(state, "a"))).toBe(ok);
+      const stand = () =>
+        executePostureMove(state, "a", "standUp", "walk", [], [], { rng: scriptedRng(6, 6) });
+      if (ok) expect(stand).not.toThrow();
+      else expect(stand).toThrow(/cannot stand up/);
+    }
   });
 });
 

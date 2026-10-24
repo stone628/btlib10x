@@ -591,7 +591,9 @@ exported for reading `AttackResolution.applications` steps.
 Predicates: `isUnitDestroyed(damage)` (head or CT IS gone),
 `isUnitImmobile(damage)` (both legs AND both arms gone — TW p.122),
 `destroyedLegs(damage)`, `destroyedArms(damage)`,
-`canAttemptStandUp(damage)` (TW p.50: false for 2-legs or 1-leg + 2-arms),
+`canAttemptStandUp(damage)` (TW p.50 legs/arms only: false for 2-legs or
+1-leg + 2-arms; blind to the gyro — use `canUnitStandUp(unit)` from the game
+API, which also refuses a destroyed gyro, TW p.125),
 `canFireFromLocation(damage, loc)` (location intact; arms also need their
 side torso, legs do not).
 Side-torso IS death blows off the arm. One leg destroyed = walk MP 1,
@@ -817,6 +819,7 @@ executePostureMove(state, unitId, "standUp" | "drop", locomotion, steps, sink: G
 postureMoveBudget(unit, "standUp" | "drop", budget): number           // MP left for the movement after a posture change, out of the locomotion budget (for reachability displays)
 postureCost(unit, "standUp" | "drop"): number                         // MP the stand-up / drop charges now
 attemptStandUp(state, unitId, sink: GameEvent[], rng): number          // movement phase only: prone unit tries to rise (one attempt per activation; ends it)
+canUnitStandUp(unit): boolean                                            // legs/arms (TW p.50) + gyro not destroyed (TW p.125): attemptStandUp won't refuse the unit's condition (MP/heat/shutdown not tested)
 dropProne(state, unitId, sink: GameEvent[]): void                // movement phase only: go prone voluntarily (1 MP, no heat, no roll, no damage; refused after jumping; ends the activation)
 ejectPilot(state, unitId, rng, sink: GameEvent[]): void                // current movement actor only, as its declaration (Tactical Operations extension; not with an unconscious pilot): ejection PSR (failure = floor(MoF/2) pilot hits, `pilotDamaged` reason "ejection"), then removes the unit (removed = "pilotEjected"); the frame stays as a hull; pilotHits retained
 abandonPilot(state, unitId, sink: GameEvent[]): void                   // current movement actor only (house rule, TO:AR p.165): a unit shut down since an earlier turn; no roll, no hits; removed = "pilotAbandoned", the frame stays as a hull in its posture

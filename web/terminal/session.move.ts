@@ -2,7 +2,7 @@ import {
   abandonPilot,
   attemptVoluntaryStartup,
   type BattleState,
-  canAttemptStandUp,
+  canUnitStandUp,
   cellAt,
   DROP_MP_COST,
   destroyedArms,
@@ -216,7 +216,7 @@ export function modeSyntaxFor(unit: UnitState | null): string {
     return "pronestill | shutdown | eject";
   }
   if (unit.prone) {
-    const standOk = canAttemptStandUp(unit.damage) && !isGyroDestroyed(unit);
+    const standOk = canUnitStandUp(unit);
     const runOk = legs === 0; // a one-leg 'Mech cannot stand into a run (TW p.122)
     const standupModes = standOk
       ? runOk
