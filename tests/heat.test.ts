@@ -15,6 +15,7 @@ import {
   requireUnit,
   resolveAllAttacks,
   rollInitiativePhase,
+  salvageableSeveredLimbs,
 } from "../src/rules/game";
 import {
   ammoExplosionAvoid,
@@ -875,6 +876,29 @@ describe("game integration: heat ammo explosion", () => {
     expect(hbk.destroyed).toBe("centerTorsoDestroyed");
     expect(hbk.pilotHits).toBe(hbk.pilotHitMax);
     expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "ejection")).toBe(false);
+  });
+
+  it("an arm blown off with the blasted torso keeps its slot flags (CRIT-11)", () => {
+    const state = hbkVsEnf();
+    const hbk = requireUnit(state, "hbk");
+    // One AC/20 shot (20) zeroes the 12-point LT; CT is padded so the 'Mech
+    // lives. The LT takes the catastrophic mark; the left arm (Medium Laser)
+    // is only blown off and keeps its slots for salvage.
+    hbk.ammoBins["leftTorso:1"] = 1;
+    hbk.ammoBins["leftTorso:2"] = 0;
+    hbk.damage.internalStructure.centerTorso = 1000;
+    hbk.heat = 43;
+    startAttackTurn(state);
+    const events: GameEvent[] = [];
+    advancePhase(state, events, scriptedRng(1, 1, 1, 3, 4, 3, 3, 3, 1, ...Array(30).fill(6)));
+    expect(
+      events.some((e) => e.kind === "ammoExplosionCheck" && e.unitId === "hbk" && !e.avoided),
+    ).toBe(true);
+    expect(hbk.damage.internalStructure.leftTorso).toBe(0);
+    expect(hbk.blownOffLimbs.map((l) => l.limb)).toContain("leftArm");
+    expect(hbk.critSlotsDestroyed.leftTorso).not.toBe(0);
+    expect(hbk.critSlotsDestroyed.leftArm).toBe(0);
+    expect(salvageableSeveredLimbs(state, "hbk")).toEqual(["leftArm"]);
   });
 
   it("gauss-only unit does not detonate from heat (inert ammo)", () => {

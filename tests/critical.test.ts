@@ -1251,6 +1251,36 @@ describe("blow-off and cockpit kill: salvage-friendly slot preservation", () => 
     expect(res.critSlotsDestroyed.leftArm).toEqual(flagsBefore);
   });
 
+  it("arm blown off with a torso an ammo explosion destroyed keeps its slot flags (CRIT-11)", () => {
+    // HBK-4G: AC/20 bin in leftTorso slot 1, Medium Laser in the left arm.
+    // One shot (20) zeroes the 12-point LT; CT absorbs the rest and lives.
+    // The torso takes the catastrophic mark; the arm is only blown off, so
+    // it keeps its slots for salvage as on the plain-damage path.
+    const def = mechDef("HBK-4G")!;
+    expect(def.critSlots.leftArm.some((s) => s.kind === "weapon")).toBe(true);
+    const ammoBins = loadAmmoBins(def);
+    overrideAmmoBin(ammoBins, "leftTorso", 1, 1);
+    overrideAmmoBin(ammoBins, "leftTorso", 2, 0);
+    const res = resolveCriticalHits({
+      rng: detRoll(8, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1),
+      model: def.model,
+      source: { location: "leftTorso", damage: 5 },
+      critSlotsDestroyed: freshFlags(def),
+      damage: {
+        armor: { ...def.armor, leftTorso: 0 },
+        armorRear: { ...def.armorRear },
+        internalStructure: { ...def.internalStructure, centerTorso: 1000 },
+      },
+      ammoBins,
+    });
+    expect(res.rows[0]!.kind).toBe("ammoExplosion");
+    expect(critSeveredLimbs(res)).toContain("leftArm");
+    expect(res.damage.internalStructure.leftArm).toBe(0);
+    const filled = def.critSlots.leftTorso.flatMap((slot, i) => (slot.kind === "empty" ? [] : [i]));
+    expect(destroyedSlots(res.critSlotsDestroyed, "leftTorso")).toEqual(filled);
+    expect(res.critSlotsDestroyed.leftArm).toBe(0);
+  });
+
   it("leg blow-off (det 12) preserves slot flags; immobility still triggers via IS<=0", () => {
     const def = mechDef("HBK-4G")!;
     const damage: UnitDamageState = {

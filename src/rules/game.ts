@@ -6025,8 +6025,10 @@ export function resolveHeatPhase(state: BattleState, rng: Rng, sink: GameEvent[]
             // Mark every freshly-zeroed location as catastrophic so
             // counters (`countDestroyedEngine`, `heatSinksOperational`,
             // `effectiveMovement`) report truthful destruction state for
-            // the rest of the phase.
+            // the rest of the phase. An arm blown off with its torso keeps
+            // its slots (see `detonateCritBlast`).
             for (const lost of application.newlyDestroyed) {
+              if (application.blownOffLimbs.some((arm) => arm === lost)) continue;
               markLocationCatastrophicallyDestroyed(
                 def,
                 unit.damage,

@@ -785,6 +785,9 @@ function detonateCritBlast(
     runDetermining(rng, def, { location: critLoc, damage: amount, struck: true }, state);
   }
   for (const newlyLost of app.newlyDestroyed) {
+    // An arm blown off with its torso is lost, not destroyed: its slots stay
+    // as they were, as on the plain-damage and Determining-12 paths.
+    if (app.blownOffLimbs.some((arm) => arm === newlyLost)) continue;
     markLocationCatastrophicallyDestroyed(def, state.damage, state.destroyed, newlyLost);
   }
   return app;
