@@ -763,7 +763,8 @@ and `ejectionDamage(roll)` (floor(margin of failure / 2)) support ejection.
 turn of the knockout; cleared on waking), the only record of consciousness.
 `pilotStatus(unit): "active" | "unconscious" | "ejected" | "abandoned" | "dead"` is the pilot's
 relation to the 'Mech, derived from `pilotHits`/`pilotHitMax`/`unconsciousSinceTurn`/`removed`
-(`dead` once the hits reach the max, else `ejected` / `abandoned` by the removal reason).
+(`ejected` / `abandoned` by the removal reason even at 0 HP, else `dead` once the hits reach
+the max; read `hp` for an ejected pilot's fate).
 `pilotRecord(unit)` returns `{ gunnery, piloting, hits, hitMax, hp, nextTarget, targets, status }`
 for record-sheet display (`hp = hitMax - hits`). `FallDirection` and
 `PreexistingDamage` are the related shapes.

@@ -35,10 +35,10 @@ export function isPilotUnconscious(unit: UnitState): boolean {
 }
 
 export function pilotStatus(unit: UnitState): PilotStatus {
-  // A pilot killed by the ejection landing is dead, not "ejected".
-  if (unit.pilotHits >= unit.pilotHitMax) return "dead";
+  // Out of the 'Mech first: an ejected pilot stays "ejected" even at 0 HP.
   if (unit.removed === "pilotEjected") return "ejected";
   if (unit.removed === "pilotAbandoned") return "abandoned";
+  if (unit.pilotHits >= unit.pilotHitMax) return "dead";
   return isPilotUnconscious(unit) ? "unconscious" : "active";
 }
 
