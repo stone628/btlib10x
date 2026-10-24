@@ -6447,7 +6447,9 @@ export function attemptStandUp(
     throw new Error(`${unitId} has a destroyed gyro and cannot stand up`);
   if (!canAttemptStandUp(unit.damage)) throw new Error(`${unitId} cannot stand up in this state`);
   const standCost = standUpCost(unit);
-  unit.moveMode = "walk";
+  // The declared mode sets the attacker movement modifier (TW p.49), even
+  // when the 'Mech stands in place and moveUnit never re-sets it.
+  unit.moveMode = locomotion === "run" ? "run" : "walk";
   unit.hexesMovedThisTurn = 0;
   unit.jumpedThisTurn = false;
   unit.mpSpent = standCost;

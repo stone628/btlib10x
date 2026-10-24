@@ -16,7 +16,7 @@ import {
   rollInitiativePhase,
   standUpCost,
 } from "../src/rules/game";
-import { pathMp, reachableLandings } from "../src/rules/movement";
+import { attackerMovementModifier, pathMp, reachableLandings } from "../src/rules/movement";
 import {
   budgetFor,
   newSession,
@@ -321,6 +321,23 @@ describe("failed stand-up (MOV-06)", () => {
     expect(a.mpSpent).toBe(2);
     expect(state.actedThisPhase).toContain("a");
     expect(() => attemptStandUp(state, "a", [], scriptedRng(6, 6))).toThrow();
+  });
+});
+
+describe("stand in place keeps the declared mode (MOV-06, 261022)", () => {
+  it("a run stand fires at the running modifier it paid heat for", () => {
+    const expected = { run: [3, "run", 2], walk: [2, "walk", 1], standStill: [1, "walk", 1] };
+    for (const [locomotion, [heat, mode, modifier]] of Object.entries(expected)) {
+      const state = movementBattle("HBK-4G", true);
+      executePostureMove(state, "a", "standUp", locomotion as MoveMode, [], [], {
+        rng: scriptedRng(6, 6),
+      });
+      const a = requireUnit(state, "a");
+      expect(a.prone).toBe(false);
+      expect(a.heatPending).toBe(heat);
+      expect(a.moveMode).toBe(mode);
+      expect(attackerMovementModifier(a.moveMode!)).toBe(modifier);
+    }
   });
 });
 
