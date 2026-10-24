@@ -47,6 +47,14 @@ function battle(hbkExtra: Partial<UnitInit> = {}): BattleState {
   return state;
 }
 
+/** Sum of `pilotDamaged.hits` emitted for `unitId`. */
+function pilotHitsEvented(events: readonly GameEvent[], unitId: string): number {
+  return events.reduce(
+    (sum, e) => (e.kind === "pilotDamaged" && e.unitId === unitId ? sum + e.hits : sum),
+    0,
+  );
+}
+
 function hurtHead(unit: UnitState, points: number): void {
   const is = unit.damage.internalStructure;
   unit.damage = { ...unit.damage, internalStructure: { ...is, head: is.head - points } };
@@ -466,6 +474,45 @@ describe("eject", () => {
     });
   });
 
+  describe("API-07: kill-time pilot hits are evented (head loss)", () => {
+    const NO_EJECT = {
+      policy: { ammoPolicy: "exposed", autoEject: false, heatFlamer: true, amsPolicy: "expected" },
+    } as const;
+
+    it("auto-eject: pilotDamaged headLoss before the ejection PSR; unitRemoved keeps destroyReason", () => {
+      const { hbk, events } = sweepHeadLoss(0);
+      const raise = events.findIndex((e) => e.kind === "pilotDamaged" && e.reason === "headLoss");
+      const psr = events.findIndex((e) => e.kind === "pilotingCheck" && e.reason === "ejection");
+      expect(events[raise]).toMatchObject({ unitId: "hbk", hits: 5, totalHits: 5, hpRemaining: 1 });
+      expect(raise).toBeGreaterThanOrEqual(0);
+      expect(raise).toBeLessThan(psr);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          kind: "unitRemoved",
+          unitId: "hbk",
+          reason: "pilotEjected",
+          destroyReason: "headDestroyed",
+        }),
+      );
+      expect(pilotHitsEvented(events, "hbk")).toBe(hbk.pilotHits);
+    });
+
+    it("auto-eject off: pilotDamaged headLoss before unitRemoved destroyed", () => {
+      const { hbk, events } = sweepHeadLoss(2, NO_EJECT);
+      const raise = events.findIndex((e) => e.kind === "pilotDamaged" && e.reason === "headLoss");
+      const removed = events.findIndex((e) => e.kind === "unitRemoved" && e.reason === "destroyed");
+      expect(events[raise]).toMatchObject({ hits: 4, totalHits: 6, hpRemaining: 0 });
+      expect(raise).toBeLessThan(removed);
+      expect(pilotHitsEvented(events, "hbk") + 2).toBe(hbk.pilotHits);
+    });
+
+    it("no event when the pilot is already at the raised total", () => {
+      const { hbk, events } = sweepHeadLoss(5);
+      expect(hbk.pilotHits).toBe(5);
+      expect(events.some((e) => e.kind === "pilotDamaged")).toBe(false);
+    });
+  });
+
   describe("ejectionModifier (TO p.165)", () => {
     const base = {
       landingTerrain: "clear",
@@ -724,12 +771,13 @@ describe("DMG-08: pilot fate reads the frame, eject first (TW p.128, TO:AR p.165
 
   // ML #1 at the bare right torso crits its AC/10 bin: the blast takes the
   // RT and the CT. ML #2 then strikes the head.
-  function blastThenHead(headArmor: number) {
+  function blastThenHead(headArmor: number, autoEject = true) {
+    const enfInit = buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "n");
     const state = createTestBattle(
       [],
       [
         buildUnitInit("hbk", "HBK-4G", 1, { col: 2, row: 2 }, "s"),
-        buildUnitInit("enf", "ENF-4R", 2, { col: 2, row: 3 }, "n"),
+        autoEject ? enfInit : { ...enfInit, policy: { ...enfInit.policy!, autoEject: false } },
       ],
       false,
     );
@@ -782,6 +830,65 @@ describe("DMG-08: pilot fate reads the frame, eject first (TW p.128, TO:AR p.165
     expect(enf.removed).toBe("destroyed");
     expect(enf.pilotHits).toBe(enf.pilotHitMax);
     expect(events.some((e) => e.kind === "pilotingCheck" && e.reason === "ejection")).toBe(false);
+  });
+
+  describe("API-07: kill-time pilot hits are evented", () => {
+    it("cockpit: pilotDamaged cockpitHit before unitRemoved destroyed", () => {
+      const { state, enf } = engineThenHead({ headArmor: 3 });
+      const events: GameEvent[] = [];
+      resolveAllAttacks(state, scriptedRng(...ENGINE_THEN_HEAD, 4, 4, 3, 6, 6), events);
+      const raise = events.findIndex((e) => e.kind === "pilotDamaged" && e.reason === "cockpitHit");
+      const removed = events.findIndex((e) => e.kind === "unitRemoved" && e.reason === "destroyed");
+      // The head hit's own point landed first (1), the cockpit raises to 6.
+      expect(events[raise]).toMatchObject({ unitId: "enf", hits: 5, totalHits: 6 });
+      expect(raise).toBeLessThan(removed);
+      expect(pilotHitsEvented(events, "enf")).toBe(enf.pilotHits);
+    });
+
+    it("auto-eject: unitRemoved pilotEjected carries the engine kill as destroyReason", () => {
+      const { state, enf } = engineThenHead({});
+      const events: GameEvent[] = [];
+      resolveAllAttacks(state, scriptedRng(...ENGINE_THEN_HEAD, 2, 2, 6, 6), events);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          kind: "unitRemoved",
+          reason: "pilotEjected",
+          destroyReason: "engineDestroyed",
+        }),
+      );
+      expect(pilotHitsEvented(events, "enf")).toBe(enf.pilotHits);
+    });
+
+    it("CT blast without auto-eject: pilotDamaged ctBlast, total 6", () => {
+      // Head armor 9 holds ML #2; spare 6s cover any consciousness rolls.
+      const { state, enf } = blastThenHead(9, false);
+      const events: GameEvent[] = [];
+      resolveAllAttacks(state, scriptedRng(...BLAST_THEN_HEAD, 6, 6, 6, 6, 6, 6, 6, 6), events);
+      expect(enf.damage.internalStructure.head).toBeGreaterThan(0);
+      expect(enf.removed).toBe("destroyed");
+      expect(enf.pilotHits).toBe(6);
+      const raise = events.find((e) => e.kind === "pilotDamaged" && e.reason === "ctBlast");
+      expect(raise).toMatchObject({ unitId: "enf", totalHits: 6, hpRemaining: 0 });
+      expect(pilotHitsEvented(events, "enf")).toBe(enf.pilotHits);
+    });
+
+    it("CT blast with the head lost and auto-eject: pilotDamaged headLoss before the ejection PSR", () => {
+      const { state, enf } = blastThenHead(0);
+      const events: GameEvent[] = [];
+      resolveAllAttacks(state, scriptedRng(...BLAST_THEN_HEAD, 2, 2, 6, 6), events);
+      const raise = events.findIndex((e) => e.kind === "pilotDamaged" && e.reason === "headLoss");
+      const psr = events.findIndex((e) => e.kind === "pilotingCheck" && e.reason === "ejection");
+      expect(events[raise]).toMatchObject({ hits: 5, totalHits: 5 });
+      expect(raise).toBeLessThan(psr);
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          kind: "unitRemoved",
+          reason: "pilotEjected",
+          destroyReason: "centerTorsoDestroyed",
+        }),
+      );
+      expect(pilotHitsEvented(events, "enf")).toBe(enf.pilotHits);
+    });
   });
 
   it("an ejected pilot takes the blast feedback but no hits aboard", () => {

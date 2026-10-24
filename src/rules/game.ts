@@ -447,7 +447,13 @@ export type PilotHitReason =
   | "fall"
   | "shutdownFall"
   | "lifeSupport"
-  | "ejection";
+  | "ejection"
+  /** Kill-time raises ({@link raisePilotHits}): head lost (to one short of
+   *  death on auto-eject, TO:AR p.165, else death, TW p.128), cockpit
+   *  destroyed (TW p.125), CT lost to a blast without auto-eject (TW p.128). */
+  | "headLoss"
+  | "cockpitHit"
+  | "ctBlast";
 
 /** Removal from play: "not" = on the board and active. "destroyed" = unit
  *  killed (paired with a DestroyedState reason); it leaves the board.
@@ -956,7 +962,10 @@ export type GameEvent =
       readonly hull?: true;
     }
   | {
-      /** One event per damage source (one `applyPilotHits` call). */
+      /** One event per damage source (one `applyPilotHits` call). Kill-time
+       *  raises (head loss, cockpit hit, CT blast) are evented too, with
+       *  reasons "headLoss" / "cockpitHit" / "ctBlast" and no
+       *  consciousness roll (the pilot dies, or the ejection roll decides). */
       readonly kind: "pilotDamaged";
       readonly unitId: string;
       readonly reason: PilotHitReason;
@@ -1464,6 +1473,28 @@ export function killCredit(state: BattleState, unit: UnitState): KillCredit[] {
     .sort((a, b) => b.damage - a.damage || (a.unitId < b.unitId ? -1 : 1));
 }
 
+/** Raise the pilot's hits to `to` at kill time (head loss, cockpit hit, CT
+ *  blast) and emit the matching `pilotDamaged`. No consciousness roll: the
+ *  pilot is dying, or the ejection roll decides. No-op when already there. */
+function raisePilotHits(
+  unit: UnitState,
+  to: number,
+  reason: PilotHitReason,
+  sink: GameEvent[],
+): void {
+  if (to <= unit.pilotHits) return;
+  const hits = to - unit.pilotHits;
+  unit.pilotHits = to;
+  sink.push({
+    kind: "pilotDamaged",
+    unitId: unit.id,
+    reason,
+    hits,
+    totalHits: unit.pilotHits,
+    hpRemaining: Math.max(0, unit.pilotHitMax - unit.pilotHits),
+  });
+}
+
 function markUnitDestroyed(
   state: BattleState,
   unit: UnitState,
@@ -1493,7 +1524,7 @@ function markUnitDestroyed(
   // TO p.165: head destruction auto-ejects the pilot (cockpit crits still kill),
   // brought one hit short of death so the ejection roll decides survival.
   if (headLoss && unit.autoEject) {
-    unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax - 1);
+    raisePilotHits(unit, unit.pilotHitMax - 1, "headLoss", sink);
     // Keep the cause of the loss: the ejection itself only marks `removed`.
     unit.destroyed = reason;
     resolveEjection(state, unit, rng, sink, "auto");
@@ -1507,7 +1538,8 @@ function markUnitDestroyed(
   // only reaches here with auto-eject off) or a CT lost to a blast without
   // auto-eject; any other destruction (engine, CT) leaves the pilot alive.
   if (cockpit || headLoss || pilotDies) {
-    unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax);
+    const why = cockpit ? "cockpitHit" : headLoss ? "headLoss" : "ctBlast";
+    raisePilotHits(unit, unit.pilotHitMax, why, sink);
   }
   sink.push({
     kind: "unitRemoved",
@@ -1677,7 +1709,8 @@ function awaitsDestroyedMark(unit: UnitState): boolean {
 
 /** Turn an active unit whose pilot is gone into a hull (`isHull`): it
  *  keeps its record, team, posture and hex, drops any club, and acts no
- *  more. Emits `unitRemoved` with `reason`. */
+ *  more. Emits `unitRemoved` with `reason`, plus `destroyReason` when the
+ *  frame is already destroyed (auto-eject from a destroyed 'Mech). */
 function leaveHull(
   state: BattleState,
   unit: UnitState,
@@ -1686,7 +1719,13 @@ function leaveHull(
 ): void {
   releaseClub(state, unit, "removed", sink);
   unit.removed = reason;
-  sink.push({ kind: "unitRemoved", unitId: unit.id, reason, credit: killCredit(state, unit) });
+  sink.push({
+    kind: "unitRemoved",
+    unitId: unit.id,
+    reason,
+    ...(unit.destroyed !== "not" ? { destroyReason: unit.destroyed } : {}),
+    credit: killCredit(state, unit),
+  });
 }
 
 /** A pilot killed by six accumulated pilot hits removes the unit from play
@@ -2146,7 +2185,7 @@ function resolveCenterTorsoBlast(
   // "regardless of prior condition" (TO:AR p.165), the blast's feedback
   // folded in (see `applyPilotHits`).
   if (unit.damage.internalStructure.head <= 0) {
-    unit.pilotHits = Math.max(unit.pilotHits, unit.pilotHitMax - 1);
+    raisePilotHits(unit, unit.pilotHitMax - 1, "headLoss", sink);
   }
   unit.destroyed = "centerTorsoDestroyed";
   resolveEjection(state, unit, rng, sink, "auto");

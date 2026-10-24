@@ -1312,6 +1312,9 @@ const PILOT_HIT_REASON_KEY: Readonly<Record<PilotHitReason, MessageKey>> = {
   fall: "log.pilotHitReason.fall",
   shutdownFall: "log.pilotHitReason.shutdownFall",
   lifeSupport: "log.pilotHitReason.lifeSupport",
+  headLoss: "log.pilotHitReason.headLoss",
+  cockpitHit: "log.pilotHitReason.cockpitHit",
+  ctBlast: "log.pilotHitReason.ctBlast",
 };
 
 function consciousnessCauseText(cause: PilotHitReason | "recovery"): string {

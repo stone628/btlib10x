@@ -949,7 +949,7 @@ type DestroyedState = "not" | DestroyedReason;
 type RemovalReason = "destroyed" | "pilotEjected" | "pilotKilled" | "pilotAbandoned";
 type RemovedState = "not" | RemovalReason;
 type ShutdownState = "not" | "manual" | "heat";
-type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFall" | "lifeSupport"; // pilot-damage cause tag
+type PilotHitReason = "headHit" | "ammoExplosion" | "fall" | "shutdownFall" | "lifeSupport" | "ejection" | "headLoss" | "cockpitHit" | "ctBlast"; // pilot-damage cause tag; the last three are kill-time raises (no consciousness roll): head lost (to pilotHitMax − 1 on auto-eject, else pilotHitMax), cockpit destroyed, CT lost to a blast without auto-eject
 
 type GameEvent =
   | { kind: "turn"; turn }
@@ -988,7 +988,12 @@ Rules encoded by the state machine:
   kill reason when the frame was destroyed (head loss or CT blast before an
   auto-eject, or a hull destroyed later, in the same step as a pilot kill or
   any time after). The `unitRemoved` event for a pilot kill carries no
-  `destroyReason`; a destroyed hull emits a second `unitRemoved` with reason
+  `destroyReason`; an ejection from an already destroyed frame (auto-eject
+  on head loss or a CT blast) carries the frame's `destroyReason`. Every
+  pilot-hit raise at kill time emits a `pilotDamaged` (reason `"headLoss"`,
+  `"cockpitHit"` or `"ctBlast"`; before the ejection roll on auto-eject,
+  before `unitRemoved` otherwise), so the `hits` of a unit's
+  `pilotDamaged` events sum to its `pilotHits`; a destroyed hull emits a second `unitRemoved` with reason
   `"destroyed"` and its `destroyReason` while the unit keeps its pilot
   removal reason.
 - **Kill credit**: every `unitRemoved` carries `credit`, from
