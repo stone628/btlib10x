@@ -348,9 +348,10 @@ are listed here. Rule text lives in the rulebook.
 These piloting-adjacent rules cannot be implemented without breaking limits
 stated elsewhere in this document or the codebase:
 
-- **Displacement** (push, domino effect, pavement skidding, charge / DFA
+- **Displacement** (push, domino effect, skidding, charge / DFA
   displacement; TW pp.62, 147, 151-153) — intentionally not implemented, for
-  simpler play (`docs/VISION.md` §2.5). A failed running skid falls in place.
+  simpler play (`docs/VISION.md` §2.5). There is no pavement terrain, so no
+  skid roll exists.
   All falls (combat PSRs, shutdowns, stand-up attempts, building crashes,
   accidental falls from above) happen in place; only ground-movement falls
   across levels use the `levelsFallen` term (lower-hex rule). A faller

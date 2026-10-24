@@ -19,7 +19,7 @@ export interface TerrainDef {
   readonly blocksTargeting: boolean;
   readonly waterDepth: number;
   /** Ejection Modifiers Table landing-terrain term (TO p.165) for the hex
-   *  behind the 'Mech: clear/pavement -2, water -1, rough/rubble 0, light woods
+   *  behind the 'Mech: clear -2, water -1, rough/rubble 0, light woods
    *  +2, heavy woods +3, +1 per level of building. */
   readonly ejectLandMod: (level: number) => number;
 }

@@ -6,27 +6,27 @@
     {
       "col": 1,
       "row": 1,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 1,
       "row": 2,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 1,
       "row": 3,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 1,
       "row": 4,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 1,
       "row": 5,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 1,
@@ -51,92 +51,92 @@
     {
       "col": 2,
       "row": 5,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 6,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 7,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 8,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 9,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 10,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 11,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 12,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 2,
       "row": 13,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 14,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 15,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 16,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 17,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 18,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 20,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 21,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 3,
       "row": 22,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 4,
@@ -151,32 +151,32 @@
     {
       "col": 4,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 4,
       "row": 22,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 4,
       "row": 23,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 4,
       "row": 24,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 4,
       "row": 25,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 4,
       "row": 26,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 5,
@@ -231,7 +231,7 @@
     {
       "col": 5,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 5,
@@ -341,7 +341,7 @@
     {
       "col": 6,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 7,
@@ -381,7 +381,7 @@
     {
       "col": 7,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 7,
@@ -436,7 +436,7 @@
     {
       "col": 8,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 9,
@@ -491,32 +491,32 @@
     {
       "col": 9,
       "row": 17,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 9,
       "row": 18,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 9,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 9,
       "row": 20,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 9,
       "row": 21,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 9,
       "row": 22,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 10,
@@ -589,7 +589,7 @@
     {
       "col": 10,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 10,
@@ -665,7 +665,7 @@
     {
       "col": 11,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 11,
@@ -726,7 +726,7 @@
     {
       "col": 12,
       "row": 19,
-      "type": "pavement"
+      "type": "clear"
     },
     {
       "col": 12,

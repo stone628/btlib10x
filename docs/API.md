@@ -26,7 +26,7 @@ source module.
 | Type | Values |
 | --- | --- |
 | `Facing` | `"n" \| "ne" \| "se" \| "s" \| "sw" \| "nw"` (hexside; clockwise from north) |
-| `TerrainType` | `"clear" \| "lightWoods" \| "heavyWoods" \| "rough" \| "rubble" \| "pavement" \| "water1" \| "water2" \| "water3" \| "lightBuilding" \| "mediumBuilding" \| "heavyBuilding" \| "hardenedBuilding"` |
+| `TerrainType` | `"clear" \| "lightWoods" \| "heavyWoods" \| "rough" \| "rubble" \| "water1" \| "water2" \| "water3" \| "lightBuilding" \| "mediumBuilding" \| "heavyBuilding" \| "hardenedBuilding"` |
 | `HexCoord` | `{ col: number; row: number }` (1-based odd-q, flat-top) |
 | `HexCell` | `{ terrain: TerrainType; level: number }` (per-cell terrain + elevation) |
 | `TerrainHexDef` | `{ col: number; row: number; type: TerrainType; level?: number }` (map data + setup; level optional, default 0) |

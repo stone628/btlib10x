@@ -29,7 +29,6 @@ export type TerrainType =
   | "heavyWoods"
   | "rough"
   | "rubble"
-  | "pavement"
   | "water1"
   | "water2"
   | "water3"
@@ -42,7 +41,6 @@ export const TERRAIN_TYPES: readonly TerrainType[] = [
   "heavyWoods",
   "rough",
   "rubble",
-  "pavement",
   "water1",
   "water2",
   "water3",

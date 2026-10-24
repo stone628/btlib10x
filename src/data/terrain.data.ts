@@ -62,8 +62,6 @@ function terrainData(type: TerrainType): TerrainDef {
       return buildSimpleTerrain(1, 0, 0, 0);
     case "rubble":
       return buildSimpleTerrain(1, 0, 0, 0);
-    case "pavement":
-      return buildSimpleTerrain(0, 0, 0, -2);
     case "water1":
       return buildWaterTerrain(1, 1, false);
     case "water2":

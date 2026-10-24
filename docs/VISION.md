@@ -144,7 +144,7 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   (skidding vehicles, sideslipping VTOLs).
 - **Displacement rules (by design, for simpler play):** no rule moves a unit
   across hexes. The push attack, the domino effect, skidding / sliding
-  (pavement skids fall in place) and displacement from charge / DFA are
+  (there is no pavement terrain, so no skid roll either) and displacement from charge / DFA are
   intentionally absent. Falls always happen in place (ground-movement falls
   across levels use the lower-hex rule); a faller landing on an occupied
   hex stays in the hex it came from, or, when another unit holds that hex

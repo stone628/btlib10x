@@ -211,7 +211,7 @@ export function losBlockedByWater(
  *  - 'Mechs: 2 levels for LOS ray (TW p. 99 unit height).
  *  - woods: 2 levels (p. 100).
  *  - buildings: 2 levels default (p. 166–167 medium default).
- *  - clear / rough / rubble / pavement / water: 0 (no LOS height).
+ *  - clear / rough / rubble / water: 0 (no LOS height).
  */
 export const MECH_LOS_HEIGHT = 2;
 const BUILDING_LOS_HEIGHT = 2;

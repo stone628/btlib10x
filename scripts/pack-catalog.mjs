@@ -101,7 +101,6 @@ const TERRAIN_TYPES = [
   "heavyWoods",
   "rough",
   "rubble",
-  "pavement",
   "water1",
   "water2",
   "water3",

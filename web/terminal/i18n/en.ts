@@ -962,7 +962,6 @@ export const en = {
   "terrain.heavyWoods": "heavy woods",
   "terrain.rough": "rough",
   "terrain.rubble": "rubble",
-  "terrain.pavement": "pavement",
   "terrain.water1": "shallow water",
   "terrain.water2": "deep water",
   "terrain.water3": "very deep water",

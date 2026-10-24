@@ -65,9 +65,9 @@ ensureMechRegistered("GRF-1N");
 ```
 
 Terrain is plain data: a list of hex definitions `{ col, row, type, level? }`
-whose missing hexes are clear ground at level 0. The engine supports 13
+whose missing hexes are clear ground at level 0. The engine supports 12
 core-rulebook terrain types (`clear`, lightWoods, heavyWoods, rough, rubble,
-pavement, water1, water2, water3, and light/medium/heavy/hardened buildings),
+water1, water2, water3, and light/medium/heavy/hardened buildings),
 each with data-driven movement-cost, LOS-screening, and to-hit modifiers in
 `src/data/terrain.data.ts` (read with `terrainMoveCost`, `costToEnter`,
 `screeningPoints`, `terrainTargetMod`, `hasPartialCover`, `blocksTargeting`).

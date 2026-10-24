@@ -25,7 +25,7 @@ TypeScript library encapsulating BattleTech Total Warfare board game logic.
   effective facing one hexside). Elevation IS
   implemented: per-hex `level` (default 0) on the map, with movement
   climb cost, jump ignoring elevation, and LOS elevation ray.
-- Terrain: 13 core-rulebook types, data-driven from `src/data/terrain.data.ts`
+- Terrain: 12 core-rulebook types, data-driven from `src/data/terrain.data.ts`
   (move surcharge, screening value, target to-hit mod, partial-cover and
   targeting-restriction flags). Water depth 2+ (water2/water3) blocks LOS
   in/out; water1 grants partial cover. Buildings carry a structural

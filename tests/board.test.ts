@@ -433,7 +433,6 @@ describe("terrainCatalog", () => {
       expect(costToEnter("clear")).toBe(1);
       expect(costToEnter("rough")).toBe(2);
       expect(costToEnter("heavyWoods")).toBe(3);
-      expect(costToEnter("pavement")).toBe(1);
     });
   });
 
@@ -445,8 +444,8 @@ describe("terrainCatalog", () => {
       expect(terrainTargetMod("heavyWoods")).toBe(2);
     });
 
-    it("clear / rough / rubble / pavement provide no screening or to-hit mod", () => {
-      for (const t of ["clear", "rough", "rubble", "pavement"] as const) {
+    it("clear / rough / rubble provide no screening or to-hit mod", () => {
+      for (const t of ["clear", "rough", "rubble"] as const) {
         expect(screeningPoints(t)).toBe(0);
         expect(terrainTargetMod(t)).toBe(0);
       }

@@ -940,7 +940,6 @@ export const ko: Catalog = {
   "terrain.heavyWoods": "빽빽한 숲",
   "terrain.rough": "험지",
   "terrain.rubble": "잔해",
-  "terrain.pavement": "포장도로",
   "terrain.water1": "얕은 물",
   "terrain.water2": "깊은 물",
   "terrain.water3": "아주 깊은 물",
