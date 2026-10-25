@@ -1,10 +1,10 @@
 import { buildUnitInit as buildUnitInitDist, createBattle as createBattleDist } from "btlib10x";
 import { describe, expect, it } from "vitest";
-import { createBattle, type FireTarget, validateAttacks } from "../src";
 import { neighbor } from "../src/core/hex";
+import type { TerrainHexDef } from "../src/core/types";
 import { type HexCoord, isArm, rotateFacing } from "../src/core/types";
+import { mechDefFor } from "../src/data/mech.schema";
 import { isFireableWeapon, weaponDef } from "../src/data/weapon.schema";
-import { mechDefFor } from "../src/index";
 import {
   classifyArcWithBoundary,
   classifyFiringArc,
@@ -13,21 +13,17 @@ import {
 } from "../src/rules/arcs";
 import { expectedClusterHits } from "../src/rules/cluster";
 import { canFireFromLocation } from "../src/rules/damage";
+import type { FireTarget } from "../src/rules/fireability";
 import { bestFireTarget, hitProbability, suggestFireTargets } from "../src/rules/fireability";
-import {
-  advancePhase,
-  type BattleState,
-  buildUnitInit,
-  declareAttacks,
-  type GameEvent,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type TerrainHexDef,
-  type UnitInit,
-  validateAttacksImpl,
-} from "../src/rules/game";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import { declareAttacks, validateAttacks, validateAttacksImpl } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game/types";
 import { usableWeapons } from "../web/terminal/persona.common";
-import { createTestBattle, scriptedRng, seededRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng, seededRng } from "./helpers/rng";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [

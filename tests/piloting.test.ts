@@ -1,38 +1,29 @@
 import { describe, expect, it } from "vitest";
 import type { Location } from "../src/core/types";
 import { mechDef } from "../src/data/index";
-import {
-  mechDefFor,
-  type ResolvedCritSlot,
-  suggestFireTargets,
-  type UnitDamageState,
-} from "../src/index";
+import { mechDefFor, type ResolvedCritSlot } from "../src/data/mech.schema";
 import { type CritMask, cloneCritTable, setSlotDestroyed } from "../src/rules/critical";
+import type { UnitDamageState } from "../src/rules/damage";
 import { applyDamage, dealtOf } from "../src/rules/damage";
-import {
-  advancePhase,
-  applyFall,
-  applyPilotHits,
-  attemptStandUp,
-  buildUnitInit,
-  declareAttacks,
-  dropProne,
-  executeMove,
-  type GameEvent,
-  isHull,
-  isImmobile,
-  nextActor,
-  occupantAt,
-  type PhaseSnapshots,
-  requireUnit,
-  resolveAllAttacks,
-  resolveHeatPhase,
-  rollInitiativePhase,
-} from "../src/rules/game";
+import { suggestFireTargets } from "../src/rules/fireability";
+import { isImmobile } from "../src/rules/game/condition";
+import { applyFall, applyPilotHits } from "../src/rules/game/consequences";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks } from "../src/rules/game/declare";
+import { resolveHeatPhase } from "../src/rules/game/heatPhase";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove } from "../src/rules/game/move";
+import { attemptStandUp, dropProne } from "../src/rules/game/posture";
+import { isHull, occupantAt, requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { nextActor, rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { GameEvent, PhaseSnapshots } from "../src/rules/game/types";
 import { isPilotUnconscious } from "../src/rules/pilot";
 import { rollFallDirection } from "../src/rules/piloting";
 
-import { createTestBattle, groupsTotaling, scriptedRng, sweepPiloting } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { groupsTotaling, sweepPiloting } from "./helpers/piloting";
+import { scriptedRng } from "./helpers/rng";
 
 function hbkEnf(critsDisabled = true) {
   return createTestBattle(

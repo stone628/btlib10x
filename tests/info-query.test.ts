@@ -22,7 +22,7 @@ import {
 import { newSession } from "../web/terminal/session";
 import { infoMechChunk } from "../web/terminal/session.common";
 import { infoMechQuery, infoWeaponQuery } from "../web/terminal/table";
-import { chunkText, execute } from "./helpers";
+import { chunkText, execute } from "./helpers/session";
 
 function mech(
   model: string,

@@ -23,9 +23,10 @@ import {
   type TorsoLocationValue,
   type UnitDamageState,
 } from "../src/rules/damage";
-import { buildUnitInit, type UnitInit, type UnitState } from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game/create";
+import type { UnitInit, UnitState } from "../src/rules/game/types";
 import { resolveInitialDamage, type UnitInitDamage } from "../src/rules/initialDamage";
-import { createTestBattle } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
 
 /** Build a layered damage state; every location defaults to 10 armor / 10 IS. */
 function mk(

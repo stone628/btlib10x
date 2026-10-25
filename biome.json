@@ -56,6 +56,44 @@
           }
         }
       }
+    },
+    {
+      "includes": ["tests/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "../src": "Import the module that defines the symbol, not the src barrel (docs/GAME_REFACTORING.md section 3).",
+                  "../src/index": "Import the module that defines the symbol, not the src barrel (docs/GAME_REFACTORING.md section 3).",
+                  "../../src": "Import the module that defines the symbol, not the src barrel (docs/GAME_REFACTORING.md section 3).",
+                  "../../src/index": "Import the module that defines the symbol, not the src barrel (docs/GAME_REFACTORING.md section 3)."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "includes": ["src/rules/**"],
+      "linter": {
+        "rules": {
+          "style": {
+            "noRestrictedImports": {
+              "level": "error",
+              "options": {
+                "paths": {
+                  "../index": "Import the module that defines the symbol, not the src barrel (docs/GAME_REFACTORING.md section 3).",
+                  "../../index": "Import the module that defines the symbol, not the src barrel (docs/GAME_REFACTORING.md section 3)."
+                }
+              }
+            }
+          }
+        }
+      }
     }
   ]
 }

@@ -9,15 +9,10 @@ import { mechDefFor } from "../data/index";
 import { type AmmoBinId, collectAmmoBins, strandedShots } from "./ammo";
 import { destroyedSlots, isSlotDestroyed, isWeaponCritted } from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
-import {
-  type BattleState,
-  type DestroyedReason,
-  isHull,
-  type RemovalReason,
-  salvageableSeveredLimbs,
-  type UnitState,
-  WRECKAGE_TONNAGE_MIN,
-} from "./game";
+import { salvageableSeveredLimbs } from "./game/clubs";
+import { WRECKAGE_TONNAGE_MIN } from "./game/constants";
+import { isHull } from "./game/queries";
+import type { BattleState, DestroyedReason, RemovalReason, UnitState } from "./game/types";
 import { dhsCritWidth } from "./heat";
 
 /** A hull is an abandoned, intact frame still on the board (TO:AR

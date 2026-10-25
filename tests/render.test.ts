@@ -1,13 +1,10 @@
 import { describe, expect, it } from "vitest";
+import type { TerrainHexDef } from "../src/core/types";
+import { hexKey } from "../src/core/types";
 import { mapDef } from "../src/data/index";
-import { hexKey, type MapDef } from "../src/index";
-import {
-  type BattleState,
-  buildUnitInit,
-  type createBattle,
-  type TerrainHexDef,
-  type UnitInit,
-} from "../src/rules/game";
+import type { MapDef } from "../src/data/map.schema";
+import { buildUnitInit, type createBattle } from "../src/rules/game/create";
+import type { BattleState, UnitInit } from "../src/rules/game/types";
 import {
   applyEdgeStyles,
   type BoardModel,
@@ -29,7 +26,7 @@ import {
   type Span,
   TEAM_STYLES,
 } from "../web/terminal/renderer.text";
-import { createTestBattle } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
 
 /** Flat battle text via the structured model (historic renderer shape). */
 const renderBattle = (

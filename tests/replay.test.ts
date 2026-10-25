@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { neighbor } from "../src/core/hex";
 import { type Facing, type HexCoord, oppositeFacing, rotateFacing } from "../src/core/types";
 import { setSlotDestroyed } from "../src/rules/critical";
-import { buildUnitInit, type ClubPickupDecl, type MoveStep } from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game/create";
+import type { ClubPickupDecl, MoveStep } from "../src/rules/game/types";
 import type { PhysicalAttackDecl } from "../src/rules/physical";
 import { VERSION } from "../src/version";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
@@ -24,7 +25,9 @@ import {
   weaponListText,
 } from "../web/terminal/replay";
 import { commitAtomic, newSession, type Session, setSeed } from "../web/terminal/session";
-import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 const w = (...ns: number[]) => ns.map((weaponIndex) => ({ weaponIndex }));
 const idxOf = (id: string) => ({ a: "0", b: "1", c: "2" })[id] ?? "?";

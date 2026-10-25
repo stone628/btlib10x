@@ -5,19 +5,13 @@ import type { Rng } from "../src/core/types";
 import { appendCatalog, decodeMapLine } from "../src/data/catalog";
 import { encodeMapDef, listMapNames, mapDef, mechDef } from "../src/data/index";
 import { type MapDef, type MapDefSrc, validateMapDef } from "../src/data/map.schema";
-import {
-  buildUnitInit,
-  clubTokensInHex,
-  createBattle,
-  declarePickup,
-  type GameEvent,
-  hasWreckage,
-  resolveAllAttacks,
-  type UnitInit,
-  wreckageAt,
-} from "../src/rules/game";
+import { clubTokensInHex, declarePickup } from "../src/rules/game/clubs";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import { hasWreckage, wreckageAt } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import type { GameEvent, UnitInit } from "../src/rules/game/types";
 import { loadBattleState, saveBattleState } from "../src/rules/snapshot";
-import { createTestBattle } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
 
 /**
  * Map-declared severed limbs and wreckage: validation, battle seeding, the

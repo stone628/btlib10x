@@ -1,12 +1,10 @@
 import { isArm, mapDefFor, mechDefFor, suggestFireTargets } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import { mechDefFor as mechDefForSrc } from "../src/data/index";
-import {
-  effectiveMoveBudget,
-  effectiveMovement,
-  isUnitImmobile,
-  STAND_MP_COST,
-} from "../src/index";
+import { effectiveMovement } from "../src/rules/critical";
+import { isUnitImmobile } from "../src/rules/damage";
+import { STAND_MP_COST } from "../src/rules/game/constants";
+import { effectiveMoveBudget } from "../src/rules/heat";
 import {
   AUTOPLAY_MAX_TURNS,
   nextAutoPlayCommand,
@@ -24,7 +22,9 @@ import {
   requireAttackActor,
   type Session,
 } from "../web/terminal/session";
-import { critWeapon, disableCritical, execute, scriptedRng } from "./helpers";
+import { critWeapon } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 /** HBK by hand vs. a persona WVR, both well inside each other's range. */
 function setup(seed = 5, persona = "jumpjockey"): Session {

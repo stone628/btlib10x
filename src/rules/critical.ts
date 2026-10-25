@@ -82,7 +82,7 @@
  *     `src/rules/actuators.ts`)
  *
  * The engine's rules functions are pure given their inputs and operate on
- * snapshots; the caller (game.ts) commits the resulting state onto UnitState.
+ * snapshots; the caller (`src/rules/game/`) commits the resulting state onto UnitState.
  */
 
 import { diceIndex, roll2D6, rollD6 } from "../core/dice";
@@ -103,7 +103,7 @@ import {
   type UnitDamageState,
   zeroLocationStructure,
 } from "./damage";
-import type { DestroyedReason } from "./game";
+import type { DestroyedReason } from "./game/types";
 import { GYRO_DESTROYED_HITS, SENSOR_BLIND_HITS } from "./piloting";
 
 // ---------------------------------------------------------------------------

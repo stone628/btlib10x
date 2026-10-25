@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { TerrainHexDef } from "../src/core/types";
 import { FACINGS, type Facing, type Rng } from "../src/core/types";
 import { mechDef, mechDefFor } from "../src/data/index";
 import { weaponDefFor } from "../src/data/weapon.schema";
@@ -6,22 +7,18 @@ import { ammoWeaponTotals, binsForWeaponName, pooledShotsLeft } from "../src/rul
 import type { AmsPolicy } from "../src/rules/ams";
 import { classifyFiringArc, effectiveFacingForTwist, type Twist } from "../src/rules/arcs";
 import { crittedWeapons, isSlotDestroyed, isWeaponCritted } from "../src/rules/critical";
-import type { BattleState, GameEvent, TerrainHexDef, UnitInit } from "../src/rules/game";
-import {
-  actorQueue,
-  advancePhase,
-  buildUnitInit,
-  DEFAULT_UNIT_POLICY,
-  declareAttacks,
-  executeMove,
-  nextActor,
-  passAttack,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-} from "../src/rules/game";
+import { DEFAULT_UNIT_POLICY } from "../src/rules/game/constants";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks, passAttack } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove } from "../src/rules/game/move";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { actorQueue, nextActor, rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game/types";
 import { critLines, resolutionLines } from "../web/terminal/session";
-import { checkVictory, createTestBattle, overrideAmmoBin, scriptedRng } from "./helpers";
+import { checkVictory, createTestBattle, overrideAmmoBin } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
 
 function hbkVsEnf(terrain: readonly TerrainHexDef[] = []): BattleState {
   const units: UnitInit[] = [

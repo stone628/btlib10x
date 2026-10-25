@@ -372,7 +372,7 @@ Engine-internal heat plumbing (source-module import only): `movementHeat`,
 `engineHitHeat`, `engineInternalSinks`, `dhsCritWidth`,
 `heatSinksOperational`, `largestAmmoBin`, `shutdownAvoidWithThreshold`.
 
-### Heat phase (`rules/game.ts` `resolveHeatPhase`)
+### Heat phase (`rules/game/heatPhase.ts` `resolveHeatPhase`)
 
 Per TW p.159, the heat scale updates once at the heat phase: own heat
 (movement + weapon + posture + engine crit, summed into `unit.heatPending`
@@ -452,7 +452,7 @@ the terrain is the building's sub-type and nothing else stores it), `buildingAt`
 `collapseToRubble`, `assertBuildingsMatchCells`, `DEFAULT_BUILDING_LEVELS`. The battle engine tracks building CF itself;
 library consumers observe collapses through `buildingCollapsed` events.
 
-In the battle engine (`rules/game.ts`), `createBattle` initializes
+In the battle engine (`rules/game/create.ts`), `createBattle` initializes
 `BattleState.buildings["col,row"]` for each building hex in `terrain`.
 `damageBuildingAt(state, hex, damage)` drains a building's CF, collapses it
 to rubble on reaching 0 (emitting a `buildingCollapsed` event), and returns
@@ -798,7 +798,7 @@ The draw-order/consumption internals (`AMMO_POLICIES`, `isAmmoPolicy`,
 `consumeAmmo`, `consumeAmmoForName`, `drawOrderBins`, `designTotalsByWeaponName`)
 are engine-internal (source-module import only).
 
-## Battle state machine (`rules/game.ts`)
+## Battle state machine (`rules/game/`)
 
 The engine is **in-place and `void`-returning**: rule functions mutate the
 `BattleState` you pass directly and return `void` (read-only queries like
@@ -808,7 +808,7 @@ activation order on first use each phase). The engine never decides
 winner: `gameLoop(state, rng, stopper)` advances transient phases until
 caller-supplied `GameLoopStopper` returns true; victory checks live
 outside engine (`checkSessionVictory` in `web/terminal/session.ts`, `checkVictory`
-test helper in `tests/helpers.ts`).
+test helper in `tests/helpers/battle.ts`).
 The engine is single-threaded and non-concurrent; atomicity is **not**
 guaranteed per rule call — callers that need all-or-nothing behavior (e.g. the
 web session) hold a serializable snapshot and roll back on failure (see
@@ -863,7 +863,7 @@ requireUnit(state, unitId): UnitState
 stop condition. Engine returns `{ actorId; stopped }` with no winner field
 (events go to the `sink` you pass). See `web/terminal/session.ts` `drive()` feeding
 `checkSessionVictory` as stopper; tests use `checkVictory` helper in
-`tests/helpers.ts` same role.
+`tests/helpers/battle.ts` same role.
 
 ```ts
 interface CreateBattleOptions {
@@ -970,13 +970,13 @@ type GameEvent =
   | { kind: "heatInflicted"; unitId; targetId; weapon; heat; source: "asHeat" | "extraHeat"; totalReceived }
   | { kind: "heatExternal"; unitId; received; applied; wasted }   // outside heat landing, TW p.159
   | { kind: "amsEngaged"; unitId; weaponIndex; weapon; attackerId; attackWeapon; hitsWithout; hitsWith; heat; base; totalGenerated; shotsLeft: number | null }   // unitId's AMS cut the attack just resolved (TW p.129); heat joins heatPending; shotsLeft null for a Laser AMS
-  | ... ;                              // see src/rules/game.ts for the full union
+  | ... ;                              // see src/rules/game/types.ts for the full union
 
 interface ActorQueueActorView { id; team; shutdown; destroyed; removed }
 type GameLoopStopper = (state: BattleState) => boolean;
 interface GameLoopResult { actorId: string | null; stopped: boolean; }  // transient: nothing stored on BattleState
 // No VictoryResult in engine. Winner checks live outside engine:
-// SessionVictoryResult in web/terminal/session.ts, VictoryResult test helper in tests/helpers.ts.
+// SessionVictoryResult in web/terminal/session.ts, VictoryResult test helper in tests/helpers/battle.ts.
 ```
 
 Rules encoded by the state machine:

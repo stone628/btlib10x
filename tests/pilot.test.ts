@@ -1,33 +1,27 @@
 import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import { mechDef } from "../src/data/index";
-import { mechDefFor } from "../src/index";
+import { mechDefFor } from "../src/data/mech.schema";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import { setSlotDestroyed } from "../src/rules/critical";
+import { isImmobile } from "../src/rules/game/condition";
+import { applyPilotHits } from "../src/rules/game/consequences";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import { declareAttacks, validateAttacks } from "../src/rules/game/declare";
+import { partialCoverMod } from "../src/rules/game/geometry";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove } from "../src/rules/game/move";
+import { ejectPilot } from "../src/rules/game/pilotActions";
 import {
-  advancePhase,
-  applyPilotHits,
-  type BattleState,
-  buildUnitInit,
-  createBattle,
-  declareAttacks,
-  ejectPilot,
-  executeMove,
-  type GameEvent,
   isHull,
-  isImmobile,
   isUnitOnBoard,
-  nextActor,
   occupantAt,
   occupantTeamAt,
-  partialCoverMod,
   requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type UnitInit,
-  type UnitState,
-  validateAttacks,
-} from "../src/rules/game";
+} from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { nextActor, rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit, UnitState } from "../src/rules/game/types";
 import { losClear } from "../src/rules/los";
 import { reachableLandings } from "../src/rules/movement";
 import { pilotRecord, pilotStatus } from "../src/rules/pilot";
@@ -35,7 +29,8 @@ import { consciousnessTarget, ejectionDamage, ejectionModifier } from "../src/ru
 import { loadBattleState, saveBattleState } from "../src/rules/snapshot";
 import { toHitTotal } from "../src/rules/tohit";
 import { sheetIdLine } from "../web/terminal/session.common";
-import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
+import { checkVictory, createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
 
 function battle(hbkExtra: Partial<UnitInit> = {}): BattleState {
   const units: UnitInit[] = [

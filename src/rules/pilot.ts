@@ -4,7 +4,7 @@
  * fields on `UnitState`; nothing here is stored, so snapshots cannot drift.
  */
 
-import type { UnitState } from "./game";
+import type { UnitState } from "./game/types";
 import { consciousnessTarget } from "./piloting";
 
 /** The pilot's relation to the 'Mech.

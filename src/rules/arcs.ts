@@ -114,7 +114,7 @@ export function classifyArcWithBoundary(unitFacing: Facing, b: Bearing): ArcClas
  * this helper picks the defender-favouring member of the boundary pair
  * deterministically — `front` always wins; otherwise drop `rear`. Weapon
  * attacks take the hexside of the chosen LOS chain instead
- * (`attackDirectionFor` in `game.ts`); this fallback serves callers with no
+ * (`attackDirectionFor` in `game/geometry.ts`); this fallback serves callers with no
  * chain.
  */
 export function defenderArcChoice(arc: Arc, altArc: Arc | null): Arc {

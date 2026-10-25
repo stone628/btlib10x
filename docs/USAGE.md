@@ -48,7 +48,7 @@ function mulberry32(seed: number): Rng {
 const rng = mulberry32(42);
 ```
 
-For tests you can also script exact die results (see `tests/helpers.ts`
+For tests you can also script exact die results (see `tests/helpers/rng.ts`
 `scriptedRng`).
 
 ## 2. Load the catalog, terrain, and the 'Mechs
@@ -211,7 +211,7 @@ world around it owns stop condition, passed as `GameLoopStopper`:
 
 ```ts
 advancePhase(state, events);                 // attack -> end (kills committed)
-// world-side victory check, e.g. test helper in tests/helpers.ts or
+// world-side victory check, e.g. test helper in tests/helpers/battle.ts or
 // checkSessionVictory in web/terminal/session.ts:
 const aliveTeams = new Set(
   Object.values(state.units).filter((u) => u.removed === "not").map((u) => u.team),
@@ -226,7 +226,7 @@ if (aliveTeams.size > 1) {
 Engine simulates; caller decides finish. Define a stopper over
 `BattleState` and feed it to `gameLoop(state, rng, stopper)` —
 `gameLoop` returns `{ actorId; stopped }` (events go to the sink you pass) with no winner field.
-`tests/helpers.ts` `checkVictory` shows minimal test-world version;
+`tests/helpers/battle.ts` `checkVictory` shows minimal test-world version;
 `web/terminal/session.ts` `checkSessionVictory` + `drive()` shows app version:
 
 ```ts

@@ -9,7 +9,7 @@ import {
   replayPrettifier,
 } from "../web/terminal/replay";
 import { newSession, type Session } from "../web/terminal/session";
-import { execute } from "./helpers";
+import { execute } from "./helpers/session";
 
 function battle(seed = 5): Session {
   const s = newSession(seed);

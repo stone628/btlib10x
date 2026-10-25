@@ -9,20 +9,16 @@ import { resolveWeaponAttack } from "../src/rules/attack";
 import { type CritMask, emptyCritTable, setSlotDestroyed } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
 import { suggestFireTargets } from "../src/rules/fireability";
-import {
-  advancePhase,
-  type BattleState,
-  buildUnitInit,
-  declareAttacks,
-  type GameEvent,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  validateAttacksImpl,
-  type WeaponAttackDecl,
-} from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks, validateAttacksImpl } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, WeaponAttackDecl } from "../src/rules/game/types";
 import { computeToHit, toHitTotal } from "../src/rules/tohit";
-import { createTestBattle, scriptedRng, seededRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng, seededRng } from "./helpers/rng";
 
 describe("GATOR to-hit calculation", () => {
   // Total Warfare, Rolling To Hit diagram (p.106):

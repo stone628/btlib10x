@@ -6,7 +6,7 @@
  * engages at most one attack per turn and only one AMS may engage a given
  * attack; the defender chooses which. This module holds the pure parts: the
  * modifiers, the value of an engagement and the per-unit choice policy
- * (`UnitPolicy.amsPolicy`). `resolveAllAttacks` (game.ts) does the bookkeeping.
+ * (`UnitPolicy.amsPolicy`). `resolveAllAttacks` (`game/resolveAttacks.ts`) does the bookkeeping.
  */
 import type { WeaponDef } from "../data/weapon.schema";
 import { clusterHits, expectedClusterHits, modifiedClusterRoll } from "./cluster";

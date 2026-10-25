@@ -2,7 +2,7 @@ import { D2D6_MAX, D2D6_MIN } from "../core/dice";
 import { terrainTargetMod } from "../core/terrain";
 import type { MoveMode, TerrainType } from "../core/types";
 import type { WeaponDef } from "../data/weapon.schema";
-import type { UnitSkillRange } from "./game";
+import type { UnitSkillRange } from "./game/types";
 import { attackerMovementModifier, TARGET_IMMOBILE_MOD, targetMovementModifier } from "./movement";
 
 export type RangeBracket = "short" | "medium" | "long";

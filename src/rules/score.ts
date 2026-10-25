@@ -17,7 +17,7 @@ import {
   isWeaponCritted,
 } from "./critical";
 import { canFireMount, isUnitLocationDestroyed, type UnitDamageState } from "./damage";
-import type { BattleState, UnitState } from "./game";
+import type { BattleState, UnitState } from "./game/types";
 import { SENSOR_BLIND_HITS } from "./piloting";
 import { damageForBracket } from "./tohit";
 

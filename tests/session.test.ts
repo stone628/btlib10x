@@ -4,7 +4,7 @@ import { LOCATIONS } from "../src/core/types";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
 import { suggestFireTargets } from "../src/rules/fireability";
-import type { GameEvent } from "../src/rules/game";
+import type { GameEvent } from "../src/rules/game/types";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
 import { decodeUnitLine, encodeUnitLine } from "../web/terminal/replay";
 import { createRng } from "../web/terminal/rng";
@@ -22,7 +22,8 @@ import {
 } from "../web/terminal/session";
 import { formatCritEffect } from "../web/terminal/session.attack";
 import { handleSessionGameEvents } from "../web/terminal/session.common";
-import { disableCritical, execute, scriptedRng } from "./helpers";
+import { scriptedRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 function freshState(hp = 10): UnitDamageState {
   const armor = {} as LocationValue;

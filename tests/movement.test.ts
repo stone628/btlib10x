@@ -12,18 +12,16 @@ import {
 } from "../src/core/types";
 import { mechDefFor } from "../src/data/index";
 import { effectiveMovement } from "../src/rules/critical";
-import {
-  type BattleState,
-  buildUnitInit,
-  executeMove,
-  type GameEvent,
-  requireUnit,
-  rollInitiativePhase,
-  type UnitInit,
-} from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game/create";
+import { executeMove } from "../src/rules/game/move";
+import { requireUnit } from "../src/rules/game/queries";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game/types";
 import { losClear } from "../src/rules/los";
 import { type MovePathStep, pathMp, reachableLandings } from "../src/rules/movement";
-import { createTestBattle, groupsTotaling, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { groupsTotaling } from "./helpers/piloting";
+import { scriptedRng } from "./helpers/rng";
 
 // Start in the middle of a large board so the search radius is not clipped.
 const start = { col: 12, row: 12 };

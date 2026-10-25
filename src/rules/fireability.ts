@@ -17,17 +17,10 @@ import {
 import { expectedClusterHits } from "./cluster";
 import { countDestroyedSensor, isWeaponCritted } from "./critical";
 import { canFireMount, isUnitLocationDestroyed } from "./damage";
-import {
-  type BattleState,
-  isImmobile,
-  isTargetableBy,
-  isUnitOnBoard,
-  isUnitRemoved,
-  losEnds,
-  losSideFor,
-  partialCoverMod,
-  shooterInPartialCover,
-} from "./game";
+import { isImmobile } from "./game/condition";
+import { losEnds, losSideFor, partialCoverMod, shooterInPartialCover } from "./game/geometry";
+import { isTargetableBy, isUnitOnBoard, isUnitRemoved } from "./game/queries";
+import type { BattleState } from "./game/types";
 import { toHitHeatModifier } from "./heat";
 import { losClear, losWoodsPointsBetween } from "./los";
 import { sensorAttackModifier, sensorsBlind } from "./piloting";

@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { requireUnit, type UnitInit } from "../src";
 import { LOCATIONS, type Location, type Rng } from "../src/core/types";
 import { mechDef, type ResolvedMechDef } from "../src/data/index";
 import {
@@ -31,17 +30,17 @@ import {
   setSlotDestroyed,
 } from "../src/rules/critical";
 import { dealtOf, type UnitDamageState } from "../src/rules/damage";
-import {
-  advancePhase,
-  buildUnitInit,
-  declareAttacks,
-  type GameEvent,
-  resolveAllAttacks,
-  rollInitiativePhase,
-} from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { GameEvent, UnitInit } from "../src/rules/game/types";
 import { heatSinksOperational } from "../src/rules/heat";
 import { preexistingDamageModifier } from "../src/rules/piloting";
-import { createTestBattle, overrideAmmoBin, scriptedRng, seededRng } from "./helpers";
+import { createTestBattle, overrideAmmoBin } from "./helpers/battle";
+import { scriptedRng, seededRng } from "./helpers/rng";
 
 /** Helper: returns an Rng whose first 2D6 sums to `sum` (1..12), then yields `tail`. */
 function detRoll(sum: number, ...tail: number[]): ReturnType<typeof scriptedRng> {
@@ -442,7 +441,7 @@ describe("weapon and ammo crit effects", () => {
     // ammo (20 shots x 5 = 100), no CASE. Two CT engine slots are already
     // gone, so the third engine slot kills the 'Mech; the bin then blows
     // through the 1-IS center torso. The engine came first, so it is the
-    // reason (the derivation every damage path shares in game.ts).
+    // reason (the derivation every damage path shares in `src/rules/game/`).
     const def = mechDef("HER-5SA")!;
     const flags = freshFlags(def);
     setSlotDestroyed(flags, "centerTorso", 0);

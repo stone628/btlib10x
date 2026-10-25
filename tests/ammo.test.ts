@@ -20,17 +20,16 @@ import {
 } from "../src/rules/ammo";
 import { setSlotDestroyed } from "../src/rules/critical";
 import { suggestFireTargets } from "../src/rules/fireability";
-import {
-  advancePhase,
-  buildUnitInit,
-  type createBattle,
-  declareAttacks,
-  requireUnit,
-  rollInitiativePhase,
-  type UnitInit,
-} from "../src/rules/game";
+import { buildUnitInit, type createBattle } from "../src/rules/game/create";
+import { declareAttacks } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { requireUnit } from "../src/rules/game/queries";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { UnitInit } from "../src/rules/game/types";
 import { newSession, type Session } from "../web/terminal/session";
-import { createTestBattle, critState, disableCritical, execute, scriptedRng } from "./helpers";
+import { createTestBattle, critState } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 describe("ammo catalog", () => {
   it("every ammo weapon resolves as a catalog weapon", () => {

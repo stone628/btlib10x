@@ -7,21 +7,10 @@
 
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import {
-  type BattleState,
-  buildUnitInit,
-  createBattle,
-  type HexCoord,
-  isTsmActive,
-  mechDefFor,
-  type Rng,
-  type TeamId,
-  TSM_ACTIVATION_HEAT,
-  type UnitInit,
-} from "../src";
-import type { Location } from "../src/core/types";
+import type { HexCoord, Location, Rng } from "../src/core/types";
 import { loadCatalog } from "../src/data/catalog";
 import { decodeMechLine, encodeMechDef } from "../src/data/mech.codec";
+import { mechDefFor } from "../src/data/mech.schema";
 import { decodeRelaxed } from "../src/data/relaxed-json";
 import {
   type CritMask,
@@ -30,6 +19,9 @@ import {
   TSM_WALK_BONUS,
 } from "../src/rules/critical";
 import type { UnitDamageState } from "../src/rules/damage";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import type { BattleState, TeamId, UnitInit } from "../src/rules/game/types";
+import { isTsmActive, TSM_ACTIVATION_HEAT } from "../src/rules/heat";
 import { physicalDamage, resolvePhysicalAttack } from "../src/rules/physical";
 
 function freshFlags(def = mechDefFor({ model: "CN9-YLW2" })): CritMask {

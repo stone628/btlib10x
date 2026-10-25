@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { HexGrid } from "../src/core/terrain";
+import type { TerrainHexDef } from "../src/core/types";
 import { type HexCell, hexKey } from "../src/core/types";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import {
@@ -8,31 +9,24 @@ import {
   isBuildingTerrain,
   isCollapsed,
 } from "../src/rules/building";
-import {
-  advancePhase,
-  applyFall,
-  type BattleState,
-  buildUnitInit,
-  collapseDamageTotal,
-  damageBuildingAt,
-  declareAttacks,
-  executeMove,
-  type GameEvent,
-  partialCoverBuildingHex,
-  partialCoverMod,
-  passAttack,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type TerrainHexDef,
-  type UnitInit,
-  type UnitState,
-} from "../src/rules/game";
+import { collapseDamageTotal, damageBuildingAt } from "../src/rules/game/buildings";
+import { applyFall } from "../src/rules/game/consequences";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks, passAttack } from "../src/rules/game/declare";
+import { partialCoverBuildingHex, partialCoverMod } from "../src/rules/game/geometry";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove } from "../src/rules/game/move";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit, UnitState } from "../src/rules/game/types";
 import { punchHitLocation } from "../src/rules/hitlocation";
 import { losBlockedByWater } from "../src/rules/los";
 import { reachableLandings } from "../src/rules/movement";
 import { buildingMovementModifier } from "../src/rules/piloting";
-import { createTestBattle, groupsTotaling, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { groupsTotaling } from "./helpers/piloting";
+import { scriptedRng } from "./helpers/rng";
 
 describe("isBuildingTerrain", () => {
   it("accepts each building terrain", () => {

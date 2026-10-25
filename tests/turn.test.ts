@@ -1,49 +1,42 @@
 import { describe, expect, it } from "vitest";
 import { hexCell } from "../src/core/terrain";
 import { mechDef } from "../src/data/index";
-import {
-  declareAttacks,
-  loadBattleState,
-  parseBattleState,
-  requireUnit,
-  saveBattleState,
-} from "../src/index";
 import { setSlotDestroyed } from "../src/rules/critical";
+import { damageBuildingAt } from "../src/rules/game/buildings";
+import { applyPilotHits } from "../src/rules/game/consequences";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove, passMovement } from "../src/rules/game/move";
 import {
   abandonPilot,
-  actorQueue,
-  advancePhase,
-  applyPilotHits,
   attemptVoluntaryStartup,
-  type BattleState,
-  buildUnitInit,
-  damageBuildingAt,
   ejectPilot,
-  executeMove,
-  type GameEvent,
-  nextActor,
-  passMovement,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type UnitInit,
-  type UnitState,
   voluntaryShutdown,
-} from "../src/rules/game";
+} from "../src/rules/game/pilotActions";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { actorQueue, nextActor, rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit, UnitState } from "../src/rules/game/types";
 import {
   loadAmmoState,
+  loadBattleState,
   loadBuildings,
   loadCritTable,
   loadDamageState,
   loadUnitState,
   loadWreckage,
+  parseBattleState,
   saveAmmoState,
+  saveBattleState,
   saveBuildings,
   saveCritTable,
   saveDamageState,
   saveUnitState,
   saveWreckage,
 } from "../src/rules/snapshot";
-import { checkVictory, createTestBattle, scriptedRng } from "./helpers";
+import { checkVictory, createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
 
 function hbkEnf(critsDisabled: boolean): BattleState {
   const units: UnitInit[] = [

@@ -1,22 +1,19 @@
 import { describe, expect, it } from "vitest";
-import type { UnitDamageState } from "../src";
 import { D2D6_IMPOSSIBLE } from "../src/core/dice";
 import type { TerrainType } from "../src/core/types";
 import { mechDef, mechDefFor } from "../src/data/index";
 import { collectAmmoBins } from "../src/rules/ammo";
 import { countDestroyedEngine, emptyCritTable, setSlotDestroyed } from "../src/rules/critical";
-import type { BattleState, GameEvent, UnitInit } from "../src/rules/game";
-import {
-  advancePhase,
-  buildUnitInit,
-  declareAttacks,
-  executeMove,
-  nextActor,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  salvageableSeveredLimbs,
-} from "../src/rules/game";
+import type { UnitDamageState } from "../src/rules/damage";
+import { salvageableSeveredLimbs } from "../src/rules/game/clubs";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove } from "../src/rules/game/move";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { nextActor, rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game/types";
 import {
   ammoExplosionAvoid,
   effectiveMoveBudget,
@@ -31,7 +28,8 @@ import {
 } from "../src/rules/heat";
 import { damageGroupsTotal } from "../src/rules/physical";
 import { isPilotUnconscious } from "../src/rules/pilot";
-import { createTestBattle, scriptedRng, seededRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng, seededRng } from "./helpers/rng";
 
 function hbkVsEnf(): BattleState {
   const units: UnitInit[] = [

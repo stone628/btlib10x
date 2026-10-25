@@ -1,15 +1,8 @@
 import { describe, expect, it } from "vitest";
 import kgcJson from "../docs/mtf/sw/json/kgc-000.json";
-import {
-  type Arc,
-  classifyFiringArc,
-  createBattle,
-  mechDefFor,
-  suggestFireTargets,
-  type Twist,
-} from "../src";
 import { type Facing, type HexCoord, LOCATIONS } from "../src/core/types";
 import { type CritSlot, type MechDef, mechDef, resolveMechDef } from "../src/data/index";
+import { mechDefFor } from "../src/data/mech.schema";
 import { weaponDef } from "../src/data/weapon.schema";
 import { loadAmmoBins, pooledShotsLeft } from "../src/rules/ammo";
 import {
@@ -19,6 +12,7 @@ import {
   chooseAms,
   isAmsEngageable,
 } from "../src/rules/ams";
+import { type Arc, classifyFiringArc, type Twist } from "../src/rules/arcs";
 import {
   type AttackResolution,
   resolveWeaponAttack,
@@ -38,18 +32,14 @@ import {
   setSlotDestroyed,
 } from "../src/rules/critical";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
-import {
-  advancePhase,
-  type BattleState,
-  buildUnitInit,
-  declareAttacks,
-  type GameEvent,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type UnitInit,
-  validateAttacksImpl,
-} from "../src/rules/game";
+import { suggestFireTargets } from "../src/rules/fireability";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import { declareAttacks, validateAttacksImpl } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit } from "../src/rules/game/types";
 import {
   HIT_LOCATION_TABLE,
   hitLocation,
@@ -57,7 +47,8 @@ import {
   LEFT_SIDE_TABLE,
   RIGHT_SIDE_TABLE,
 } from "../src/rules/hitlocation";
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
 
 function freshState(hp = 10): UnitDamageState {
   const armor = {} as LocationValue;

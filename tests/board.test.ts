@@ -27,7 +27,6 @@ import {
   type TerrainType,
 } from "../src/core/types";
 import { allTerrainDefs } from "../src/data/terrain.schema";
-import { loadBattleState, parseBattleState, saveBattleState } from "../src/index";
 import {
   classifyArc,
   classifyArcWithBoundary,
@@ -35,7 +34,8 @@ import {
   defenderArcChoice,
   weaponCanFireIntoArc,
 } from "../src/rules/arcs";
-import { buildUnitInit, damageBuildingAt } from "../src/rules/game";
+import { damageBuildingAt } from "../src/rules/game/buildings";
+import { buildUnitInit } from "../src/rules/game/create";
 import { losBlocked, losWoodsPoints } from "../src/rules/los";
 import {
   attackerMovementModifier,
@@ -44,7 +44,8 @@ import {
   facingChangeCost,
   maxMovePoints,
 } from "../src/rules/movement";
-import { bearing, createTestBattle } from "./helpers";
+import { loadBattleState, parseBattleState, saveBattleState } from "../src/rules/snapshot";
+import { bearing, createTestBattle } from "./helpers/battle";
 
 describe("movement rules", () => {
   it("computes MP budgets per movement mode", () => {

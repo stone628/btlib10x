@@ -41,7 +41,7 @@
  * (TW p.42): 1 hit -> 3+, 2 -> 5+, 3 -> 7+, 4 -> 10+, 5 -> 11+,
  * 6 hits = dead.
  *
- * All functions here are pure; game.ts commits the results onto UnitState.
+ * All functions here are pure; `src/rules/game/` commits the results onto UnitState.
  */
 
 import { D2D6_MAX, D2D6_MIN, roll2D6, rollD6 } from "../core/dice";
@@ -52,7 +52,7 @@ import type { ResolvedMechDef } from "../data/mech.schema";
 import type { Arc } from "./arcs";
 import { type CritMask, countDestroyedGyro, destroyedStructures, HIP } from "./critical";
 import { isUnitLocationDestroyed, type UnitDamageState } from "./damage";
-import type { UnitSkillRange } from "./game";
+import type { UnitSkillRange } from "./game/types";
 
 /** Default pilot skill for `UnitInit`s that omit it (TW regular pilot). */
 export const DEFAULT_PILOTING: UnitSkillRange = 5;

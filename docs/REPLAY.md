@@ -1,7 +1,7 @@
 # REPLAY.md — compact battle replay format (draft)
 
 Status: **draft, not implemented.** A replay is a log of the **engine API calls**
-that drove a battle (`src/rules/game.ts`, `physical.ts`), plus the seed — not
+that drove a battle (`src/rules/game/*`, `physical.ts`), plus the seed — not
 CLI words. Re-running the calls on the same engine version with the same seeded
 `Rng` (mulberry32, `web/terminal/rng.ts`) reproduces the battle; dice are never stored.
 Terse on purpose — not meant to be read without this document.

@@ -4,7 +4,7 @@
  * Public surface is three functions: `saveBattleState` serializes live state
  * to a JSON string; `loadBattleState` parses it back onto live state in
  * place (engine mutates passed state, returns void — see
- * `src/rules/game.ts`); `parseBattleState` parses a snapshot string into a
+ * `src/rules/game/`); `parseBattleState` parses a snapshot string into a
  * fresh detached `BattleState` with no placeholder needed. The string itself
  * is the reusable snapshot: load the same string repeatedly for repeated
  * rollbacks.
@@ -52,7 +52,7 @@ import type {
   Phase,
   UnitState,
   WreckageEntry,
-} from "./game";
+} from "./game/types";
 
 /** Detached deep copy of a `BattleState`. Treat as immutable. */
 type BattleSnapshot = BattleState;

@@ -7,7 +7,7 @@
  * to-hit modifiers in the weapon attack phase already include that turn's
  * movement heat. Dissipation, shutdown/restart checks and heat ammo
  * explosions are processed once per turn when the end phase runs
- * (`resolveHeatPhase` in game.ts).
+ * (`resolveHeatPhase` in `game/heatPhase.ts`).
  *
  * Heat sinks come from the `heatsink` config (MTF `Heat Sinks:N Type` header)
  * plus the crit-slot table. Per construction rules an engine mounts

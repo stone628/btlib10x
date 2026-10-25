@@ -19,18 +19,17 @@ import {
   setSlotDestroyed,
 } from "../src/rules/critical";
 import { applyDamage, dealtOf, type UnitDamageState } from "../src/rules/damage";
-import {
-  advancePhase,
-  applyFall,
-  buildUnitInit,
-  createBattle,
-  type GameEvent,
-  requireUnit,
-  rollInitiativePhase,
-} from "../src/rules/game";
+import { applyFall } from "../src/rules/game/consequences";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import { advancePhase } from "../src/rules/game/loop";
+import { requireUnit } from "../src/rules/game/queries";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { GameEvent } from "../src/rules/game/types";
 import { largestAmmoBin } from "../src/rules/heat";
 import { infoMechChunk } from "../web/terminal/session.common";
-import { chunkText, createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
+import { chunkText } from "./helpers/session";
 
 // Unmodelled equipment (ECM, probes, Artemis, MASC, command modules, ...)
 // takes critical hits like any other equipment (TW p.124); only CASE, endo

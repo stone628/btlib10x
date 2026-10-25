@@ -1,32 +1,23 @@
 import { describe, expect, it } from "vitest";
 import hct5sJson from "../data/mechs/hct-5s.json";
-import {
-  type BattleState,
-  createBattle,
-  declareAttacks,
-  type GameEvent,
-  type HexCoord,
-  mechDefFor,
-  type Rng,
-  suggestFireTargets,
-  type UnitInit,
-} from "../src";
-import type { LimbLocation, Location } from "../src/core/types";
+import type { HexCoord, LimbLocation, Location, Rng } from "../src/core/types";
 import { type MechDef, type ResolvedMechDef, resolveMechDef } from "../src/data/index";
+import { mechDefFor } from "../src/data/mech.schema";
 import { isWeaponCritted, setSlotDestroyed } from "../src/rules/critical";
+import { suggestFireTargets } from "../src/rules/fireability";
+import { damageBuildingAt } from "../src/rules/game/buildings";
 import {
-  applyFall,
-  buildUnitInit,
   clubTokensInHex,
-  damageBuildingAt,
   declarePickup,
   recordSeveredLimbs,
-  resolveAllAttacks,
   salvageableSeveredLimbs,
-  type TeamId,
-  validateAttacksImpl,
   validatePickup,
-} from "../src/rules/game";
+} from "../src/rules/game/clubs";
+import { applyFall } from "../src/rules/game/consequences";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import { declareAttacks, validateAttacksImpl } from "../src/rules/game/declare";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import type { BattleState, GameEvent, TeamId, UnitInit } from "../src/rules/game/types";
 import {
   computePhysicalToHit,
   isPhysicalWeaponName,
@@ -48,7 +39,9 @@ import {
   queuePhysicalAttack,
   type Session,
 } from "../web/terminal/session";
-import { critWeapon, disableCritical, execute, seededRng } from "./helpers";
+import { critWeapon } from "./helpers/battle";
+import { seededRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 /**
  * Physical-weapon strike tests (TW p.146).

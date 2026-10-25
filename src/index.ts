@@ -130,6 +130,7 @@ export {
   isAmsEngageable,
   isAmsPolicy,
 } from "./rules/ams";
+export type { SecondaryTargetMod } from "./rules/arcs";
 export {
   type Arc,
   classifyArcWithBoundary,
@@ -200,6 +201,57 @@ export {
   hitProbability,
   suggestFireTargets,
 } from "./rules/fireability";
+export {
+  clubTokensInHex,
+  declarePickup,
+  pickupSourceInHex,
+  salvageableSeveredLimbs,
+  validatePickup,
+} from "./rules/game/clubs";
+export { isImmobile } from "./rules/game/condition";
+export {
+  DEFAULT_UNIT_POLICY,
+  DROP_MP_COST,
+  GIRDER_SEARCH_TARGET,
+  STAND_MP_COST,
+  TEAM_IDS,
+  WRECKAGE_TONNAGE_MIN,
+} from "./rules/game/constants";
+export { buildUnitInit, createBattle } from "./rules/game/create";
+export { declareAttacks, passAttack, validateAttacks } from "./rules/game/declare";
+export { facingToward } from "./rules/game/geometry";
+export { gameLoop } from "./rules/game/loop";
+export { meleeDeclarationProblem } from "./rules/game/melee";
+export { executeMove, executePostureMove, passMovement } from "./rules/game/move";
+export {
+  abandonPilot,
+  attemptVoluntaryStartup,
+  ejectPilot,
+  voluntaryShutdown,
+} from "./rules/game/pilotActions";
+export {
+  canUnitStandUp,
+  dropProne,
+  postureCost,
+  postureMoveBudget,
+  standUpCost,
+} from "./rules/game/posture";
+export {
+  hasWreckage,
+  isHull,
+  isNominal,
+  isShutdown,
+  isTargetableBy,
+  isUnitAvailable,
+  isUnitOnBoard,
+  isUnitRemoved,
+  isValidTeam,
+  occupantAt,
+  occupantTeamAt,
+  requireUnit,
+  wreckageAt,
+} from "./rules/game/queries";
+export { actorQueue, setUnitPolicy, unitPolicyOf } from "./rules/game/turnOrder";
 export type {
   ActorQueueActorView,
   AttackPhaseStage,
@@ -227,7 +279,6 @@ export type {
   PostureChange,
   RemovalReason,
   RemovedState,
-  SecondaryTargetMod,
   SeveredLimb,
   ShutdownState,
   TeamId,
@@ -239,57 +290,7 @@ export type {
   ValidatedTargetVolley,
   WeaponAttackDecl as AttackDecl,
   WreckageEntry,
-} from "./rules/game";
-export {
-  abandonPilot,
-  actorQueue,
-  attemptVoluntaryStartup,
-  buildUnitInit,
-  canUnitStandUp,
-  clubTokensInHex,
-  createBattle,
-  DEFAULT_UNIT_POLICY,
-  DROP_MP_COST,
-  declareAttacks,
-  declarePickup,
-  dropProne,
-  ejectPilot,
-  executeMove,
-  executePostureMove,
-  facingToward,
-  GIRDER_SEARCH_TARGET,
-  gameLoop,
-  hasWreckage,
-  isHull,
-  isImmobile,
-  isNominal,
-  isShutdown,
-  isTargetableBy,
-  isUnitAvailable,
-  isUnitOnBoard,
-  isUnitRemoved,
-  isValidTeam,
-  meleeDeclarationProblem,
-  occupantAt,
-  occupantTeamAt,
-  passAttack,
-  passMovement,
-  pickupSourceInHex,
-  postureCost,
-  postureMoveBudget,
-  requireUnit,
-  STAND_MP_COST,
-  salvageableSeveredLimbs,
-  setUnitPolicy,
-  standUpCost,
-  TEAM_IDS,
-  unitPolicyOf,
-  validateAttacks,
-  validatePickup,
-  voluntaryShutdown,
-  WRECKAGE_TONNAGE_MIN,
-  wreckageAt,
-} from "./rules/game";
+} from "./rules/game/types";
 export {
   AMMO_EXPLOSION_START_HEAT,
   ammoExplosionAvoid,

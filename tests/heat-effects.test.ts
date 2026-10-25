@@ -6,29 +6,23 @@ import { type MechDef, resolveMechDef, validateMechDef } from "../src/data/index
 import { parseWeaponsData, weaponDef } from "../src/data/weapon.schema";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
-import {
-  advancePhase,
-  attemptVoluntaryStartup,
-  type BattleState,
-  buildUnitInit,
-  DEFAULT_UNIT_POLICY,
-  declareAttacks,
-  executeMove,
-  type GameEvent,
-  nextActor,
-  passMovement,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type UnitInit,
-  type UnitPolicy,
-  voluntaryShutdown,
-} from "../src/rules/game";
+import { DEFAULT_UNIT_POLICY } from "../src/rules/game/constants";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove, passMovement } from "../src/rules/game/move";
+import { attemptVoluntaryStartup, voluntaryShutdown } from "../src/rules/game/pilotActions";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { nextActor, rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit, UnitPolicy } from "../src/rules/game/types";
 import { OUTSIDE_HEAT_CAP, outsideHeatApplied } from "../src/rules/heat";
 import { parseBattleState, saveBattleState } from "../src/rules/snapshot";
 import { decodeUnitLine, encodeUnitLine } from "../web/terminal/replay";
 import { commitMovement, declareMovementMode, newSession } from "../web/terminal/session";
-import { createTestBattle, execute, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
+import { execute } from "./helpers/session";
 
 function freshDamage(hp = 10): UnitDamageState {
   const armor = {} as LocationValue;

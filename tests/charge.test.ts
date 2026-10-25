@@ -1,26 +1,23 @@
 import { describe, expect, it } from "vitest";
-import type { Facing, HexCoord } from "../src/core/types";
-import {
-  type BattleState,
-  buildUnitInit,
-  declareAttacks,
-  executeMove,
-  type GameEvent,
-  losEnds,
-  meleeDeclarationProblem,
-  requireUnit,
-  resolveAllAttacks,
-  type TeamId,
-  type TerrainHexDef,
-  type UnitInit,
-} from "../src/rules/game";
+import type { Facing, HexCoord, TerrainHexDef } from "../src/core/types";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks } from "../src/rules/game/declare";
+import { losEnds } from "../src/rules/game/geometry";
+import { meleeDeclarationProblem } from "../src/rules/game/melee";
+import { executeMove } from "../src/rules/game/move";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import type { BattleState, GameEvent, TeamId, UnitInit } from "../src/rules/game/types";
 import { reachableLandings } from "../src/rules/movement";
 import { damageGroupsTotal, validatePhysicalAttack } from "../src/rules/physical";
 import { loadBattleState, saveBattleState } from "../src/rules/snapshot";
 import { nextAutoPlayCommand, resetAutoplayState } from "../web/terminal/autoplay";
 import { replayPlayer } from "../web/terminal/replay";
 import { newSession, type Session } from "../web/terminal/session";
-import { createTestBattle, currentActor, execute, scriptedRng, sweepPiloting } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { sweepPiloting } from "./helpers/piloting";
+import { scriptedRng } from "./helpers/rng";
+import { currentActor, execute } from "./helpers/session";
 
 /**
  * Charge and Death From Above without displacement (TW pp.144, 148-150):

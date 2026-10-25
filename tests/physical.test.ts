@@ -5,25 +5,15 @@
  */
 
 import { describe, expect, it } from "vitest";
-import {
-  type BattleState,
-  createBattle,
-  declareAttacks,
-  type GameEvent,
-  type HexCoord,
-  mechDefFor,
-  type Rng,
-  type UnitInit,
-} from "../src";
 import { bearingExact } from "../src/core/hex";
+import type { HexCoord, Rng } from "../src/core/types";
+import { mechDefFor } from "../src/data/mech.schema";
 import { classifyArcWithBoundary, defenderArcChoice } from "../src/rules/arcs";
 import { setSlotDestroyed } from "../src/rules/critical";
-import {
-  buildUnitInit,
-  resolveAllAttacks,
-  type TeamId,
-  validateAttacksImpl,
-} from "../src/rules/game";
+import { buildUnitInit, createBattle } from "../src/rules/game/create";
+import { declareAttacks, validateAttacksImpl } from "../src/rules/game/declare";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import type { BattleState, GameEvent, TeamId, UnitInit } from "../src/rules/game/types";
 import { hitLocationForArc, punchHitLocationForArc } from "../src/rules/hitlocation";
 import {
   computePhysicalToHit,
@@ -996,7 +986,7 @@ describe("physical attack critical hits", () => {
   });
 
   it("critical hit destroys weapon in hit location", () => {
-    // This test would require full game.ts integration to verify
+    // This test would require full `src/rules/game/` integration to verify
     // the critical resolution actually destroys the weapon.
     // For now, verify the resolvePhysicalAttack returns correct data.
     const battle = makeBattleWithStrippedArmor("rightArm");
@@ -1022,7 +1012,7 @@ describe("physical attack critical hits", () => {
 
     expect(resolution.hit).toBe(true);
     expect(resolution.damageToTarget[0]!.damage).toBeGreaterThan(0);
-    // The blow-off would be handled by resolveCriticalHits in game.ts
+    // The blow-off would be handled by resolveCriticalHits in `src/rules/game/`
   });
 
   it("critical roll 12 on torso → 3 critical hits", () => {

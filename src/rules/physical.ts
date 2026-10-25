@@ -6,7 +6,7 @@
  * hex), stop the attacker in front of the target, and never displace anyone.
  * A club attack requires the
  * attacker to hold a club (`UnitState.club`), acquired through the pickup
- * rules in `game.ts` (severed limbs, trees, girders).
+ * rules in `game/clubs.ts` (severed limbs, trees, girders).
  *
  * Physical attacks are declared in the weapon attack phase and resolved
  * after all weapon attacks (TW p. 37 phase order within the unified phase).
@@ -42,15 +42,10 @@ import {
   type DamageApplication,
   type UnitDamageState,
 } from "./damage";
-import type { BattleState, UnitState } from "./game";
-import {
-  isImmobile,
-  isTargetableBy,
-  isUnitOnBoard,
-  isUnitRemoved,
-  losSideFor,
-  partialCoverMod,
-} from "./game";
+import { isImmobile } from "./game/condition";
+import { losSideFor, partialCoverMod } from "./game/geometry";
+import { isTargetableBy, isUnitOnBoard, isUnitRemoved } from "./game/queries";
+import type { BattleState, UnitState } from "./game/types";
 import { isTsmActive } from "./heat";
 import { hitLocationForArc, punchHitLocationForArc } from "./hitlocation";
 import { losWoodsPointsBetween } from "./los";
@@ -597,7 +592,7 @@ export function physicalDamage(
       // 0 damage, but a hit still forces both sides' +2 PSRs.
       return Math.ceil((tons * attacker.hexesMovedThisTurn) / CHARGE_DAMAGE_PER_TONS);
     case "dfa":
-      return Math.ceil(tons * DFA_DAMAGE_MULTIPLIER / PUNCH_DAMAGE_PER_TONS);
+      return Math.ceil((tons * DFA_DAMAGE_MULTIPLIER) / PUNCH_DAMAGE_PER_TONS);
   }
 }
 

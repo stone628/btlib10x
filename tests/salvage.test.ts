@@ -4,30 +4,18 @@ import { hexCell, hexEntryCost, setCell } from "../src/core/terrain";
 import { hexKey, type Location, type TerrainType } from "../src/core/types";
 import { mechDef, registeredMechDefs } from "../src/data/index";
 import { setSlotDestroyed } from "../src/rules/critical";
-import {
-  abandonPilot,
-  advancePhase,
-  applyPilotHits,
-  type BattleState,
-  buildUnitInit,
-  declareAttacks,
-  ejectPilot,
-  executeMove,
-  type GameEvent,
-  hasWreckage,
-  isHull,
-  killCredit,
-  nextActor,
-  passAttack,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type UnitInit,
-  type UnitState,
-  voluntaryShutdown,
-  WRECKAGE_TONNAGE_MIN,
-  wreckageAt,
-} from "../src/rules/game";
+import { applyPilotHits } from "../src/rules/game/consequences";
+import { WRECKAGE_TONNAGE_MIN } from "../src/rules/game/constants";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks, passAttack } from "../src/rules/game/declare";
+import { killCredit } from "../src/rules/game/ledger";
+import { advancePhase } from "../src/rules/game/loop";
+import { executeMove } from "../src/rules/game/move";
+import { abandonPilot, ejectPilot, voluntaryShutdown } from "../src/rules/game/pilotActions";
+import { hasWreckage, isHull, requireUnit, wreckageAt } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { nextActor, rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, UnitInit, UnitState } from "../src/rules/game/types";
 import { reachableLandings } from "../src/rules/movement";
 import { pilotRecord } from "../src/rules/pilot";
 import { salvageReport } from "../src/rules/salvage";
@@ -48,14 +36,10 @@ import {
   setConfigLocale,
 } from "../web/terminal/session";
 import { handleSessionGameEvents } from "../web/terminal/session.common";
-import {
-  createTestBattle,
-  critWeapon,
-  disableCritical,
-  execute,
-  scriptedRng,
-  sweepPiloting,
-} from "./helpers";
+import { createTestBattle, critWeapon } from "./helpers/battle";
+import { sweepPiloting } from "./helpers/piloting";
+import { scriptedRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 function hbkVsEnf(critsDisabled = true): BattleState {
   const units: UnitInit[] = [

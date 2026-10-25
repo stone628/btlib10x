@@ -1,20 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { HexCoord } from "../src/core/types";
 import { mechDefFor } from "../src/data/index";
-import {
-  advancePhase,
-  type BattleState,
-  buildUnitInit,
-  declareAttacks,
-  type GameEvent,
-  passAttack,
-  requireUnit,
-  resolveAllAttacks,
-  rollInitiativePhase,
-  type TeamId,
-  type UnitInit,
-  validateAttacks,
-} from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game/create";
+import { declareAttacks, passAttack, validateAttacks } from "../src/rules/game/declare";
+import { advancePhase } from "../src/rules/game/loop";
+import { requireUnit } from "../src/rules/game/queries";
+import { resolveAllAttacks } from "../src/rules/game/resolveAttacks";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { BattleState, GameEvent, TeamId, UnitInit } from "../src/rules/game/types";
 import { resolvePhysicalAttack, validatePhysicalAttack } from "../src/rules/physical";
 import {
   commitMovement,
@@ -27,7 +20,10 @@ import {
   setTorsoTwist,
 } from "../web/terminal/session";
 import { physicalResolutionLines } from "../web/terminal/session.attack";
-import { createTestBattle, disableCritical, execute, scriptedRng, sweepPiloting } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { sweepPiloting } from "./helpers/piloting";
+import { scriptedRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 /**
  * Weapon-then-physical sub-pass ordering (TW pp.37-38,59-61,144,147).

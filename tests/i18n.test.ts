@@ -1,13 +1,8 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import {
-  bestFireTarget,
-  isNominal,
-  isUnitAvailable,
-  isUnitRemoved,
-  mechDefFor,
-  reachableLandings,
-  suggestFireTargets,
-} from "../src/index";
+import { mechDefFor } from "../src/data/mech.schema";
+import { bestFireTarget, suggestFireTargets } from "../src/rules/fireability";
+import { isNominal, isUnitAvailable, isUnitRemoved } from "../src/rules/game/queries";
+import { reachableLandings } from "../src/rules/movement";
 import { i18nIn, normalizeLocale } from "../web/terminal/i18n/index";
 import {
   commitAttack,
@@ -19,7 +14,8 @@ import {
   queueWeaponAttacks,
   setConfigLocale,
 } from "../web/terminal/session";
-import { bearing, currentActor, execute } from "./helpers";
+import { bearing } from "./helpers/battle";
+import { currentActor, execute } from "./helpers/session";
 
 /** Drive a started battle until it is over using minimal legal actions. */
 function autoPlay(s: ReturnType<typeof newSession>): void {

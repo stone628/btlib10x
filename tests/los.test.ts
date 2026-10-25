@@ -6,16 +6,12 @@ import { weaponDefFor } from "../src/data/weapon.schema";
 import { targetingComputerModifier } from "../src/rules/actuators";
 import { emptyCritTable, setSlotDestroyed } from "../src/rules/critical";
 import { suggestFireTargets } from "../src/rules/fireability";
-import {
-  attackDirectionFor,
-  buildUnitInit,
-  executeMove,
-  losSideFor,
-  partialCoverMod,
-  requireUnit,
-  rollInitiativePhase,
-  type UnitInit,
-} from "../src/rules/game";
+import { buildUnitInit } from "../src/rules/game/create";
+import { attackDirectionFor, losSideFor, partialCoverMod } from "../src/rules/game/geometry";
+import { executeMove } from "../src/rules/game/move";
+import { requireUnit } from "../src/rules/game/queries";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { UnitInit } from "../src/rules/game/types";
 import {
   interveningTerrains,
   losBlockedByBuilding,
@@ -24,7 +20,8 @@ import {
   losWoodsPointsBetween,
 } from "../src/rules/los";
 import { type ReachabilityOptions, reachableLandings } from "../src/rules/movement";
-import { createTestBattle, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
 
 /** Build a 5x5 grid with the given per-hex "col,row" elevation overrides (others 0). */
 function gridWithElevation(levels: Record<string, number>): HexGrid {

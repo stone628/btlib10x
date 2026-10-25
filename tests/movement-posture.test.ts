@@ -2,22 +2,20 @@ import { describe, expect, it } from "vitest";
 import { neighbor } from "../src/core/hex";
 import type { Facing, MoveMode } from "../src/core/types";
 import { mechDef } from "../src/data/index";
-import type { RevealedLanding } from "../src/index";
 import { setSlotDestroyed } from "../src/rules/critical";
 import { canAttemptStandUp } from "../src/rules/damage";
+import { buildUnitInit } from "../src/rules/game/create";
+import { executeMove, executePostureMove } from "../src/rules/game/move";
 import {
   attemptStandUp,
-  buildUnitInit,
   canUnitStandUp,
-  executeMove,
-  executePostureMove,
-  type GameEvent,
-  type PostureChange,
   postureMoveBudget,
-  requireUnit,
-  rollInitiativePhase,
   standUpCost,
-} from "../src/rules/game";
+} from "../src/rules/game/posture";
+import { requireUnit } from "../src/rules/game/queries";
+import { rollInitiativePhase } from "../src/rules/game/turnOrder";
+import type { GameEvent, PostureChange } from "../src/rules/game/types";
+import type { RevealedLanding } from "../src/rules/movement";
 import { attackerMovementModifier, pathMp, reachableLandings } from "../src/rules/movement";
 import {
   budgetFor,
@@ -26,7 +24,9 @@ import {
   requireMovementActor,
   type Session,
 } from "../web/terminal/session";
-import { createTestBattle, disableCritical, execute, scriptedRng } from "./helpers";
+import { createTestBattle } from "./helpers/battle";
+import { scriptedRng } from "./helpers/rng";
+import { disableCritical, execute } from "./helpers/session";
 
 /**
  * Movement and piloting fixes: jump path validation (MOV-02), no jump after a
