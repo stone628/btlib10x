@@ -81,11 +81,11 @@ export const ko: Catalog = {
   "cmd.set.arg.prop":
     "속성 이름: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer, amsPolicy",
   "cmd.set.arg.value":
-    "새 값 (정수, 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first, autoEject와 heatFlamer의 경우 on|off, amsPolicy의 경우 expected|first-hit|priority|off)",
+    "새 값 (정수(team은 1 또는 2), 모델의 경우 메크 키, 방향의 경우 방향 단어, ammoPolicy의 경우 exposed|core|spread|least-first, autoEject와 heatFlamer의 경우 on|off, amsPolicy의 경우 expected|first-hit|priority|off)",
   "cmd.rm.help": "배치된 유닛 제거",
   "cmd.rm.arg.id": "이전에 추가한 유닛의 id",
   "cmd.statusSetup.help": "설정 요약: 팀별 유닛 그룹, 선택된 맵",
-  "cmd.start.help": "전투 시작 (2팀 이상, 각 2유닛 이상 필요)",
+  "cmd.start.help": "전투 시작 (팀 1과 2에 걸쳐 2유닛 이상 필요)",
   "cmd.mode.help":
     "이동 모드(walk/run/jump/standstill/prone/turn/pronestill/standup), 자발적 셧다운/시동, 또는 탈출 선언",
   "cmd.mode.arg.standstill": "제자리 대기 — MP 소비 없음. 'done'으로 확정",

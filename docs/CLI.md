@@ -63,12 +63,12 @@ Examples:
 | command | effect |
 |---|---|
 | `map <name>` | load a bundled map as terrain (`beginner`, `quickstart`, `test`, `testground`) |
-| `add <id> <model> <col> <row> [facing]` | place unit (team auto-assigned to smallest team; default gunnery `4`, piloting `5`, facing `n`) |
-| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team`, `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional), `autoEject` (`on` default / `off`: TO:AR p. 165 auto-eject; off means losing the head, or the center torso to an ammo/weapon blast, kills the pilot, TW p. 128), `heatFlamer` (`on` default / `off`: on, the unit's flamers apply their Damage Value as heat instead of damage, TW p. 303; `status` shows `flamer-heat off` only when off), `amsPolicy` (`expected` default / `first-hit` / `priority` / `off`, case-insensitive, hyphen optional: which hitting missile attack the unit's AMS engage, TW p.129; `status` shows `AMS <policy>` only when not `expected`); property names are case-insensitive; cannot modify `id`; in battle the acting unit changes these four with `policy`) |
+| `add <id> <model> <col> <row> [facing]` | place unit (team (1 or 2) auto-assigned to the smaller team; default gunnery `4`, piloting `5`, facing `n`) |
+| `set <id> <prop> <value>` | edit a property on a unit already on the roster (`model`, `team` (1 or 2), `col`, `row`, `facing`, `gunnery`, `piloting`, `pilotHitMax` (integer >= 1, default 6), `ammoPolicy` (`exposed` default, `core`, `spread`, `least-first`; case-insensitive, hyphens optional), `autoEject` (`on` default / `off`: TO:AR p. 165 auto-eject; off means losing the head, or the center torso to an ammo/weapon blast, kills the pilot, TW p. 128), `heatFlamer` (`on` default / `off`: on, the unit's flamers apply their Damage Value as heat instead of damage, TW p. 303; `status` shows `flamer-heat off` only when off), `amsPolicy` (`expected` default / `first-hit` / `priority` / `off`, case-insensitive, hyphen optional: which hitting missile attack the unit's AMS engage, TW p.129; `status` shows `AMS <policy>` only when not `expected`); property names are case-insensitive; cannot modify `id`; in battle the acting unit changes these four with `policy`) |
 | `seed <n>` | set the dice seed (setup only; a battle in progress keeps its generator) |
 | `rm <id>` | remove placed unit |
 | `status` | setup summary: 'Mechs grouped by team, selected map name |
-| `start` | ≥2 units on ≥2 teams required; creates battle, rolls initiative → `turn` |
+| `start` | ≥2 units covering teams 1 and 2 required; creates battle, rolls initiative → `turn` |
 
 ### turn(N):move(team T, mech <id>)
 
@@ -137,7 +137,7 @@ attack line (activations joined by `;`), the `W` line and one `E` line per unit.
 log; `reset` clears it and re-creates the dice generator from the seed. `replayPlayer(text)`
 (`web/terminal/replay.ts`) replays such text and checks the winner, the final dice state and every
 unit's end state; it throws a single error naming turn, phase and actor on the first problem. A match
-that cannot be reproduced (more than 36 units, a team above 9, a unit id with
+that cannot be reproduced (more than 36 units, a unit id with
 `:` `;` `,` or whitespace, a replaced dice generator) shows no block.
 
 ## Persona player (GDD §9)

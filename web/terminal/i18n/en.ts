@@ -81,11 +81,11 @@ export const en = {
   "cmd.set.arg.prop":
     "property name: model, team, col, row, facing, gunnery, piloting, pilotHitMax, ammoPolicy, autoEject, heatFlamer, amsPolicy",
   "cmd.set.arg.value":
-    "new value (integer for numeric props, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer, expected|first-hit|priority|off for amsPolicy)",
+    "new value (integer for numeric props; team is 1 or 2, 'Mech key for model, facing word for facing, exposed|core|spread|least-first for ammoPolicy, on|off for autoEject and heatFlamer, expected|first-hit|priority|off for amsPolicy)",
   "cmd.rm.help": "remove a placed unit",
   "cmd.rm.arg.id": "id of a previously added unit",
   "cmd.statusSetup.help": "setup summary: units grouped by team, selected map",
-  "cmd.start.help": "start the battle (needs >=2 units on >=2 teams)",
+  "cmd.start.help": "start the battle (needs >=2 units covering teams 1 and 2)",
   "cmd.mode.help":
     "declare movement mode (walk/run/jump/standstill/prone/turn/pronestill/standup), voluntary shutdown/startup, or eject",
   "cmd.mode.arg.standstill": "stay in place — no movement points spent. committed by 'done'",
