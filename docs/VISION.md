@@ -130,6 +130,12 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   salvage-friendly outcome, paid for with a shut-down turn.
 - A held club drops into the hex when its wielder falls, drops prone or leaves
   play.
+- A dropped club of any kind stays intact in the hex, and a later pickup
+  takes it back without a roll. A dropped tree is still unused and keeps
+  its one successful club attack, even in a hex without woods; a dropped
+  girder is not searched for again. *Why:* TW says girders are reusable
+  indefinitely, a tree is spent only by a successful hit, and TW is silent
+  on drops.
 - A severed limb once used as a club is no longer salvageable.
 - Picking up or carrying a club needs both hands working; losing either
   drops it. A destroyed shoulder only bars the swing.

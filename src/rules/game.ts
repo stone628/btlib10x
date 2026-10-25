@@ -726,7 +726,7 @@ export type GameEvent =
   | {
       /** Held club dropped as the first act of an attack declaration: hands
        *  are free for the rest of the declaration. Every kind stays intact
-       *  in the hex as a token (`returned: true`). `cause` marks
+       *  in the hex as a token (`returned` is always `true`). `cause` marks
        *  involuntary drops (fall, or the holder leaving play). */
       readonly kind: "clubDropped";
       readonly unitId: string;
@@ -2998,7 +2998,8 @@ export interface DeclareAttacksOptions {
   readonly twist?: Twist;
   /** Drop the held club first: hands are free for the rest of this
    *  declaration, so arm-mounted weapons, punch, and strike validate
-   *  normally. A dropped limb returns to the hex; trees/girders vanish.
+   *  normally. The club (limb, tree or girder) stays intact in the hex as
+   *  a token, and a later pickup takes it back without a roll.
    *  Requires holding a club. */
   readonly dropClub?: boolean;
   /** Primary target for a multi-target volley (TW p.108). Must be one of the

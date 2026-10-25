@@ -553,6 +553,8 @@ sink)` (an exclusive, attack-phase pickup declaration). Both need two working
 hands: `clubHandsFunctional(def, damage, destroyed)` (each arm standing with an
 undestroyed hand actuator); a unit that loses them drops its club
 (`clubDropped` with `cause: "hands"`).
+Every drop (a declared `dropClub`, a fall or drop prone, leaving play, lost
+hands) leaves the club intact in the hex as a `ClubGroundToken`.
 
 The numeric tuning constants (`PUNCH_ATTACK_MOD`, `KICK_ATTACK_MOD`,
 `CLUB_ATTACK_MOD`, `PUNCH_DAMAGE_PER_TONS`,
