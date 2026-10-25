@@ -1,0 +1,276 @@
+/**
+ * Instant Action (docs/INSTANT_ACTION.html): the DOM-free parts — deployment
+ * (TW p. 256), victory modes, the battle controller and persona battles.
+ * Imports `web/instant/*`, which resolves `btlib10x` to `dist/`.
+ */
+/// <reference types="node" />
+import { readdirSync, readFileSync } from "node:fs";
+import { join } from "node:path";
+import {
+  buildUnitInit,
+  ensureMapRegistered,
+  type Facing,
+  type HexCoord,
+  type MapDef,
+} from "btlib10x";
+import { describe, expect, it } from "vitest";
+import type { PersonaKey } from "../web/instant/ai/persona.data";
+import { BattleController } from "../web/instant/battle/controller";
+import {
+  autoPlace,
+  edgeHexes,
+  inwardFacing,
+  oppositeEdge,
+  rollOff,
+  setupRng,
+} from "../web/instant/battle/deploy";
+import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
+import { createRng } from "../web/instant/rng";
+import { defaultFilter, filterMechs, generateSide } from "../web/instant/setup/loadout";
+import { runChunks } from "../web/terminal/cli";
+import { newSession } from "../web/terminal/session";
+
+function quickstart(): MapDef {
+  const map = ensureMapRegistered("quickstart");
+  if (!map) throw new Error("quickstart map missing");
+  return map;
+}
+
+function battle(
+  mode: VictoryMode,
+  control: Record<string, PersonaKey | null>,
+  seed = 42,
+  units: [string, string, 1 | 2, HexCoord, Facing][] = [
+    ["A1", "HBK-4G", 1, { col: 4, row: 16 }, "n"],
+    ["A2", "CN9-YLW2", 1, { col: 12, row: 16 }, "n"],
+    ["B1", "GRF-1N", 2, { col: 4, row: 1 }, "s"],
+    ["B2", "ENF-4R", 2, { col: 12, row: 1 }, "s"],
+  ],
+): BattleController {
+  const inits = units.map(([id, model, team, hex, facing]) =>
+    buildUnitInit(id, model, team, hex, facing),
+  );
+  return new BattleController(quickstart(), inits, control, seed, mode);
+}
+
+function runAi(b: BattleController, limit = 3000): void {
+  for (let i = 0; i < limit && b.result === null; i++) {
+    if (!b.stepAi()) throw new Error(`no persona at prompt ${b.actorId}`);
+  }
+}
+
+const ALL_AI: Record<string, PersonaKey> = {
+  A1: "alpha",
+  A2: "gladiator",
+  B1: "longtom",
+  B2: "pitfighter",
+};
+
+describe("Instant Action deployment (TW p. 256)", () => {
+  it("rolls off 2D6 with ties re-rolled, the same for the same seed", () => {
+    const a = rollOff(setupRng(42));
+    const b = rollOff(setupRng(42));
+    expect(a).toEqual(b);
+    const last = a.rolls[a.rolls.length - 1]!;
+    expect(last[0]).not.toBe(last[1]);
+    expect(a.winner).toBe(last[0] > last[1] ? 1 : 2);
+  });
+
+  it("gives the loser the opposite edge and faces units into the map", () => {
+    expect(oppositeEdge("north")).toBe("south");
+    expect(oppositeEdge("west")).toBe("east");
+    expect(inwardFacing("north")).toBe("s");
+    expect(inwardFacing("south")).toBe("n");
+  });
+
+  it("auto-places on the home edge without stacking", () => {
+    const map = quickstart();
+    const south = autoPlace(map, "south", 4, new Set());
+    expect(south).toHaveLength(4);
+    expect(south.every((h) => h.row === map.height)).toBe(true);
+    expect(new Set(south.map((h) => `${h.col},${h.row}`)).size).toBe(4);
+    const taken = new Set(south.map((h) => `${h.col},${h.row}`));
+    const more = autoPlace(map, "south", 3, taken);
+    expect(more.some((h) => taken.has(`${h.col},${h.row}`))).toBe(false);
+    expect(edgeHexes(map, "west")).toHaveLength(map.height);
+  });
+});
+
+describe("Instant Action victory modes", () => {
+  it("Destroy All ends with one side left in play", () => {
+    const b = battle({ kind: "destroyAll" }, ALL_AI);
+    runAi(b);
+    expect(b.result).not.toBeNull();
+    const r = b.result!;
+    const alive = new Set(
+      Object.values(b.state.units)
+        .filter((u) => u.removed === "not")
+        .map((u) => u.team),
+    );
+    expect(alive.size).toBeLessThanOrEqual(1);
+    if (alive.size === 1) expect(r.winnerTeam).toBe([...alive][0]);
+  });
+
+  it("Damage Race stops after turn N and the bigger damage dealer wins", () => {
+    const b = battle({ kind: "damageRace", turns: 3 }, ALL_AI);
+    runAi(b);
+    const r = b.result!;
+    expect(r.turn).toBeLessThanOrEqual(3);
+    const [s1, s2] = r.sides;
+    if (b.state.turn > 3 && s1!.dealt !== s2!.dealt) {
+      expect(r.winnerTeam).toBe(s1!.dealt > s2!.dealt ? 1 : 2);
+    }
+    // dealt by one side is taken by the other
+    expect(s1!.dealt).toBe(s2!.taken);
+    expect(s2!.dealt).toBe(s1!.taken);
+  });
+
+  it("counts a removed unit's whole total", () => {
+    const b = battle({ kind: "destroyAll" }, ALL_AI);
+    const u = b.state.units.B1!;
+    const whole = b.totals.B1!;
+    expect(unitLoss(u, b.totals)).toBe(0);
+    u.removed = "pilotEjected";
+    expect(unitLoss(u, b.totals)).toBe(whole);
+  });
+});
+
+describe("Instant Action battle controller", () => {
+  it("plays a player prompt through menu actions and lets the AI answer", () => {
+    const b = battle(
+      { kind: "destroyAll" },
+      { A1: null, A2: "alpha", B1: "longtom", B2: "gladiator" },
+    );
+    for (let i = 0; i < 50 && b.actorPersona !== null; i++) b.stepAi();
+    expect(b.actorId).toBe("A1");
+    expect(b.phase).toBe("movement");
+    expect(b.moveChoices()).toContain("walk");
+    b.chooseMove("walk");
+    const landing = b.move!.landings.find((l) => l.path.length > 0)!;
+    b.chooseLanding(landing);
+    b.commitMove();
+    expect(b.state.units.A1!.position).toEqual(landing.hex);
+    expect(b.canUndo).toBe(true);
+    b.undo();
+    expect(b.actorId).toBe("A1");
+    expect(b.state.units.A1!.position).toEqual({ col: 4, row: 16 });
+  });
+
+  it("rolls a rejected commit back: state, dice and actor unchanged", () => {
+    const b = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null });
+    const actor = b.actorId;
+    expect(() => b.chooseMove("standupWalk")).toThrow();
+    b.chooseMove("walk");
+    const step = {
+      fragment: "F" as const,
+      baseMp: 1,
+      terrain: "clear" as const,
+      terrainSurcharge: 0,
+      climbLevels: 0,
+      climbCost: 0,
+    };
+    const unit = b.actor!;
+    // A path far beyond the walking MP: the engine rejects it.
+    b.chooseLanding({
+      hex: { col: unit.position.col, row: unit.position.row - 9 },
+      facing: unit.facing,
+      path: Array(9).fill(step),
+    });
+    const before = structuredClone(b.state);
+    const rng = b.rng.snapshot();
+    expect(() => b.commitMove()).toThrow();
+    expect(b.state).toEqual(before);
+    expect(b.rng.snapshot()).toBe(rng);
+    expect(b.actorId).toBe(actor);
+    expect(b.canUndo).toBe(false);
+  });
+
+  it("checks weapons on a fireable target and passes an empty declaration", () => {
+    const units: [string, string, 1 | 2, HexCoord, Facing][] = [
+      ["A1", "HBK-4G", 1, { col: 7, row: 9 }, "n"],
+      ["B1", "GRF-1N", 2, { col: 7, row: 6 }, "s"],
+    ];
+    const b = battle({ kind: "destroyAll" }, { A1: null, B1: null }, 7, units);
+    let guard = 0;
+    while (b.phase === "movement" && guard++ < 4) {
+      b.chooseMove("standStill");
+      b.commitMove();
+    }
+    expect(b.phase).toBe("attack");
+    const target = b.fireSuggestion()!.targets[0]!;
+    expect(b.attack!.targetId).toBe(target.targetId);
+    const w = target.weapons[0]!;
+    b.toggleWeapon(w.weaponIndex);
+    expect(b.attack!.weapons).toEqual([w.weaponIndex]);
+    b.toggleWeapon(w.weaponIndex);
+    expect(b.attack!.weapons).toEqual([]);
+    const actor = b.actorId;
+    b.commitAttack();
+    expect(b.actorId).not.toBe(actor);
+  });
+});
+
+describe("Instant Action plays the same battle as the terminal", () => {
+  // Same logic, own copy: with the same seed, positions and personas the two
+  // apps must reach the same end state (only the presentation differs).
+  it.each([42, 2])("seed %i", (seed) => {
+    const b = battle({ kind: "destroyAll" }, ALL_AI, seed);
+    runAi(b);
+    const s = newSession(seed);
+    runChunks(s, "map quickstart");
+    for (const u of Object.values(b.state.units)) {
+      const init = { A1: [4, 16, "n"], A2: [12, 16, "n"], B1: [4, 1, "s"], B2: [12, 1, "s"] }[
+        u.id
+      ]!;
+      runChunks(s, `add ${u.id} ${u.model} ${init[0]} ${init[1]} ${init[2]}`);
+      runChunks(s, `set ${u.id} team ${u.team}`);
+    }
+    for (const [id, p] of Object.entries(ALL_AI)) runChunks(s, `pp ${id} ${p}`);
+    runChunks(s, "start");
+    expect(s.over?.victory.winnerTeam).toBe(b.result?.winnerTeam);
+    expect(s.battle!.turn).toBe(b.state.turn);
+    const view = (units: typeof b.state.units) =>
+      Object.values(units).map((u) => [u.id, u.position, u.facing, u.damage, u.removed]);
+    expect(view(s.battle!.units)).toEqual(view(b.state.units));
+  });
+});
+
+describe("Instant Action setup", () => {
+  it("filters the catalog like info mech (class, tech, text)", () => {
+    const f = { ...defaultFilter(), classes: ["assault" as const], tech: "is" as const };
+    const list = filterMechs(f);
+    expect(list.length).toBeGreaterThan(0);
+    expect(list.every((m) => m.tonnage >= 80)).toBe(true);
+    expect(
+      filterMechs({ ...defaultFilter(), text: "hunchback" }).every((m) =>
+        /hunchback/i.test(m.name),
+      ),
+    ).toBe(true);
+  });
+
+  it("generates a side near a BV target", () => {
+    const slots = generateSide(createRng(5), {
+      count: 3,
+      bvTarget: 4000,
+      classes: [],
+      personas: "random",
+    });
+    expect(slots).toHaveLength(3);
+    expect(slots.every((s) => s.persona !== null)).toBe(true);
+  });
+});
+
+describe("Instant Action import boundary", () => {
+  // Decision (plan §2): the app depends only on the engine and the TUI kit.
+  it("never imports the terminal app", () => {
+    const root = new URL("../web/instant/", import.meta.url).pathname;
+    const files = (readdirSync(root, { recursive: true }) as string[]).filter((f) =>
+      f.endsWith(".ts"),
+    );
+    expect(files.length).toBeGreaterThan(10);
+    for (const f of files) {
+      const text = readFileSync(join(root, f), "utf8");
+      expect(text, f).not.toMatch(/from\s+"[^"]*terminal\//);
+    }
+  });
+});

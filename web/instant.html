@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en" data-theme="green">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>bt10x Instant Action</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="fonts/bt10x-mono-0.63.2-regular.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="tui.css" />
+    <link rel="stylesheet" href="instant.css" />
+  </head>
+  <body class="tui">
+    <main id="screen" aria-live="polite"><div id="app"></div></main>
+    <p id="small-notice" hidden>A larger window is recommended (100×32 cells).</p>
+    <script src="tui.js"></script>
+    <script type="importmap">{ "imports": { "btlib10x": "./btlib10x.js" } }</script>
+    <script type="module" src="./instant.js"></script>
+  </body>
+</html>

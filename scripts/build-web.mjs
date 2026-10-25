@@ -1,4 +1,4 @@
-import { copyFileSync } from "node:fs";
+import { copyFileSync, existsSync } from "node:fs";
 import * as esbuild from "esbuild";
 import { buildStamp } from "./build-stamp.mjs";
 
@@ -14,6 +14,10 @@ const stamp = buildStamp();
 // comes from `npm run pack`, the SW season pack from `npm run pack:sw`.
 copyFileSync("data/btlib10x.jsonl", "web/btlib10x.jsonl");
 copyFileSync("docs/mtf/sw/sw.jsonl", "web/btlib10x.sw.jsonl");
+// Instant-Action-only maps (`npm run pack:ia`); the app runs without them.
+if (existsSync("web/instant/instant.jsonl")) {
+  copyFileSync("web/instant/instant.jsonl", "web/btlib10x.ia.jsonl");
+}
 // VISION.md ships as a hidden static file for reviewing LLM agents only:
 // fetched via GET ./VISION.md, never linked in the UI. Source of truth is
 // docs/VISION.md.
@@ -40,6 +44,17 @@ const appCtx = await esbuild.context({
   logLevel: "info",
 });
 
+// Instant Action (docs/INSTANT_ACTION.html): engine kept external like the terminal.
+const instantCtx = await esbuild.context({
+  entryPoints: ["web/instant/instant.ts"],
+  outfile: "web/instant.js",
+  bundle: true,
+  format: "esm",
+  target: "es2022",
+  external: ["btlib10x"],
+  logLevel: "info",
+});
+
 const avatarCtx = await esbuild.context({
   entryPoints: ["web/avatar/avatar.ts"],
   outfile: "web/avatar.js",
@@ -62,12 +77,13 @@ const galleryCtx = await esbuild.context({
 if (serve) {
   const { hosts, port: actualPort } = await appCtx.serve({ servedir: "web", port });
   console.log(
-    `serving at http://${hosts[0]}:${actualPort}/index.html (terminal: /terminal.html, avatar: /avatar.html, gallery: /gallery.html, tui: /tui-demo.html)`,
+    `serving at http://${hosts[0]}:${actualPort}/index.html (terminal: /terminal.html, instant: /instant.html, avatar: /avatar.html, gallery: /gallery.html, tui: /tui-demo.html)`,
   );
 }
 if (watch) {
   await coreCtx.watch();
   await appCtx.watch();
+  await instantCtx.watch();
   await avatarCtx.watch();
   await galleryCtx.watch();
   console.log("watching for changes…");
@@ -75,10 +91,12 @@ if (watch) {
 if (!watch && !serve) {
   await coreCtx.rebuild();
   await appCtx.rebuild();
+  await instantCtx.rebuild();
   await avatarCtx.rebuild();
   await galleryCtx.rebuild();
   await coreCtx.dispose();
   await appCtx.dispose();
+  await instantCtx.dispose();
   await avatarCtx.dispose();
   await galleryCtx.dispose();
 }

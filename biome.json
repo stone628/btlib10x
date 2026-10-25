@@ -9,6 +9,7 @@
       "data/**",
       "functions/**",
       "!web/terminal.js",
+      "!web/instant.js",
       "!web/btlib10x.js",
       "!web/btlib10x.d.ts",
       "!web/avatar.js",

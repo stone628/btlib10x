@@ -1,0 +1,197 @@
+/* Instant Action (docs/INSTANT_ACTION.html). Layout and colours on top of tui.css.
+   The app is a fixed 100×32 cell screen, centred in the window (plan §8.0). */
+
+:root {
+  --tui-font: "Bt10x Mono", ui-monospace, Menlo, monospace;
+  /* map palette: terrain faces, overlays, banners */
+  --ia-map-bg: #101410;
+  --ia-map-edge: #6f8f6f;
+  --ia-map-wall: #070907;
+  --ia-map-label: #5f7a5f;
+  --ia-map-mark: #e8f5e8;
+  --ia-t-clear: #182018;
+  --ia-t-pavement: #2a2c2a;
+  --ia-t-lightWoods: #1f4a22;
+  --ia-t-heavyWoods: #133a17;
+  --ia-t-rough: #4a4432;
+  --ia-t-rubble: #3f3528;
+  --ia-t-water1: #1f3d5c;
+  --ia-t-water2: #18324f;
+  --ia-t-water3: #112743;
+  --ia-t-lightBuilding: #5a4a2a;
+  --ia-t-mediumBuilding: #4f3f24;
+  --ia-t-heavyBuilding: #45361f;
+  --ia-t-hardenedBuilding: #3a2c18;
+  --ia-team1: #5aaaff;
+  --ia-team2: #ff7a5a;
+  --ia-hull: #8a8a8a;
+  --ia-reach: #7ee787;
+  --ia-target: #ffd24a;
+  --ia-select: #ffffff;
+  --ia-banner-bg: #0b0d0b;
+  --ia-banner-ink: #0b0d0b;
+}
+
+:root[data-theme="paper"] {
+  --ia-map-bg: #e9e6dc;
+  --ia-map-edge: #6b6b5a;
+  --ia-map-wall: #b9b4a2;
+  --ia-map-label: #7a776a;
+  --ia-map-mark: #1a1a1a;
+  --ia-t-clear: #f3f0e6;
+  --ia-t-pavement: #d8d6cf;
+  --ia-t-lightWoods: #b8d8a8;
+  --ia-t-heavyWoods: #93c07f;
+  --ia-t-rough: #d9c9a0;
+  --ia-t-rubble: #c9b48f;
+  --ia-t-water1: #a9cbea;
+  --ia-t-water2: #8cb7e0;
+  --ia-t-water3: #6fa1d4;
+  --ia-t-lightBuilding: #e0c48a;
+  --ia-t-mediumBuilding: #d2b070;
+  --ia-t-heavyBuilding: #c09a5a;
+  --ia-t-hardenedBuilding: #a8824a;
+  --ia-team1: #1f63c8;
+  --ia-team2: #c8412a;
+  --ia-banner-bg: #fbfaf5;
+  --ia-banner-ink: #fbfaf5;
+}
+
+html,
+body {
+  margin: 0;
+  height: 100%;
+  background: var(--tui-page);
+}
+
+body {
+  display: grid;
+  place-items: center;
+  min-height: 100dvh;
+  overflow: auto;
+}
+
+#screen {
+  position: relative;
+  width: calc(100 * var(--cw));
+  height: calc(32 * var(--ch));
+  overflow: hidden;
+  color: var(--tui-fg);
+}
+
+#small-notice {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  padding: 2px 8px;
+  font: 12px var(--tui-font);
+  color: var(--tui-dim);
+  background: var(--tui-surface-2);
+}
+
+.ia-root {
+  position: relative;
+  width: calc(100 * var(--cw));
+  height: calc(32 * var(--ch));
+}
+
+.ia-root > .tui-statusbar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--ch);
+}
+
+/* one text row; a cursor row is reverse video */
+.ia-row {
+  white-space: pre;
+  height: var(--ch);
+  line-height: var(--ch);
+  cursor: default;
+}
+.ia-row.sel {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.ia-row.dim,
+.ia-dim {
+  color: var(--tui-dim);
+}
+.ia-row.hot {
+  color: var(--tui-bright);
+}
+.ia-row[data-click] {
+  cursor: pointer;
+}
+.ia-bright {
+  color: var(--tui-bright);
+}
+.ia-accent {
+  color: var(--tui-accent);
+}
+.ia-team1 {
+  color: var(--ia-team1);
+}
+.ia-team2 {
+  color: var(--ia-team2);
+}
+.ia-err {
+  color: var(--tui-red);
+}
+
+.ia-center {
+  text-align: center;
+}
+
+/* map slot: the persistent canvas is moved in here after each render */
+.ia-mapslot {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.ia-mapslot > canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+
+/* modal windows sit centred on the screen over a dimmed backdrop */
+.ia-modal {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--tui-overlay);
+  z-index: 10;
+}
+
+/* log lines */
+.ia-log .ia-row.hit {
+  color: var(--tui-bright);
+}
+.ia-log .ia-row.miss,
+.ia-log .ia-row.dim {
+  color: var(--tui-dim);
+}
+.ia-log .ia-row.crit,
+.ia-log .ia-row.err {
+  color: var(--tui-red);
+}
+.ia-log .ia-row.banner {
+  color: var(--tui-accent);
+}
+.ia-log .ia-row.prompt {
+  color: var(--tui-yellow);
+}
+
+.ia-title-art {
+  color: var(--tui-accent);
+  text-align: center;
+  white-space: pre;
+}

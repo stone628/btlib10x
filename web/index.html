@@ -38,6 +38,8 @@
           // their URLs.
           const term = document.getElementById("card-terminal");
           if (term) term.href = saved ? "terminal.html" : `terminal.html?lang=${locale}`;
+          const instant = document.getElementById("card-instant");
+          if (instant) instant.href = saved ? "instant.html" : `instant.html?lang=${locale}`;
           const avatar = document.getElementById("card-avatar");
           if (avatar) {
             const url = new URL(avatar.getAttribute("href"), location.href);
@@ -85,6 +87,20 @@
             <span lang="en">Fight Total Warfare battles by typing commands: move, fire, punch, charge, or let a persona player drive.</span><span lang="ko">명령어를 입력해 Total Warfare 전투를 진행합니다. 이동, 사격, 펀치, 차지, 또는 persona player에게 맡기기.</span>
           </p>
           <span class="go"><span lang="en">open terminal →</span><span lang="ko">터미널 열기 →</span></span>
+        </a>
+        <a id="card-instant" class="card" href="instant.html">
+          <pre class="preview" aria-hidden="true">╔═ New battle ════════╗
+║▸1 A1 HBK-4G  Player ║
+║ 2 A2 CN9     Alpha  ║
+║ <span class="g">[ LAUNCH  F10 ]</span>     ║
+╚═════════════════════╝</pre>
+          <h2>
+            <span lang="en">Instant Action</span><span lang="ko">인스턴트 액션</span>
+          </h2>
+          <p>
+            <span lang="en">Pick your lance, a map and opponents from menus, then drop into a battle on a vector hex map.</span><span lang="ko">메뉴에서 랜스, 지도, 상대를 골라 바로 벡터 헥스 지도 위의 전투에 들어갑니다.</span>
+          </p>
+          <span class="go"><span lang="en">open Instant Action →</span><span lang="ko">인스턴트 액션 열기 →</span></span>
         </a>
         <a id="card-avatar" class="card" href="avatar.html?head=bv&amp;shoulder=l3&amp;torso=dbo&amp;arms=pb&amp;legs=bf">
           <!-- Composite from the creator: head=bv shoulder=l3 torso=dbo arms=pb legs=bf. -->

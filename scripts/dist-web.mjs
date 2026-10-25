@@ -1,4 +1,4 @@
-import { copyFileSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 
 const dest = "dist/web";
@@ -18,6 +18,9 @@ const FILES = [
   "btlib10x.jsonl",
   "btlib10x.sw.jsonl",
   "terminal.js",
+  "instant.html",
+  "instant.css",
+  "instant.js",
   "avatar.html",
   "avatar.css",
   "avatar.js",
@@ -36,6 +39,9 @@ const FILES = [
   ...readdirSync("web/fonts").map((f) => `fonts/${f}`),
 ];
 
+// Instant-Action-only map pack, present after `npm run pack:ia`.
+if (existsSync("web/btlib10x.ia.jsonl")) FILES.push("btlib10x.ia.jsonl");
+
 rmSync(dest, { recursive: true, force: true });
 const written = [];
 for (const entry of FILES) {
@@ -50,6 +56,7 @@ writeFileSync(
   `${dest}/_headers`,
   "/btlib10x.jsonl\n  Content-Type: application/json; charset=utf-8\n" +
     "/btlib10x.sw.jsonl\n  Content-Type: application/json; charset=utf-8\n" +
+    "/btlib10x.ia.jsonl\n  Content-Type: application/json; charset=utf-8\n" +
     // File names carry the JuliaMono version, so a new release is a new URL.
     // CORS lets the avatar creator's HTML snippet load the font on other sites.
     "/fonts/*\n  Cache-Control: public, max-age=31536000, immutable\n" +

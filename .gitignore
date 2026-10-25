@@ -1,6 +1,9 @@
 node_modules/
 dist/
 web/terminal.js
+web/instant.js
+web/btlib10x.ia.jsonl
+web/instant/instant.jsonl
 web/btlib10x.js
 web/btlib10x.d.ts
 web/btlib10x.jsonl

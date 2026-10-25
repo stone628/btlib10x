@@ -3,13 +3,14 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-// Optional overrides: `--mechs <dir> --maps <dir|none> --out <file>`.
+// Optional overrides: `--mechs <dir|none> --maps <dir|none> --out <file>`.
 const args = process.argv.slice(2);
 const opt = (name, fallback) => {
   const i = args.indexOf(`--${name}`);
   return i >= 0 && args[i + 1] !== undefined ? resolve(args[i + 1]) : fallback;
 };
 const mechsDir = opt("mechs", join(root, "data", "mechs"));
+const noMechs = args[args.indexOf("--mechs") + 1] === "none";
 const noMaps = args[args.indexOf("--maps") + 1] === "none";
 const mapsDir = opt("maps", join(root, "data", "maps"));
 const outFile = opt("out", join(root, "data", "btlib10x.jsonl"));
@@ -225,7 +226,7 @@ function encodeMapDef(src) {
   });
 }
 
-const mechFiles = readdirSync(mechsDir)
+const mechFiles = (noMechs ? [] : readdirSync(mechsDir))
   .filter((f) => f.endsWith(".json"))
   .sort()
   .filter((f) => {
