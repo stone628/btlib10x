@@ -597,7 +597,7 @@ export function physicalDamage(
       // 0 damage, but a hit still forces both sides' +2 PSRs.
       return Math.ceil((tons * attacker.hexesMovedThisTurn) / CHARGE_DAMAGE_PER_TONS);
     case "dfa":
-      return Math.ceil(tons / PUNCH_DAMAGE_PER_TONS) * DFA_DAMAGE_MULTIPLIER;
+      return Math.ceil(tons * DFA_DAMAGE_MULTIPLIER / PUNCH_DAMAGE_PER_TONS);
   }
 }
 
