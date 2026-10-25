@@ -17,7 +17,7 @@ import { battleBanners, pumpAi, stopAi } from "../flow";
 import { locName, t } from "../i18n";
 import { type AttackRow, app, kitModal, rerender } from "../state";
 import type { TuiNode } from "../tui";
-import { blank, fit, h, kit, mapSlot, modal, row, statusbar } from "./common";
+import { blank, fit, h, kit, logView, mapSlot, modal, row, statusbar } from "./common";
 import { helpWindow } from "./setup";
 
 const SIDE_W = { movement: 29, attack: 45 } as const;
@@ -368,9 +368,6 @@ export function battleScreen(): TuiNode {
     );
   }
   if (app.error) side.push(row(fit(`! ${app.error}`, w - 2), { cls: "ia-err", key: "err" }));
-  const logLines = b.log
-    .slice(-4)
-    .map((e, i) => row(fit(e.text, 96), { cls: e.cls ?? "", key: `log${b.log.length - 4 + i}` }));
   return H.el(
     "div",
     { class: "ia-root" },
@@ -380,11 +377,11 @@ export function battleScreen(): TuiNode {
         { title: `${header()} · ${modeLine()}` },
         H.split(
           { sizes: `1fr ${w}` },
-          H.pane({}, mapSlot()),
+          H.pane({ pad: 0 }, mapSlot()),
           H.pane(u ? `${u.id} ${u.model}` : "", ...side),
         ),
       ),
-      H.pane(t("battle.log"), H.el("div", { class: "ia-log" }, ...logLines)),
+      H.pane(t("battle.log"), logView(b.log, 4, 96)),
     ),
     statusbar(
       phase === "movement"
@@ -593,10 +590,9 @@ function battleModal(): TuiNode | null {
     );
   }
   if (m.kind === "log") {
-    const lines = b.log.slice(-26);
     return modal(
       { cols: 98, rows: 29, title: t("battle.log"), footer: t("key.anyKey") },
-      H2log(lines),
+      logView(b.log, 26, 94),
     );
   }
   if (m.kind === "help") return helpWindow();
@@ -608,14 +604,6 @@ function battleModal(): TuiNode | null {
       row(t("key.anyKey"), { cls: "ia-dim" }),
     );
   return null;
-}
-
-function H2log(lines: readonly { text: string; cls?: string }[]): TuiNode {
-  return h().el(
-    "div",
-    { class: "ia-log" },
-    ...lines.map((e, i) => row(fit(e.text, 94), { cls: e.cls ?? "", key: `L${i}` })),
-  );
 }
 
 function runMenu(i: number): void {

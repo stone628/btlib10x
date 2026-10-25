@@ -1,7 +1,10 @@
-/* Instant Action (docs/INSTANT_ACTION.html). Layout and colours on top of tui.css.
-   The app is a fixed 100×32 cell screen, centred in the window (plan §8.0). */
+/* Instant Action (docs/INSTANT_ACTION.html). Loaded after bt10x.css (site fonts,
+   palette, #legal, .link-button, #lang) and tui.css. The app is a fixed 100×32
+   cell screen, centred between the header and the footer (plan §8.0). */
 
 :root {
+  /* header height, as on the terminal page; taller on touch screens */
+  --topbar-h: 36px;
   --tui-font: "Bt10x Mono", ui-monospace, Menlo, monospace;
   /* map palette: terrain faces, overlays, banners */
   --ia-map-bg: #101410;
@@ -57,18 +60,61 @@
   --ia-banner-ink: #fbfaf5;
 }
 
-html,
-body {
-  margin: 0;
-  height: 100%;
-  background: var(--tui-page);
+/* Header and footer match the terminal page (web/terminal.css). */
+#topbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: calc(var(--topbar-h) + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) calc(12px + env(safe-area-inset-right)) 0
+    calc(12px + env(safe-area-inset-left));
+  border-bottom: 1px solid var(--c-line);
+}
+#topbar-title {
+  color: var(--c-green);
+  font-weight: bold;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#topbar-version {
+  color: var(--c-dim);
+  font-size: 11px;
+  font-weight: normal;
+}
+#topbar #lang {
+  margin-left: auto;
+}
+#home-link {
+  display: flex;
+  align-items: center;
+  flex: none;
+  height: calc(var(--topbar-h) - 10px);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: bold;
+  white-space: nowrap;
+}
+#legal {
+  padding: 4px calc(12px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
+    calc(12px + env(safe-area-inset-left));
+}
+@media (pointer: coarse) {
+  :root {
+    --topbar-h: 44px;
+  }
 }
 
-body {
+/* the 100×32 screen, centred in the space between header and footer */
+#stage {
+  flex: 1;
+  min-height: 0;
   display: grid;
   place-items: center;
-  min-height: 100dvh;
   overflow: auto;
+  background: var(--tui-page);
 }
 
 #screen {
@@ -194,4 +240,12 @@ body {
   color: var(--tui-accent);
   text-align: center;
   white-space: pre;
+}
+
+.ia-tab[data-click] {
+  cursor: pointer;
+}
+.ia-logscroll {
+  overflow-y: auto;
+  overflow-x: hidden;
 }

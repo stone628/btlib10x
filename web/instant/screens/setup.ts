@@ -2,7 +2,7 @@
 import { catalogMaps, ensureMapRegistered, weaponDefFor } from "btlib10x";
 import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../ai/persona.data";
 import { launch, mapNames, mapSource } from "../flow";
-import { type LocaleId, locale, locName, setLocale, t } from "../i18n";
+import { locName, t } from "../i18n";
 import { createRng } from "../rng";
 import {
   defaultFilter,
@@ -18,7 +18,7 @@ import {
 } from "../setup/loadout";
 import { type AiPace, app, type Modal } from "../state";
 import type { TuiNode } from "../tui";
-import { blank, fit, h, mapSlot, modal, row, statusbar } from "./common";
+import { blank, fit, h, mapSlot, modal, row, statusbar, tabBar } from "./common";
 
 const TABS = ["setup.side1", "setup.side2", "setup.map", "setup.rules"];
 const AMMO = ["exposed", "core", "spread", "leastFirst"] as const;
@@ -38,7 +38,6 @@ const resolved = mechDef;
 
 export function setupScreen(): TuiNode {
   const H = h();
-  const tabs = TABS.map((k, i) => (i === app.tab ? `[ ${t(k)} ]` : `  ${t(k)}  `)).join(" ");
   let body: TuiNode[];
   if (app.tab < 2) body = sideBody(app.tab as 0 | 1);
   else if (app.tab === 2) body = mapBody();
@@ -79,7 +78,13 @@ export function setupScreen(): TuiNode {
       { cols: 100, rows: 31, border: "double", sizes: "69 1fr" },
       H.pane(
         t("setup.title"),
-        row(tabs, { cls: "ia-bright", key: "tabs" }),
+        tabBar(
+          TABS.map((k) => t(k)),
+          app.tab,
+          (i) => {
+            app.tab = i;
+          },
+        ),
         row("─".repeat(66), { cls: "ia-dim", key: "tabsep" }),
         ...body,
       ),
@@ -222,11 +227,6 @@ function ruleRows(): RuleRow[] {
       step: (d) => {
         app.aiPace = PACES[(PACES.indexOf(app.aiPace) + d + PACES.length) % PACES.length]!;
       },
-    },
-    {
-      label: "rules.lang",
-      value: locale() === "ko" ? "한국어" : "English",
-      step: () => setLocale((locale() === "ko" ? "en" : "ko") as LocaleId),
     },
     {
       label: "rules.theme",

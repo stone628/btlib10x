@@ -33,10 +33,9 @@ export function titleItems(): TitleItem[] {
     },
     { label: "title.random", key: "R", run: randomBattle },
     {
-      label: "title.lang",
-      key: "L",
+      label: "title.settings",
+      key: "S",
       run: () => {
-        app.cursors.rules = 4;
         app.screen = "setup";
         app.tab = 3;
       },
@@ -84,9 +83,8 @@ export function titleScreen(): TuiNode {
         { style: { display: "flex", "justify-content": "center" } },
         H.box({ cols: 36, border: "single" }, ...menu),
       ),
-      ...blank(5),
+      ...blank(6),
       row(fit(last, 96), { cls: "ia-dim", key: "last" }),
-      row(fit(t("legal"), 96), { cls: "ia-dim", key: "legal" }),
     ),
     statusbar(
       [
@@ -106,7 +104,7 @@ export function titleKey(e: KeyboardEvent): boolean {
     app.cursors.title = (app.cursors.title + items.length - 1) % items.length;
   else if (e.key === "Enter") items[app.cursors.title]!.run();
   else if (e.code === "KeyR") randomBattle();
-  else if (e.code === "KeyL") items[2]!.run();
+  else if (e.code === "KeyS") items[2]!.run();
   else return false;
   return true;
 }

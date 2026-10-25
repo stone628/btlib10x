@@ -2,8 +2,6 @@
 export const en = {
   "doc.title": "bt10x Instant Action",
   loading: "Loading catalogs…",
-  legal:
-    "Unofficial fan project. BattleTech, 'Mech and MechWarrior are trademarks of their owners.",
   yes: "Yes",
   no: "No",
   on: "on",
@@ -31,7 +29,7 @@ export const en = {
   "key.twist": "Twist",
   "key.weapon": "Weapon",
   "key.allNone": "All/None",
-  "key.view": ", . rotate  + - zoom  V tilt",
+  "key.view": ", . rotate  + - zoom  V tilt  mid-drag pan",
   "key.rematch": "Rematch",
   "key.backToBattle": "Back to battle",
   "key.anyKey": "Press any key",
@@ -40,7 +38,7 @@ export const en = {
   "title.subtitle": "I N S T A N T   A C T I O N",
   "title.new": "New battle",
   "title.random": "Random battle",
-  "title.lang": "Language / settings",
+  "title.settings": "Settings",
   "title.help": "Help",
   "title.last": "last: {a} vs {b} · {map} · BV {bv}",
 
@@ -63,7 +61,6 @@ export const en = {
   "rules.turns": "Damage Race turns",
   "rules.seed": "Seed",
   "rules.pace": "AI pace",
-  "rules.lang": "Language",
   "rules.theme": "Theme",
   "rules.reasoning": "AI reasoning in log",
   "rules.hint": "←→ change   R new seed (on Seed)",
@@ -331,7 +328,7 @@ export const en = {
 
   "help.title": "Help",
   "help.text":
-    "Keyboard drives every menu; hexes are picked with the mouse.\n\nTitle  Enter new battle · R random battle\nSetup  Tab tabs · ↑↓ slot · Enter 'Mech · P pilot · C control\n       O policies · G generate side · F10 launch\nDeploy 1-4 edge · ↑↓ unit · click edge hex · [ ] facing · Enter begin\nMove   W R J S mode · click a tinted hex · pick facing · D done\nAttack Tab target · T twist · Space/1-9 weapon · A all · X physical\n       D done · Esc clear\nAny    F2 menu · I sheet · L log · Ctrl+Z undo · Space next AI step\nMap    , . rotate · + - zoom · V tilt · Home reset · drag to rotate",
+    "Keyboard drives every menu; hexes are picked with the mouse.\n\nTitle  Enter new battle · R random battle · S settings\nSetup  Tab tabs · ↑↓ slot · Enter 'Mech · P pilot · C control\n       O policies · G generate side · F10 launch\nDeploy 1-4 edge · ↑↓ unit · click edge hex · [ ] facing · Enter begin\nMove   W R J S mode · click a tinted hex · pick facing · D done\nAttack Tab target · T twist · Space/1-9 weapon · A all · X physical\n       D done · Esc clear\nAny    F2 menu · I sheet · L log · Ctrl+Z undo · Space next AI step\nMap    , . rotate · + - zoom · V tilt · Home reset · drag to rotate\n       middle-button drag to pan",
 } as const;
 
 export type MessageKey = keyof typeof en;

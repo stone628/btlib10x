@@ -5,7 +5,7 @@
  */
 import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
 import { ensureMapView, pumpAi } from "./flow";
-import { initLocale, t } from "./i18n";
+import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
 import { fitScreen } from "./screen";
 import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
 import { h, kit, row } from "./screens/common";
@@ -51,6 +51,13 @@ function rootView(): TuiNode {
 
 /** After each render: put the persistent map canvas into its slot and paint it. */
 function afterRender(): void {
+  // Logs stick to their newest line unless the reader scrolled up.
+  document.querySelectorAll<HTMLElement>("#app .ia-logscroll").forEach((el) => {
+    if (el.dataset.pinned !== "false") el.scrollTop = el.scrollHeight;
+    el.onscroll = () => {
+      el.dataset.pinned = String(el.scrollTop + el.clientHeight >= el.scrollHeight - 4);
+    };
+  });
   const slot = document.querySelector<HTMLElement>("#app .ia-mapslot");
   if (!slot) return;
   const view = ensureMapView();
@@ -110,10 +117,31 @@ function fetchText(file: string): Promise<string> {
   });
 }
 
+/** Header language buttons (as on the landing page): EN / 한국어. */
+function syncLangButtons(): void {
+  document.querySelectorAll<HTMLButtonElement>("#lang button").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.lang === locale()));
+  });
+  document.title = t("doc.title");
+}
+
+function initHeader(): void {
+  const version = document.getElementById("topbar-version");
+  if (version) version.textContent = `v${VERSION}`;
+  document.querySelectorAll<HTMLButtonElement>("#lang button").forEach((b) => {
+    b.addEventListener("click", () => {
+      setLocale(b.dataset.lang as LocaleId);
+      syncLangButtons();
+      rerender();
+    });
+  });
+  syncLangButtons();
+}
+
 async function boot(): Promise<void> {
   initLocale();
   app.version = VERSION;
-  document.title = t("doc.title");
+  initHeader();
   fitScreen();
   const TUI = kit();
   TUI.prefab("ia-app", { tick: 0 }, () => rootView());

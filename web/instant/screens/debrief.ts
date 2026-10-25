@@ -5,7 +5,7 @@ import { rematch } from "../flow";
 import { t } from "../i18n";
 import { app } from "../state";
 import type { TuiNode } from "../tui";
-import { blank, fit, h, row, statusbar } from "./common";
+import { blank, fit, h, logView, row, statusbar, tabBar } from "./common";
 
 const TABS = ["debrief.result", "debrief.units", "debrief.salvage", "battle.log"];
 
@@ -21,7 +21,6 @@ export function debriefScreen(): TuiNode {
     b.mode.kind === "destroyAll"
       ? t("mode.destroyAll")
       : t("mode.damageRaceN", { n: b.mode.turns });
-  const tabs = TABS.map((k, i) => (i === app.tab ? `[ ${t(k)} ]` : `  ${t(k)}  `)).join(" ");
   let body: TuiNode[] = [];
   if (app.tab === 0) {
     body = [
@@ -73,14 +72,20 @@ export function debriefScreen(): TuiNode {
               ),
             );
   } else {
-    body = b.log.slice(-25).map((e, i) => row(fit(e.text, 96), { cls: e.cls ?? "", key: `l${i}` }));
+    body = [logView(b.log, 26, 94)];
   }
   return H.el(
     "div",
     { class: "ia-root" },
     H.box(
       { cols: 100, rows: 31, border: "double", title: `${head} · ${mode}` },
-      row(tabs, { cls: "ia-bright", key: "tabs" }),
+      tabBar(
+        TABS.map((k) => t(k)),
+        app.tab,
+        (i) => {
+          app.tab = i;
+        },
+      ),
       row("─".repeat(96), { cls: "ia-dim", key: "tsep" }),
       H.el(
         "div",

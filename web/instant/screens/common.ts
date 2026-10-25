@@ -55,6 +55,48 @@ export function modal(props: TuiProps, ...children: TuiChild[]): TuiNode {
   );
 }
 
+/** A row of tab labels; the active one is bracketed, each label is clickable. */
+export function tabBar(
+  labels: readonly string[],
+  active: number,
+  pick: (i: number) => void,
+): TuiNode {
+  const H = h();
+  return H.el(
+    "div",
+    { class: "ia-row ia-bright", key: "tabs" },
+    ...labels.map((label, i) =>
+      H.el(
+        "span",
+        {
+          key: `tab${i}`,
+          class: "ia-tab",
+          attrs: { "data-click": "" },
+          onClick: () => pick(i),
+        },
+        i === active ? `[ ${label} ]` : `  ${label}  `,
+      ),
+    ),
+  );
+}
+
+/** A scrolling log that keeps its newest line in view (see `afterRender`). */
+export function logView(
+  entries: readonly { text: string; cls?: string }[],
+  rows: number,
+  cols: number,
+): TuiNode {
+  return h().el(
+    "div",
+    {
+      class: "ia-log ia-logscroll",
+      key: "logscroll",
+      style: { height: `calc(${rows} * var(--ch))` },
+    },
+    ...entries.map((e, i) => row(fit(e.text, cols), { cls: e.cls ?? "", key: `log${i}` })),
+  );
+}
+
 /** The persistent map canvas is moved into this slot after each render. */
 export function mapSlot(): TuiNode {
   return h().el("div", { class: "ia-mapslot", key: "mapslot", attrs: { "data-tui-raw": "" } });

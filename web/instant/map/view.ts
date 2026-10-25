@@ -97,6 +97,9 @@ export class MapView {
   tilt = TILTS[0]!;
   /** Font size driving the hex size; null = fit to the canvas. */
   fs: number | null = null;
+  /** Pan offset in CSS px (middle-button drag). */
+  panX = 0;
+  panY = 0;
   overlays: Overlays = {};
   banners: Banner[] = [];
   onPick: ((hex: HexCoord, ev: MouseEvent) => void) | null = null;
@@ -116,12 +119,29 @@ export class MapView {
         (Math.atan2(e.clientX - r.left - v.ox, -(e.clientY - r.top - v.oy) / v.sq) * 180) / Math.PI
       );
     };
+    // Middle (scroll) button drag pans the map.
+    let pan: { x: number; y: number; px: number; py: number } | null = null;
+    canvas.addEventListener("mousedown", (e) => {
+      if (e.button === 1) e.preventDefault(); // no browser autoscroll
+    });
     canvas.addEventListener("pointerdown", (e) => {
+      if (e.button === 1) {
+        e.preventDefault();
+        pan = { x: e.clientX, y: e.clientY, px: this.panX, py: this.panY };
+        canvas.setPointerCapture(e.pointerId);
+        return;
+      }
       if (e.button !== 0) return;
       drag = { start: pointerAngle(e), angle: this.angle, moved: false };
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener("pointermove", (e) => {
+      if (pan) {
+        this.panX = pan.px + e.clientX - pan.x;
+        this.panY = pan.py + e.clientY - pan.y;
+        this.render();
+        return;
+      }
       if (drag) {
         const delta = pointerAngle(e) - drag.start;
         if (Math.abs(delta) > 4) drag.moved = true;
@@ -139,6 +159,10 @@ export class MapView {
       }
     });
     const end = (e: PointerEvent) => {
+      if (pan) {
+        pan = null;
+        return;
+      }
       const d = drag;
       drag = null;
       if (d && !d.moved && e.type === "pointerup") {
@@ -199,6 +223,8 @@ export class MapView {
   }
 
   reset(): void {
+    this.panX = 0;
+    this.panY = 0;
     this.angle = 0;
     this.fs = null;
     this.tilt = TILTS[0]!;
@@ -239,8 +265,8 @@ export class MapView {
     const el = LEVEL_H * Math.cos(rad(this.tilt));
     const b = this.bounds(this.angle);
     // room above for the banners on the top row
-    const byW = (W - 8) / ((b.x1 - b.x0) * HEX_R);
-    const byH = (H - 8) / (HEX_R * ((b.y1 - b.y0) * sq + this.world.maxLevel * el + 1.6));
+    const byW = W / ((b.x1 - b.x0) * HEX_R);
+    const byH = H / (HEX_R * ((b.y1 - b.y0) * sq + this.world.maxLevel * el + 1.6));
     return Math.max(3, Math.min(byW, byH));
   }
 
@@ -260,8 +286,13 @@ export class MapView {
     const W = this.canvas.clientWidth || 300;
     const H = this.canvas.clientHeight || 200;
     const b = this.bounds(this.angle);
-    const ox = W / 2 - ((b.x0 + b.x1) / 2) * R;
-    const oy = H / 2 - ((b.y0 + b.y1) / 2) * R * sq + (this.world.maxLevel * EL) / 2 + R * 0.8 * sq;
+    const ox = W / 2 - ((b.x0 + b.x1) / 2) * R + this.panX;
+    const oy =
+      H / 2 -
+      ((b.y0 + b.y1) / 2) * R * sq +
+      (this.world.maxLevel * EL) / 2 +
+      R * 0.8 * sq +
+      this.panY;
     const proj = ([x, y]: readonly [number, number], h: number): [number, number] => [
       ox + x * R,
       oy + y * R * sq - h * EL,
@@ -404,6 +435,7 @@ export class MapView {
     this.drawn = list;
     this.drawLos(v);
     this.drawBanners(v);
+    this.drawHud(v);
   }
 
   private tintFor(k: string, team: (n: number) => string): string | null {
@@ -535,6 +567,54 @@ export class MapView {
       ctx.restore();
       this.bannerBoxes.push({ hex: b.hex, x0, y0, x1: x0 + bw, y1: y0 + bh + pole });
     }
+  }
+
+  /** North arrow and the view state: rotation, zoom against fit, tilt. */
+  private drawHud(v: ReturnType<MapView["view"]>): void {
+    const ctx = this.ctx;
+    const fs = 12;
+    const r = 16;
+    const cx = v.W - r - 6;
+    const cy = r + 6;
+    const t = (this.angle * Math.PI) / 180;
+    // world north (0, -1) after the view rotation, squashed by the tilt
+    let nx = -Math.sin(t);
+    let ny = -Math.cos(t) * v.sq;
+    const len = Math.hypot(nx, ny) || 1;
+    nx /= len;
+    ny /= len;
+    ctx.save();
+    ctx.fillStyle = css("--ia-banner-bg", "#0d0d0d");
+    ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = css("--ia-map-edge", "#cfcfcf");
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    const tipX = cx + nx * (r - 3);
+    const tipY = cy + ny * (r - 3);
+    ctx.fillStyle = css("--ia-team2", "#ff6b5a");
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(cx - ny * 4, cy + nx * 4);
+    ctx.lineTo(cx + ny * 4, cy - nx * 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.font = `bold ${fs}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillStyle = css("--ia-map-mark", "#f0f0f0");
+    ctx.fillText("N", cx - nx * 7, cy - ny * 7);
+    const zoom = this.fs === null ? 1 : this.fs / this.fitFs();
+    const text = `${Math.round(this.angle) % 360}°  ×${zoom.toFixed(1)}  ${this.tilt}°`;
+    ctx.font = `${fs}px ${FONT}`;
+    ctx.textAlign = "right";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = css("--ia-map-label", "#9a9a9a");
+    ctx.fillText(text, v.W - 6, cy + r + 4);
+    ctx.restore();
   }
 
   private hexAtEvent(e: MouseEvent): HexCoord | null {
