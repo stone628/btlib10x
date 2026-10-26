@@ -62,7 +62,9 @@ Mad Cat Prime, Masakari Prime, Wolverine WVR-6R).
   both locations' slots must add up to it.
 - **Catalog identity headers.** Every sheet carries `Intro:N` (introduction
   year) and `BV:N` (Battle Value) copied from its pack's `roster.json`, which
-  holds the Master Unit List values; `BV:0` means the MUL lists none. Both are
+  holds the Master Unit List values. Where the MUL lists none (roster `bv: 0`),
+  the header carries the BV 2.0 that MegaMek computes for the sheet instead
+  (13 sw ER 2750 / archive variants and ci Panther PNT-10ALAG). Both are
   required: a sheet missing either is a `SKIP`. `BV:` goes on the line after
   `Intro:`; they become `MechDef.intro` / `MechDef.bv`.
 - **`running = ceil(walking * 1.5)`** (quick-start convention).
