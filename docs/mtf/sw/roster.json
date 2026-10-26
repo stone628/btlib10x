@@ -6332,21 +6332,6 @@
     "id": "YCKCHW261H"
   },
   {
-    "mtf": "Hammerhands HMH-3D.mtf",
-    "chassis": "Hammerhands",
-    "model": "HMH-3D (Kessem)",
-    "bv": 1413,
-    "intro": 2725,
-    "tags": [
-      "archive",
-      "named"
-    ],
-    "sources": [
-      "ER:2750"
-    ],
-    "id": "YDBRR0F9G1"
-  },
-  {
     "mtf": "Wasp LAM Mk I WSP-100A.mtf",
     "chassis": "Wasp LAM Mk I",
     "model": "WSP-100A",

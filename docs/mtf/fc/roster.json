@@ -29,18 +29,6 @@
     "id": "026DBK563D"
   },
   {
-    "mtf": "Dervish DV-6M.mtf",
-    "chassis": "Dervish",
-    "model": "DV-6M (Mauck)",
-    "bv": 0,
-    "intro": 3060,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "05EY9Y5N4J"
-  },
-  {
     "mtf": "Masakari (Warhawk) H.mtf",
     "chassis": "Masakari (Warhawk)",
     "model": "H",
@@ -691,18 +679,6 @@
     "id": "2B991SNMK7"
   },
   {
-    "mtf": "Archer ARC-2R.mtf",
-    "chassis": "Archer",
-    "model": "ARC-2R (Rubinsky)",
-    "bv": 1411,
-    "intro": 3059,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "2C6EJR5KRG"
-  },
-  {
     "mtf": "Banshee BNC-6S.mtf",
     "chassis": "Banshee",
     "model": "BNC-6S",
@@ -1289,18 +1265,6 @@
       "TR:3050U"
     ],
     "id": "4WXFFJ5MYS"
-  },
-  {
-    "mtf": "Penetrator PTR-4D.mtf",
-    "chassis": "Penetrator",
-    "model": "PTR-4D (Christifori)",
-    "bv": 0,
-    "intro": 3060,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "50ARE52V0W"
   },
   {
     "mtf": "Gunslinger GUN-2ERD.mtf",
@@ -2098,18 +2062,6 @@
     "id": "80H9QR64S4"
   },
   {
-    "mtf": "Scorpion SCP-1N.mtf",
-    "chassis": "Scorpion",
-    "model": "SCP-1N (Rubinsky)",
-    "bv": 940,
-    "intro": 3059,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "812VFWQ258"
-  },
-  {
     "mtf": "Rifleman IIC 3.mtf",
     "chassis": "Rifleman IIC",
     "model": "3",
@@ -2268,20 +2220,6 @@
       "TR:CI"
     ],
     "id": "8ZDSRCREF7"
-  },
-  {
-    "mtf": "Hunchback HBK-4G.mtf",
-    "chassis": "Hunchback",
-    "model": "HBK-4G (Hohiro)",
-    "bv": 1126,
-    "intro": 3056,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "912PVF99F1"
   },
   {
     "mtf": "Peregrine (Horned Owl) 3.mtf",
@@ -3473,18 +3411,6 @@
     "id": "DPRJY6JRSY"
   },
   {
-    "mtf": "Gunslinger GUN-1ERD.mtf",
-    "chassis": "Gunslinger",
-    "model": "GUN-1ERD (Jared)",
-    "bv": 1813,
-    "intro": 3063,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "DRD14K871V"
-  },
-  {
     "mtf": "Cerberus MR-V3.mtf",
     "chassis": "Cerberus",
     "model": "MR-V3",
@@ -3609,18 +3535,6 @@
       "TR:3050U"
     ],
     "id": "EA4TH6JVXZ"
-  },
-  {
-    "mtf": "Jenner JR7-K.mtf",
-    "chassis": "Jenner",
-    "model": "JR7-K (Samuli)",
-    "bv": 1001,
-    "intro": 3060,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "EDMFP2F2FG"
   },
   {
     "mtf": "Ti Ts'ang TSG-9H.mtf",
@@ -5388,18 +5302,6 @@
     "id": "N6CR194ZRG"
   },
   {
-    "mtf": "Bushwacker BSW-X1.mtf",
-    "chassis": "Bushwacker",
-    "model": "BSW-X1 (Black)",
-    "bv": 0,
-    "intro": 3061,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "N778RFQ4SJ"
-  },
-  {
     "mtf": "Turkina H.mtf",
     "chassis": "Turkina",
     "model": "H",
@@ -5587,32 +5489,6 @@
       "TR:CI"
     ],
     "id": "P83093HHBC"
-  },
-  {
-    "mtf": "Snake SNK-1V.mtf",
-    "chassis": "Snake",
-    "model": "SNK-1V (Alexi)",
-    "bv": 1316,
-    "intro": 3057,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "P9N55DDTPV"
-  },
-  {
-    "mtf": "Hatchetman HCT-5S.mtf",
-    "chassis": "Hatchetman",
-    "model": "HCT-5S (Austin)",
-    "bv": 1174,
-    "intro": 3059,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "PCACZE8P76"
   },
   {
     "mtf": "N/A",
@@ -6114,18 +5990,6 @@
     "id": "RFC5FYS96J"
   },
   {
-    "mtf": "Bandersnatch BNDR-01A.mtf",
-    "chassis": "Bandersnatch",
-    "model": "BNDR-01A (Horus)",
-    "bv": 1587,
-    "intro": 3061,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "RFDCSHCVD1"
-  },
-  {
     "mtf": "Hatchetman HCT-5D.mtf",
     "chassis": "Hatchetman",
     "model": "HCT-5D",
@@ -6183,22 +6047,6 @@
       "TR:CI"
     ],
     "id": "RPDJMA27Z6"
-  },
-  {
-    "mtf": "Wolfhound WLF-1.mtf",
-    "chassis": "Wolfhound",
-    "model": "WLF-1 (Allard)",
-    "bv": 1941,
-    "intro": 3062,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:3050U"
-    ],
-    "id": "RRB4N8FEKH"
   },
   {
     "mtf": "Shadow Cat H.mtf",
@@ -6270,18 +6118,6 @@
       "TR:3055U"
     ],
     "id": "RYN6NA7T7Y"
-  },
-  {
-    "mtf": "Wolf Trap (Tora) WFT-1.mtf",
-    "chassis": "Wolf Trap (Tora)",
-    "model": "WFT-1 (Daitama)",
-    "bv": 1290,
-    "intro": 3060,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "S315Y2J9P6"
   },
   {
     "mtf": "Tsunami TS-P1D.mtf",
@@ -6490,18 +6326,6 @@
     "id": "T2GV4XYZDJ"
   },
   {
-    "mtf": "Warhammer WHM-7M.mtf",
-    "chassis": "Warhammer",
-    "model": "WHM-7M (GioAvanti)",
-    "bv": 0,
-    "intro": 3058,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "T8AN51X4ST"
-  },
-  {
     "mtf": "Awesome AWS-9Q.mtf",
     "chassis": "Awesome",
     "model": "AWS-9Q",
@@ -6687,18 +6511,6 @@
       "TR:J"
     ],
     "id": "TT83N84TTF"
-  },
-  {
-    "mtf": "Panther PNT-9R.mtf",
-    "chassis": "Panther",
-    "model": "PNT-9R (Darwin)",
-    "bv": 0,
-    "intro": 3058,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "TW1RG5ZCYY"
   },
   {
     "mtf": "Puma (Adder) H.mtf",
@@ -7180,20 +6992,6 @@
       "TR:CI"
     ],
     "id": "WMTMSN17AG"
-  },
-  {
-    "mtf": "BattleMaster BLR-3M.mtf",
-    "chassis": "BattleMaster",
-    "model": "BLR-3M (Rogers)",
-    "bv": 1818,
-    "intro": 3057,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "OTP:FI"
-    ],
-    "id": "WRY554SWGG"
   },
   {
     "mtf": "Banshee BNC-7S.mtf",

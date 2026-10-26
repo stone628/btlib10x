@@ -44,20 +44,6 @@
     "id": "16FBF0DVQ0"
   },
   {
-    "mtf": "Grand Dragon DRG-5K.mtf",
-    "chassis": "Grand Dragon",
-    "model": "DRG-5K (Emory)",
-    "bv": 1431,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "2R7HQ9H7AS"
-  },
-  {
     "mtf": "Griffin GRF-1E Sparky.mtf",
     "chassis": "Griffin",
     "model": "GRF-1E \"Sparky\"",
@@ -74,21 +60,6 @@
     "id": "3FSHT52WNY"
   },
   {
-    "mtf": "Scorpion SCP-1N.mtf",
-    "chassis": "Scorpion",
-    "model": "SCP-1N (Wendall)",
-    "bv": 1043,
-    "intro": 3030,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3039"
-    ],
-    "id": "474WYR9DRY"
-  },
-  {
     "mtf": "Marauder MAD-4X.mtf",
     "chassis": "Marauder",
     "model": "MAD-4X",
@@ -103,20 +74,6 @@
     "id": "4NFWRKEW4D"
   },
   {
-    "mtf": "Stalker STK-3F.mtf",
-    "chassis": "Stalker",
-    "model": "STK-3F (Jagawen)",
-    "bv": 1570,
-    "intro": 3028,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "HTP:Misery"
-    ],
-    "id": "4NVMYE7HSC"
-  },
-  {
     "mtf": "Daboku DCMS-MX90-D.mtf",
     "chassis": "Daboku",
     "model": "DCMS-MX90-D",
@@ -129,22 +86,6 @@
       "TR:3039"
     ],
     "id": "4RNPBY4DJV"
-  },
-  {
-    "mtf": "Jenner JR7-F.mtf",
-    "chassis": "Jenner",
-    "model": "JR7-F (Smith)",
-    "bv": 1070,
-    "intro": 3030,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TP:39V",
-      "TR:SW"
-    ],
-    "id": "4S7FZCDD8V"
   },
   {
     "mtf": "Annihilator ANH-1E.mtf",
@@ -189,22 +130,6 @@
     "id": "6V98XAQ5DJ"
   },
   {
-    "mtf": "Catapult CPLT-C1.mtf",
-    "chassis": "Catapult",
-    "model": "CPLT-C1 (Jenny) \"Butterbee\"",
-    "bv": 1242,
-    "intro": 3027,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3039",
-      "TR:SW"
-    ],
-    "id": "7G1EEH6NVP"
-  },
-  {
     "mtf": "Raven RVN-4X.mtf",
     "chassis": "Raven",
     "model": "RVN-4X",
@@ -220,22 +145,6 @@
     "id": "841K6PYR9T"
   },
   {
-    "mtf": "Clint CLNT-2-3T.mtf",
-    "chassis": "Clint",
-    "model": "CLNT-2-3T (Denton)",
-    "bv": 873,
-    "intro": 3033,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3039",
-      "TR:SW"
-    ],
-    "id": "8EWMMKM1PR"
-  },
-  {
     "mtf": "Cataphract CTF-4X.mtf",
     "chassis": "Cataphract",
     "model": "CTF-4X",
@@ -249,22 +158,6 @@
       "TR:SW"
     ],
     "id": "8Q1AEKVX7Z"
-  },
-  {
-    "mtf": "Vulcan VL-2T.mtf",
-    "chassis": "Vulcan",
-    "model": "VL-2T (Timms)",
-    "bv": 603,
-    "intro": 3034,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TP:39V",
-      "TR:SW"
-    ],
-    "id": "A9BRT8J94T"
   },
   {
     "mtf": "Banshee BNC-3S.mtf",
@@ -382,20 +275,6 @@
     "id": "ENCBG5QAS4"
   },
   {
-    "mtf": "Atlas AS7-D.mtf",
-    "chassis": "Atlas",
-    "model": "AS7-D (Danielle)",
-    "bv": 1976,
-    "intro": 3028,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "HTP:Misery"
-    ],
-    "id": "EQD2V8XH1D"
-  },
-  {
     "mtf": "Banshee BNC-3MC.mtf",
     "chassis": "Banshee",
     "model": "BNC-3MC",
@@ -409,20 +288,6 @@
       "TR:SW"
     ],
     "id": "EVVJ5B7YMP"
-  },
-  {
-    "mtf": "Hatchetman HCT-3F.mtf",
-    "chassis": "Hatchetman",
-    "model": "HCT-3F (Austin)",
-    "bv": 962,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "FN80MA067Z"
   },
   {
     "mtf": "Shogun SHG-2F.mtf",
@@ -455,20 +320,6 @@
     "id": "GVXPD2TAKF"
   },
   {
-    "mtf": "Ostroc OSR-2C.mtf",
-    "chassis": "Ostroc",
-    "model": "OSR-2C (Michi)",
-    "bv": 1321,
-    "intro": 3028,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "HTP:Misery"
-    ],
-    "id": "HPBH3CKGFD"
-  },
-  {
     "mtf": "Cronus CNS-3M.mtf",
     "chassis": "Cronus",
     "model": "CNS-3M",
@@ -496,20 +347,6 @@
       "TR:SW"
     ],
     "id": "K8Q3P2WY9P"
-  },
-  {
-    "mtf": "Black Knight BL-6-KNT.mtf",
-    "chassis": "Black Knight",
-    "model": "BL-6-KNT (Ian)",
-    "bv": 1830,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "KG04GGTBRG"
   },
   {
     "mtf": "Wolfhound WLF-1B.mtf",
@@ -596,20 +433,6 @@
     "id": "N7X9BCHKBM"
   },
   {
-    "mtf": "Jenner JR7-K.mtf",
-    "chassis": "Jenner",
-    "model": "JR7-K (Grace)",
-    "bv": 702,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "P3J9YJNBQ1"
-  },
-  {
     "mtf": "N/A",
     "chassis": "Hatamoto-Kaze",
     "model": "HTM-26V",
@@ -648,46 +471,6 @@
       "TR:SW"
     ],
     "id": "S1EW85MSV3"
-  },
-  {
-    "mtf": "Hatamoto-Chi HTM-27T.mtf",
-    "chassis": "Hatamoto-Chi",
-    "model": "HTM-27T (Daniel)",
-    "bv": 1520,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "TERH8AK58A"
-  },
-  {
-    "mtf": "Grand Dragon DRG-1G.mtf",
-    "chassis": "Grand Dragon",
-    "model": "DRG-1G (Douglas)",
-    "bv": 1076,
-    "intro": 3028,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "WQYNXM53WY"
-  },
-  {
-    "mtf": "Enforcer ENF-4R.mtf",
-    "chassis": "Enforcer",
-    "model": "ENF-4R (Daniel)",
-    "bv": 1357,
-    "intro": 3039,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "XKVHHCR0GB"
   },
   {
     "mtf": "Devastator DVS-1D.mtf",
@@ -733,19 +516,5 @@
       "TR:SW"
     ],
     "id": "YXHACC94PA"
-  },
-  {
-    "mtf": "Victor VTR-9B.mtf",
-    "chassis": "Victor",
-    "model": "VTR-9B (Li)",
-    "bv": 1625,
-    "intro": 3028,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "OTP:DTM"
-    ],
-    "id": "Z72QTD3FMD"
   }
 ]

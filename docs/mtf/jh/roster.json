@@ -1858,18 +1858,6 @@
     "id": "56JXFC4PP3"
   },
   {
-    "mtf": "Men Shen MS1-O.mtf",
-    "chassis": "Men Shen",
-    "model": "MS1-O (Li)",
-    "bv": 1550,
-    "intro": 3068,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "57QZWEEHEZ"
-  },
-  {
     "mtf": "Viper (Black Python) 3.mtf",
     "chassis": "Viper (Black Python)",
     "model": "3",
@@ -2526,20 +2514,6 @@
       "TR:3055U"
     ],
     "id": "7AS3VPWVW8"
-  },
-  {
-    "mtf": "Grand Dragon DRG-7K.mtf",
-    "chassis": "Grand Dragon",
-    "model": "DRG-7K (Mark)",
-    "bv": 1817,
-    "intro": 3067,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "7DNBX4463J"
   },
   {
     "mtf": "Crusader CRD-7W.mtf",
@@ -3199,20 +3173,6 @@
     "id": "9N9V3PG0S3"
   },
   {
-    "mtf": "Jenner JR7-K.mtf",
-    "chassis": "Jenner",
-    "model": "JR7-K (Grace II)",
-    "bv": 787,
-    "intro": 3067,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "SB:S&D"
-    ],
-    "id": "9PR0W24CWM"
-  },
-  {
     "mtf": "Warhammer WHM-8D.mtf",
     "chassis": "Warhammer",
     "model": "WHM-8D",
@@ -3225,18 +3185,6 @@
       "TR:CI"
     ],
     "id": "9R3351QTAR"
-  },
-  {
-    "mtf": "Emperor EMP-6A.mtf",
-    "chassis": "Emperor",
-    "model": "EMP-6A (Nerran)",
-    "bv": 2247,
-    "intro": 3064,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "9T04N6B874"
   },
   {
     "mtf": "King Crab KGC-008.mtf",
@@ -3382,22 +3330,6 @@
       "BattleCorps"
     ],
     "id": "A3DFQYZ5B0"
-  },
-  {
-    "mtf": "Shogun SHG-2F.mtf",
-    "chassis": "Shogun",
-    "model": "SHG-2F (Trisha)",
-    "bv": 1733,
-    "intro": 3071,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:3050U"
-    ],
-    "id": "A7H45YBR8J"
   },
   {
     "mtf": "Lineholder KW2-LHW.mtf",
@@ -3650,20 +3582,6 @@
     "id": "B07S8J96N8"
   },
   {
-    "mtf": "Thug THG-11E.mtf",
-    "chassis": "Thug",
-    "model": "THG-11E (Reich)",
-    "bv": 2612,
-    "intro": 3065,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "MSII"
-    ],
-    "id": "B0ZZMJFZ9C"
-  },
-  {
     "mtf": "Spector SPR-ST.mtf",
     "chassis": "Spector",
     "model": "SPR-ST",
@@ -3782,22 +3700,6 @@
       "TR:J"
     ],
     "id": "BCWDQ664T8"
-  },
-  {
-    "mtf": "Awesome AWS-9Q.mtf",
-    "chassis": "Awesome",
-    "model": "AWS-9Q (Klatt)",
-    "bv": 1805,
-    "intro": 3071,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3050",
-      "TR:3050U"
-    ],
-    "id": "BE9T38VGW8"
   },
   {
     "mtf": "Hachiwara HCA-4U.mtf",
@@ -3970,18 +3872,6 @@
       "TR:3085"
     ],
     "id": "BT47F0SKTK"
-  },
-  {
-    "mtf": "Daikyu DAI-01.mtf",
-    "chassis": "Daikyu",
-    "model": "DAI-01 (Tabitha)",
-    "bv": 1804,
-    "intro": 3064,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "BVVGD3AFDW"
   },
   {
     "mtf": "Bloodhound B1-HND.mtf",
@@ -6171,22 +6061,6 @@
     "id": "JXPHTW1WCN"
   },
   {
-    "mtf": "Sunder SD1-O.mtf",
-    "chassis": "Sunder",
-    "model": "SD1-O (Samual)",
-    "bv": 1593,
-    "intro": 3066,
-    "tags": [
-      "tro",
-      "named"
-    ],
-    "sources": [
-      "TR:3058U",
-      "TR:CI"
-    ],
-    "id": "K2HBX0W3TA"
-  },
-  {
     "mtf": "Hellspawn HSN-8E.mtf",
     "chassis": "Hellspawn",
     "model": "HSN-8E",
@@ -6740,20 +6614,6 @@
     "id": "MDTTKAPMJM"
   },
   {
-    "mtf": "Javelin JVN-11D.mtf",
-    "chassis": "Javelin",
-    "model": "JVN-11D (Farrell)",
-    "bv": 1155,
-    "intro": 3068,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "BD:BH"
-    ],
-    "id": "MDXF6H050Z"
-  },
-  {
     "mtf": "Dragon Fire DGR-6FC2 (Gregory).mtf",
     "chassis": "Dragon Fire",
     "model": "DGR-6FC2 (Gregory)",
@@ -7096,18 +6956,6 @@
     "id": "NDR2J6TME5"
   },
   {
-    "mtf": "Stealth STH-1D.mtf",
-    "chassis": "Stealth",
-    "model": "STH-1D (Anna)",
-    "bv": 1540,
-    "intro": 3065,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "NHH38AER70"
-  },
-  {
     "mtf": "Spider SDR-7K.mtf",
     "chassis": "Spider",
     "model": "SDR-7K",
@@ -7195,35 +7043,6 @@
       "TR:3067"
     ],
     "id": "NRPT1ZJSAH"
-  },
-  {
-    "mtf": "Black Hawk-KU BHKU-O.mtf",
-    "chassis": "Black Hawk-KU",
-    "model": "BHKU-O (Albert)",
-    "bv": 2377,
-    "intro": 3070,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "JTP:Luthien",
-      "SB:S&D"
-    ],
-    "id": "NTNSAJB321"
-  },
-  {
-    "mtf": "Phoenix Hawk PXH-3D.mtf",
-    "chassis": "Phoenix Hawk",
-    "model": "PXH-3D (Jiemin)",
-    "bv": 1322,
-    "intro": 3065,
-    "tags": [
-      "named"
-    ],
-    "sources": [
-      "OTP:FR"
-    ],
-    "id": "NV8H03RXTQ"
   },
   {
     "mtf": "Dragonfly (Viper) I.mtf",
@@ -7455,18 +7274,6 @@
     "id": "PVEVSNX2M1"
   },
   {
-    "mtf": "Assassin ASN-30.mtf",
-    "chassis": "Assassin",
-    "model": "ASN-30 (Alice)",
-    "bv": 1507,
-    "intro": 3066,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "PVR9433VPK"
-  },
-  {
     "mtf": "Razorback RZK-10T.mtf",
     "chassis": "Razorback",
     "model": "RZK-10T",
@@ -7553,18 +7360,6 @@
       "TR:DA"
     ],
     "id": "Q8M8SCSPMA"
-  },
-  {
-    "mtf": "Hercules HRC-LS-9000.mtf",
-    "chassis": "Hercules",
-    "model": "HRC-LS-9000 (Julius)",
-    "bv": 1644,
-    "intro": 3065,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "Q9KMZ483KA"
   },
   {
     "mtf": "Wolverine WVR-8C.mtf",
@@ -7817,18 +7612,6 @@
       "TR:J"
     ],
     "id": "RDSQHTYMCS"
-  },
-  {
-    "mtf": "Ti Ts'ang TSG-9H.mtf",
-    "chassis": "Ti Ts'ang",
-    "model": "TSG-9H (Jason)",
-    "bv": 1641,
-    "intro": 3068,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "RDT5CHZWFS"
   },
   {
     "mtf": "Piranha 3.mtf",
@@ -8601,18 +8384,6 @@
       "JTP:Dieron"
     ],
     "id": "V23BMFAJNQ"
-  },
-  {
-    "mtf": "Merlin MLN-1B.mtf",
-    "chassis": "Merlin",
-    "model": "MLN-1B (Porter)",
-    "bv": 1233,
-    "intro": 3064,
-    "tags": [
-      "named"
-    ],
-    "sources": [],
-    "id": "V4BM0HSSJK"
   },
   {
     "mtf": "Ostroc OSR-5W.mtf",
