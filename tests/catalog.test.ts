@@ -181,7 +181,7 @@ describe("sw season pack", () => {
 
   it("loads beside base with its own string table and pack tags", () => {
     expect(SW.version).toBe(1);
-    expect(SW.mechs.length).toBe(391);
+    expect(SW.mechs.length).toBe(390);
     expect(SW.maps).toHaveLength(0);
     for (const entry of SW.mechs) {
       expect(entry.pack).toBe("sw");
