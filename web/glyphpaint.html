@@ -819,7 +819,26 @@ function doClearSel() {
   for (const k of [...L.cells.keys()]) if (inSel(kx(k) + L.ox, ky(k) + L.oy)) { L.cells.delete(k); n++; }
   if (!n) popUndo(); msg(T().msg.cleared(n)); fixOffset(); redraw(); touch();
 }
-function doPaste() {
+// Plain text from another application becomes a clip of brush-coloured glyph cells: one grapheme per cell,
+// spaces and tabs left empty, glyphs outside the font's range (UNISET) skipped as empty cells so the layout
+// holds. Text matching our own copy keeps its colours.
+const graphemes = typeof Intl !== 'undefined' && Intl.Segmenter ? (seg => s => Array.from(seg.segment(s), x => x.segment))(new Intl.Segmenter()) : s => Array.from(s);
+function clipFromText(text) {
+  const lines = text.replace(/\r\n?/g, '\n').replace(/\n+$/, '').split('\n'), cells = [];
+  let w = 0;
+  lines.forEach((line, y) => {
+    let x = 0;
+    for (const g of graphemes(line)) {
+      const v = g !== ' ' && UNISET.has(g) ? normCell(g, fgStr(), bgStr()) : null;
+      if (v) cells.push([x, y, v]);
+      x++;
+    }
+    w = Math.max(w, x);
+  });
+  return cells.length ? { w, h: lines.length, cells } : null;
+}
+function doPaste(text) {
+  if (text && !(clip && textOf(clip) === text.replace(/\r\n?/g, '\n').replace(/\n+$/, ''))) clip = clipFromText(text);
   if (!clip) { msg(T().msg.clipEmpty); return; }
   if (!editable()) return;
   const at = lastHover && inScene(lastHover.x, lastHover.y) ? lastHover : S.sel ? { x: S.sel.x0, y: S.sel.y0 } : { x: 0, y: 0 };
@@ -1277,6 +1296,11 @@ $('#lAdd').onclick = addLayer; $('#lDup').onclick = dupLayer; $('#lDel').onclick
 $('#lUp').onclick = () => moveLayer(S.focus, S.focus + 1); $('#lDn').onclick = () => moveLayer(S.focus, S.focus - 1);
 $('#lMerge').onclick = mergeDown; $('#lMergeAll').onclick = mergeVisible;
 
+addEventListener('paste', e => {
+  const t = e.target, typing = t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && ['text', 'number'].includes(t.type));
+  if (typing || !gp.hidden || !ex.hidden) return;
+  e.preventDefault(); doPaste(e.clipboardData ? e.clipboardData.getData('text/plain') : undefined);
+});
 addEventListener('keydown', e => {
   if (e.key === 'Shift' && !shiftDown) { shiftDown = true; modeInfo(); }
   const t = e.target, typing = t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && ['text', 'number'].includes(t.type));
@@ -1288,7 +1312,7 @@ addEventListener('keydown', e => {
     else if (k === 'y') { e.preventDefault(); doRedo(); }
     else if (k === 'c') { e.preventDefault(); doCopy(); }
     else if (k === 'x') { e.preventDefault(); if (doCopy()) doClearSel(); }
-    else if (k === 'v') { e.preventDefault(); doPaste(); }
+    // Ctrl+V falls through to the browser so the paste event below gets the system clipboard.
     else if (k === 'a') { e.preventDefault(); S.sel = { x0: 0, y0: 0, x1: S.w - 1, y1: S.h - 1 }; syncInfo(); redraw(); }
     else if (k === 's') { e.preventDefault(); $('#bSave').click(); }
     else if (k === 'o') { e.preventDefault(); $('#bLoad').click(); }
