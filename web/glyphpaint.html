@@ -62,7 +62,10 @@ fieldset { border:1px solid var(--line); border-radius:4px; margin:0 0 10px; pad
 #bar { grid-column:1/4; display:flex; flex-wrap:wrap; gap:6px 18px; align-items:center; padding:6px 10px; border-bottom:1px solid var(--line); }
 #left, #right { overflow:auto; padding:8px; min-height:0; }
 #left { border-right:1px solid var(--line); } #right { border-left:1px solid var(--line); display:flex; flex-direction:column; }
-#right > fieldset { flex:none; }
+#left { display:flex; flex-direction:column; }
+#left > fieldset, #right > fieldset { flex:none; }
+/* The glyph palette takes the rest of the left column; its strip scrolls inside it. */
+#left > #palBox { flex:1 0 180px; margin-bottom:0; display:flex; flex-direction:column; }
 #right > fieldset:last-child { margin-top:auto; margin-bottom:0; }
 #view { overflow:auto; background:var(--cb-dim); min-width:0; min-height:0; position:relative; overflow-anchor:none; }
 #stage { position:relative; margin:16px; width:max-content; height:max-content; }
@@ -110,7 +113,7 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
 .ci .cg { font-size:22px; width:22px; height:28px; line-height:28px; text-align:center; flex:none; background:#000; }
 .ci .cm i { display:inline-block; width:10px; height:10px; border:1px solid var(--dim); vertical-align:middle; }
 .ci.top { border-color:var(--acc); } .ci.covered, .ci.hidden { opacity:.45; }
-#strip { display:flex; flex-wrap:wrap; gap:2px; max-height:190px; overflow:auto; margin:6px 0; }
+#strip { flex:1 1 0; min-height:60px; display:flex; flex-wrap:wrap; align-content:flex-start; gap:2px; overflow:auto; margin:6px 0; }
 .gb { width:24px; height:28px; padding:0; border-radius:2px; color:var(--fg); font-size:15px; font-family:var(--mono-ff); line-height:1; display:inline-flex; align-items:center; justify-content:center; border-color:var(--line); }
 .gb.cur, .gb.cur:hover:not(:disabled) { background:var(--fg); color:var(--bg); border-color:var(--fg); }
 .gb.in { border-color:var(--acc); }
@@ -184,7 +187,7 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
       <div class="bgrow" data-tip="galpha"><b>α</b><input type="range" id="galpha" min="0" max="100"><span id="gav" class="hint"></span><span class="hint">%</span></div>
       <div class="row" id="recentBg" data-tip="recentBg"></div>
     </fieldset>
-    <fieldset><legend><span lang="en">Glyph Palette</span><span lang="ko">글리프 팔레트</span></legend>
+    <fieldset id="palBox"><legend><span lang="en">Glyph Palette</span><span lang="ko">글리프 팔레트</span></legend>
       <select id="palSel" style="width:100%" data-tip="palSel"></select>
       <div class="row" style="margin-top:4px"><button type="button" id="pNew" data-tip="pNew"><span lang="en">New</span><span lang="ko">새로</span></button><button type="button" id="pDup" data-tip="pDup"><span lang="en">Dup</span><span lang="ko">복제</span></button><button type="button" id="pEdit" data-tip="pEdit"><span lang="en">Edit…</span><span lang="ko">편집…</span></button></div>
       <div id="strip" data-tip="strip"></div>
