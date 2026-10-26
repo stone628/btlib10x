@@ -71,9 +71,10 @@ export function titleScreen(): TuiNode {
   return H.el(
     "div",
     { class: "ia-root" },
-    H.box(
-      { cols: 100, rows: 31, border: "double" },
-      ...blank(4),
+    H.el(
+      "div",
+      { style: { height: "calc(31 * var(--ch))", padding: "0 calc(2 * var(--cw))" } },
+      ...blank(5),
       ...ART.map((a, i) => row(a, { cls: "ia-title-art", key: `art${i}` })),
       ...blank(1),
       row(t("title.subtitle"), { cls: "ia-center ia-bright", key: "sub" }),

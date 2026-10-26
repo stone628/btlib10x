@@ -119,6 +119,8 @@
 
 #screen {
   position: relative;
+  /* bounding line drawn outside the box: takes no layout space */
+  outline: 1px solid var(--c-text);
   width: calc(100 * var(--cw));
   height: calc(32 * var(--ch));
   overflow: hidden;
