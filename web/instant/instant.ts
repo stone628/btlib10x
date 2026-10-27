@@ -11,8 +11,14 @@ import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
 import { h, kit, row } from "./screens/common";
 import { debriefKey, debriefScreen } from "./screens/debrief";
 import { deployKey, deployOverlays, deployScreen } from "./screens/deploy";
-import { helpWindow, setupKey, setupMapPreview, setupScreen } from "./screens/setup";
-import { titleKey, titleScreen } from "./screens/title";
+import {
+  helpWindow,
+  setupAfterRender,
+  setupKey,
+  setupMapPreview,
+  setupScreen,
+} from "./screens/setup";
+import { titleAfterRender, titleScreen } from "./screens/title";
 import { defaultLoadout, loadLoadout } from "./setup/loadout";
 import { app, kitModal, setRerender } from "./state";
 import type { TuiNode, TuiScene } from "./tui";
@@ -58,10 +64,13 @@ function afterRender(): void {
       el.dataset.pinned = String(el.scrollTop + el.clientHeight >= el.scrollHeight - 4);
     };
   });
+  if (app.screen === "setup") setupAfterRender();
+  else if (app.screen === "title") titleAfterRender();
   const slot = document.querySelector<HTMLElement>("#app .ia-mapslot");
   if (!slot) return;
   const view = ensureMapView();
   if (view.canvas.parentElement !== slot) slot.replaceChildren(view.canvas);
+  view.showCoords = app.screen !== "setup";
   if (app.screen === "battle") battleOverlays();
   else if (app.screen === "deploy") deployOverlays();
   else if (app.screen === "setup") setupMapPreview();
@@ -77,6 +86,12 @@ function onKey(e: KeyboardEvent): void {
   if (app.screen === "loading") return;
   if (kitModal.open) return; // a kit popup or dialog owns the keys
   if (e.target instanceof HTMLInputElement) return;
+  // Kit controls own their keys: popups, menus, and Enter / Space / arrows
+  // on a focused button or select (the browser presses it, the kit opens it).
+  const target = e.target instanceof Element ? e.target : null;
+  const nav = ["Enter", " ", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key);
+  if (target?.closest(".tui-popup")) return;
+  if (nav && target?.matches('button, [data-tui="menu"]')) return;
   let handled = false;
   if (app.screen === "title") {
     if (app.modal) {
@@ -85,7 +100,7 @@ function onKey(e: KeyboardEvent): void {
     } else if (e.key === "F1") {
       app.modal = { kind: "help" };
       handled = true;
-    } else handled = titleKey(e);
+    }
   } else if (app.screen === "setup") {
     if (e.key === "F1" && !app.modal) {
       app.modal = { kind: "help" };

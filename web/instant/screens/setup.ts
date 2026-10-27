@@ -1,357 +1,510 @@
-/** Screen 1: setup (Side 1, Side 2, Map, Rules) and its modals. */
-import { catalogMaps, ensureMapRegistered, weaponDefFor } from "btlib10x";
+/**
+ * Screen 1: New Battle. Both sides, the map preview and the match options on
+ * one 100×31 window; ID, seed and turn limit edit in an input dialog, the
+ * 'Mech in the Choose 'Mech dialog, policies in their own dialog.
+ */
+import {
+  catalogMaps,
+  DEFAULT_UNIT_POLICY,
+  designTotalsByWeaponName,
+  ensureMapRegistered,
+  heatDissipationMax,
+  type Location,
+} from "btlib10x";
 import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../ai/persona.data";
-import { launch, mapNames, mapSource } from "../flow";
+import { launch, mapSource } from "../flow";
 import { locName, t } from "../i18n";
-import { createRng } from "../rng";
 import {
   defaultFilter,
   filterMechs,
-  generateSide,
+  freeId,
+  idProblem,
+  loadoutProblem,
   MAX_SLOTS,
   mechDef,
   newSlot,
+  PILOT_HIT_MAX,
+  PILOT_HIT_MIN,
   type Slot,
   sideBv,
-  slotId,
+  TURN_LIMIT_DEFAULT,
+  TURN_LIMIT_MAX,
+  TURN_LIMIT_MIN,
   type WeightClass,
 } from "../setup/loadout";
-import { type AiPace, app, type Modal } from "../state";
+import { app, type Modal, rerender } from "../state";
 import type { TuiNode } from "../tui";
-import { blank, fit, h, mapSlot, modal, row, statusbar, tabBar } from "./common";
+import { blank, fit, h, mapSlot, modal, row, statusbar } from "./common";
 
-const TABS = ["setup.side1", "setup.side2", "setup.map", "setup.rules"];
 const AMMO = ["exposed", "core", "spread", "leastFirst"] as const;
 const AMS = ["expected", "firstHit", "priority", "off"] as const;
-const PACES: AiPace[] = ["instant", "step", "timed"];
-const THEMES = ["green", "amber", "paper"] as const;
 const ERAS = [3025, 3050, 3075, 3150];
 const CLASSES: WeightClass[] = ["light", "medium", "heavy", "assault"];
+const SKILLS = [0, 1, 2, 3, 4, 5, 6, 7];
+const HIT_MAXES = Array.from(
+  { length: PILOT_HIT_MAX - PILOT_HIT_MIN + 1 },
+  (_, i) => PILOT_HIT_MIN + i,
+);
+const CONTROLS: (PersonaKey | null)[] = [null, ...PERSONA_KEYS];
+const SEED_MAX = 0x7fffffff;
+
+/** Width of the map box, and of the config column beside it. */
+const MAP_COLS = 50;
+const CFG = 46;
 
 function controlName(p: PersonaKey | null): string {
   return p === null ? t("ctl.player") : PERSONAS[p].name;
 }
 
-const resolved = mechDef;
+/** Wrap kit controls and text into one text row. */
+function line(key: string, ...kids: (TuiNode | string)[]): TuiNode {
+  return h().el("div", { key, class: "ia-row" }, ...kids);
+}
+
+/** `[x]` button; `fit` pads the label to a fixed width first. */
+function tight(key: string, text: string, onClick: () => void, cls?: string): TuiNode {
+  return h().btn({ key, variant: "tight", onClick, ...(cls ? { class: cls } : {}) }, text);
+}
+
+/** `[ x ]` button. */
+function button(key: string, text: string, onClick: () => void, primary = false): TuiNode {
+  return h().btn({ key, primary, onClick }, text);
+}
+
+/** A value in a field band; pressing it opens its editor. */
+function field(key: string, text: string, cols: number, onClick: () => void): TuiNode {
+  return h().btn({ key, variant: "field", onClick }, fit(text, cols));
+}
+
+/** Kit Select over `values`; `set` gets the picked value. */
+function select<T>(
+  key: string,
+  cols: number,
+  values: readonly T[],
+  value: T,
+  label: (v: T) => string,
+  set: (v: T) => void,
+): TuiNode {
+  return h().select({
+    key,
+    cols,
+    value: String(values.indexOf(value)),
+    options: values.map((v, i) => ({ value: String(i), label: label(v) })),
+    onChange: (e: Event) => {
+      const i = Number((e.target as HTMLSelectElement).value);
+      if (values[i] !== undefined) set(values[i]!);
+      rerender();
+    },
+  });
+}
 
 // ------------------------------------------------------------ screen
 
 export function setupScreen(): TuiNode {
   const H = h();
-  let body: TuiNode[];
-  if (app.tab < 2) body = sideBody(app.tab as 0 | 1);
-  else if (app.tab === 2) body = mapBody();
-  else body = rulesBody();
   const l = app.loadout;
-  const bvA = sideBv(l.sides[0]);
-  const bvB = sideBv(l.sides[1]);
-  const bal = bvA > 0 ? (((bvB - bvA) / bvA) * 100).toFixed(1) : "-";
-  const summary = [
-    row(fit(`${t("setup.side1")} ${l.sides[0].length}`, 14) + fit(`BV ${bvA}`, 13, "right"), {
-      cls: "ia-team1",
-      key: "s1",
-    }),
-    row(fit(`${t("setup.side2")} ${l.sides[1].length}`, 14) + fit(`BV ${bvB}`, 13, "right"), {
-      cls: "ia-team2",
-      key: "s2",
-    }),
-    row(fit(t("setup.balance"), 14) + fit(`${bal} %`, 13, "right"), { key: "bal" }),
-    ...blank(1),
-    row(fit(`${t("setup.map")}  ${l.map}`, 27), { key: "map" }),
-    row(fit(`${t("rules.mode")}  ${modeLabel()}`, 27), { key: "mode" }),
-    row(fit(`${t("rules.seed")}  ${l.seed}`, 27), { key: "seed" }),
-    row(fit(`AI  ${t(`pace.${app.aiPace}`)}`, 27), { key: "ai" }),
-    ...blank(1),
-    row(fit(t("setup.deployNote"), 27), { cls: "ia-dim", key: "dn1" }),
-    row(fit(t("setup.deployNote2"), 27), { cls: "ia-dim", key: "dn2" }),
-    ...blank(9),
-    H.el(
-      "div",
-      { style: { display: "flex", "justify-content": "center" } },
-      H.btn({ primary: true, onClick: () => doLaunch() }, t("setup.launch")),
-    ),
-  ];
+  const problem = loadoutProblem(l);
   return H.el(
     "div",
     { class: "ia-root" },
-    H.split(
-      { cols: 100, rows: 31, border: "double", sizes: "69 1fr" },
-      H.pane(
-        t("setup.title"),
-        tabBar(
-          TABS.map((k) => t(k)),
-          app.tab,
-          (i) => {
-            app.tab = i;
+    H.box(
+      {
+        key: "setup",
+        cols: 100,
+        rows: 31,
+        border: "double",
+        title: t("setup.title"),
+        titleAlign: "center",
+        pad: 0,
+      },
+      sideBox(0),
+      sideBox(1),
+      H.el(
+        "div",
+        {
+          key: "lower",
+          style: {
+            display: "grid",
+            "grid-template-columns": `calc(${MAP_COLS} * var(--cw)) calc(2 * var(--cw)) calc(${CFG} * var(--cw))`,
           },
+        },
+        H.box(
+          { key: "mapbox", cols: MAP_COLS, rows: 15, pad: 0 },
+          H.el("div", { style: { height: "calc(13 * var(--ch))" } }, mapSlot()),
         ),
-        row("─".repeat(66), { cls: "ia-dim", key: "tabsep" }),
-        ...body,
+        H.el("div", {}),
+        H.el("div", { key: "cfg" }, ...configRows()),
       ),
-      H.pane(t("setup.summary"), ...summary),
     ),
     statusbar(
       [
-        ["Tab", "key.tab"],
-        ["↑↓", "key.select"],
-        ["Enter", "key.choose"],
-        ["F10", "key.launch"],
-        ["Esc", "key.title"],
-        ["F1", "key.help"],
+        ["Tab", "key.next"],
+        ["Enter", "key.open"],
+        ["Esc", "key.title", () => (app.screen = "title")],
+        ["F10", "key.launch", () => doLaunch()],
+        ["F1", "key.help", () => (app.modal = { kind: "help" })],
       ],
-      app.error ? `! ${app.error}` : "",
+      app.error && !problem ? `! ${app.error}` : "",
     ),
     app.modal ? modalNode(app.modal) : null,
   );
 }
 
-function modeLabel(): string {
-  const m = app.loadout.mode;
-  return m.kind === "destroyAll" ? t("mode.destroyAll") : t("mode.damageRaceN", { n: m.turns });
-}
-
 function doLaunch(): void {
   try {
+    app.error = null;
     launch();
   } catch (e) {
     app.error = e instanceof Error ? e.message : String(e);
   }
 }
 
-function sideBody(side: 0 | 1): TuiNode[] {
-  const slots = app.loadout.sides[side];
-  const cur = app.cursors.side[side];
-  const head = ` #  ID  ${fit("'Mech", 25)}${fit("t", 4, "right")}${fit("BV", 6, "right")}  G/P  ${t("setup.control")}`;
-  const rows = slots.map((s, i) => {
-    const def = resolved(s.model);
-    const text =
-      `${i === cur ? "▸" : " "}${i + 1}  ${fit(slotId(side, i), 4)}${fit(`${s.model} ${def.name}`, 25)}` +
-      `${fit(def.tonnage, 4, "right")}${fit(def.bv, 6, "right")}  ${s.gunnery}/${s.piloting}  ${fit(controlName(s.persona), 15)}`;
-    return row(text, {
-      sel: i === cur,
-      key: `slot${i}`,
-      onClick: () => {
-        app.cursors.side[side] = i;
-        app.modal = mechModal(side, i);
-      },
-    });
-  });
-  if (slots.length < MAX_SLOTS) {
-    rows.push(
-      row(`${slots.length === cur ? "▸" : " "}+  ${t("setup.addSlot")}`, {
-        sel: cur === slots.length,
-        cls: "ia-dim",
-        key: "add",
-        onClick: () => addSlot(side),
-      }),
-    );
-  }
-  return [
-    row(head, { cls: "ia-dim", key: "head" }),
-    ...rows,
-    ...blank(Math.max(0, 19 - rows.length)),
-    row("─".repeat(66), { cls: "ia-dim", key: "foot0" }),
-    row(t("setup.keys1"), { cls: "ia-dim", key: "foot1" }),
-    row(t("setup.keys2"), { cls: "ia-dim", key: "foot2" }),
-  ];
-}
+// ------------------------------------------------------------ sides
 
-function mapBody(): TuiNode[] {
-  const maps = catalogMaps();
-  const cur = app.cursors.map;
-  const list = maps.map((m, i) =>
-    row(
-      `${i === cur ? "▸" : " "} ${fit(m.name, 14)}${fit(`${m.width}×${m.height}`, 7)} ${m.name === app.loadout.map ? "●" : " "}`,
-      {
-        sel: i === cur,
-        key: m.name,
-        onClick: () => {
-          app.cursors.map = i;
-          app.loadout.map = m.name;
-        },
-      },
-    ),
+function sideHeader(): string {
+  return (
+    "     " +
+    fit(t("setup.id"), 5) +
+    fit("'Mech", 29) +
+    fit("BV", 5, "right") +
+    "  " +
+    fit(t("setup.gunnery"), 7) +
+    fit(t("setup.piloting"), 7) +
+    fit(t("setup.hitMax"), 8) +
+    fit(t("setup.control"), 20) +
+    t("setup.policy")
   );
-  const H = h();
-  return [
-    H.el(
-      "div",
-      {
-        style: {
-          display: "grid",
-          "grid-template-columns": "calc(26 * var(--cw)) 1fr",
-          height: "calc(26 * var(--ch))",
-        },
-      },
-      H.el("div", {}, ...list),
-      mapSlot(),
-    ),
-  ];
 }
 
-interface RuleRow {
-  label: string;
-  value: string;
-  step: (dir: number) => void;
+function sideBox(side: 0 | 1): TuiNode {
+  const slots = app.loadout.sides[side];
+  const rows: TuiNode[] = [row(sideHeader(), { key: "head", cls: "ia-dim" })];
+  slots.forEach((s, i) => {
+    rows.push(slotRow(side, i, s));
+  });
+  if (slots.length < MAX_SLOTS)
+    rows.push(
+      line(
+        "add",
+        tight("add", "+", () => addSlot(side)),
+      ),
+    );
+  while (rows.length < 5) rows.push(row(" ", { key: `pad${rows.length}` }));
+  return h().box(
+    {
+      key: `side${side}`,
+      cols: 98,
+      rows: 7,
+      pad: 0,
+      title: t(side === 0 ? "setup.side1" : "setup.side2").toUpperCase(),
+      class: side === 0 ? "ia-side1" : "ia-side2",
+    },
+    ...rows,
+  );
 }
 
-function ruleRows(): RuleRow[] {
-  const l = app.loadout;
-  return [
-    {
-      label: "rules.mode",
-      value: l.mode.kind === "destroyAll" ? t("mode.destroyAll") : t("mode.damageRace"),
-      step: () => {
-        l.mode =
-          l.mode.kind === "destroyAll" ? { kind: "damageRace", turns: 8 } : { kind: "destroyAll" };
-      },
-    },
-    {
-      label: "rules.turns",
-      value: l.mode.kind === "damageRace" ? String(l.mode.turns) : "-",
-      step: (d) => {
-        if (l.mode.kind === "damageRace")
-          l.mode = { kind: "damageRace", turns: Math.max(3, Math.min(30, l.mode.turns + d)) };
-      },
-    },
-    {
-      label: "rules.seed",
-      value: String(l.seed),
-      step: (d) => {
-        l.seed = Math.max(0, l.seed + d);
-      },
-    },
-    {
-      label: "rules.pace",
-      value: t(`pace.${app.aiPace}`),
-      step: (d) => {
-        app.aiPace = PACES[(PACES.indexOf(app.aiPace) + d + PACES.length) % PACES.length]!;
-      },
-    },
-    {
-      label: "rules.theme",
-      value: app.theme,
-      step: (d) => {
-        app.theme = THEMES[(THEMES.indexOf(app.theme) + d + THEMES.length) % THEMES.length]!;
-        document.documentElement.dataset.theme = app.theme;
-      },
-    },
-    {
-      label: "rules.reasoning",
-      value: app.aiReasoning ? t("on") : t("off"),
-      step: () => {
-        app.aiReasoning = !app.aiReasoning;
-      },
-    },
-  ];
+function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
+  const def = s.model === null ? null : mechDef(s.model);
+  const mech = def ? `${def.model} ${def.name}` : "N/A";
+  const id = s.id.length > 4 ? `${s.id.slice(0, 3)}…` : s.id;
+  return line(
+    `slot${i}`,
+    tight("del", "-", () => removeSlot(side, i)),
+    " ",
+    field("id", id, 4, () => editId(s)),
+    " ",
+    tight("mech", fit(mech, 26, def ? "left" : "center"), () => {
+      app.modal = mechModal(side, i);
+    }),
+    " ",
+    fit(def ? def.bv : "-", 5, "right"),
+    "  ",
+    select("gun", 5, SKILLS, s.gunnery, String, (v) => (s.gunnery = v)),
+    "  ",
+    select("pil", 5, SKILLS, s.piloting, String, (v) => (s.piloting = v)),
+    "  ",
+    select("hit", 6, HIT_MAXES, s.pilotHitMax, String, (v) => (s.pilotHitMax = v)),
+    "  ",
+    select("ctl", 18, CONTROLS, s.persona, controlName, (v) => (s.persona = v)),
+    "  ",
+    tight("pol", "…", () => {
+      app.modal = { kind: "policy", side, index: i, draft: { ...s.policy } };
+    }),
+  );
 }
-
-function rulesBody(): TuiNode[] {
-  const cur = app.cursors.rules;
-  return [
-    ...ruleRows().map((r, i) =>
-      row(`${i === cur ? "▸" : " "} ${fit(t(r.label), 22)}◂ ${fit(r.value, 20)} ▸`, {
-        sel: i === cur,
-        key: r.label,
-        onClick: () => {
-          app.cursors.rules = i;
-          r.step(1);
-        },
-      }),
-    ),
-    ...blank(2),
-    row(t("rules.hint"), { cls: "ia-dim", key: "hint" }),
-    row(t("rules.raceHint"), { cls: "ia-dim", key: "hint2" }),
-  ];
-}
-
-// ------------------------------------------------------------ keys
 
 function addSlot(side: 0 | 1): void {
   const slots = app.loadout.sides[side];
   if (slots.length >= MAX_SLOTS) return;
-  slots.push(newSlot(slots[slots.length - 1]?.model ?? "HBK-4G", side === 1 ? "gladiator" : null));
-  app.cursors.side[side] = slots.length - 1;
+  slots.push(newSlot(null, side === 1 ? "gladiator" : null, freeId(app.loadout, side)));
 }
 
-export function setupKey(e: KeyboardEvent): boolean {
-  if (app.modal) return modalKey(e, app.modal);
-  if (e.key === "Tab") {
-    app.tab = (app.tab + (e.shiftKey ? 3 : 1)) % 4;
-    return true;
-  }
-  if (e.key === "F10") {
-    doLaunch();
-    return true;
-  }
-  if (e.key === "Escape") {
-    app.screen = "title";
-    return true;
-  }
-  if (app.tab < 2) return sideKey(e, app.tab as 0 | 1);
-  if (app.tab === 2) {
-    const n = catalogMaps().length;
-    if (e.key === "ArrowDown") app.cursors.map = (app.cursors.map + 1) % n;
-    else if (e.key === "ArrowUp") app.cursors.map = (app.cursors.map + n - 1) % n;
-    else if (e.key === "Enter" || e.key === " ") app.loadout.map = mapNames()[app.cursors.map]!;
-    else return false;
-    return true;
-  }
-  const rows = ruleRows();
-  if (e.key === "ArrowDown") app.cursors.rules = (app.cursors.rules + 1) % rows.length;
-  else if (e.key === "ArrowUp")
-    app.cursors.rules = (app.cursors.rules + rows.length - 1) % rows.length;
-  else if (e.key === "ArrowRight" || e.key === "Enter") rows[app.cursors.rules]!.step(1);
-  else if (e.key === "ArrowLeft") rows[app.cursors.rules]!.step(-1);
-  else if (e.code === "KeyR" && app.cursors.rules === 2)
-    app.loadout.seed = Math.floor(Math.random() * 100000);
-  else return false;
-  return true;
+function removeSlot(side: 0 | 1, i: number): void {
+  app.loadout.sides[side].splice(i, 1);
 }
 
-function sideKey(e: KeyboardEvent, side: 0 | 1): boolean {
-  const slots = app.loadout.sides[side];
-  const n = slots.length < MAX_SLOTS ? slots.length + 1 : slots.length;
-  const cur = app.cursors.side[side];
-  const slot: Slot | undefined = slots[cur];
-  if (e.key === "ArrowDown" && !e.altKey) app.cursors.side[side] = (cur + 1) % n;
-  else if (e.key === "ArrowUp" && !e.altKey) app.cursors.side[side] = (cur + n - 1) % n;
-  else if ((e.key === "ArrowUp" || e.key === "ArrowDown") && e.altKey && slot) {
-    const to = cur + (e.key === "ArrowUp" ? -1 : 1);
-    if (to >= 0 && to < slots.length) {
-      [slots[cur], slots[to]] = [slots[to]!, slots[cur]!];
-      app.cursors.side[side] = to;
-    }
-  } else if (e.key === "Enter") {
-    if (!slot) addSlot(side);
-    else app.modal = mechModal(side, cur);
-  } else if (e.key === "Insert" || e.key === "+") addSlot(side);
-  else if ((e.key === "Delete" || e.key === "Backspace") && slot && slots.length > 1) {
-    slots.splice(cur, 1);
-    app.cursors.side[side] = Math.min(cur, slots.length - 1);
-  } else if (e.code === "KeyP" && slot) app.modal = { kind: "pilot", side, index: cur, cursor: 0 };
-  else if (e.code === "KeyC" && slot) {
-    app.modal = {
-      kind: "control",
-      side,
-      index: cur,
-      cursor: slot.persona === null ? 0 : PERSONA_KEYS.indexOf(slot.persona) + 1,
-    };
-  } else if (e.code === "KeyO" && slot) app.modal = { kind: "policy", side, index: cur, cursor: 0 };
-  else if (e.code === "KeyG")
-    app.modal = {
-      kind: "generate",
-      side,
-      cursor: 0,
-      count: Math.max(1, slots.length),
-      match: 0,
-      personas: side === 1 ? 0 : 1,
-    };
-  else return false;
-  return true;
+// ------------------------------------------------------------ map, seed, engagement
+
+function configRows(): TuiNode[] {
+  const l = app.loadout;
+  const maps = catalogMaps();
+  const names = maps.map((m) => m.name);
+  const modes = ["destroyAll", "damageRace"] as const;
+  const out: TuiNode[] = [
+    row(" ", { key: "c0" }),
+    line(
+      "c1",
+      fit(t("setup.map"), 14),
+      select(
+        "map",
+        CFG - 16,
+        names,
+        l.map,
+        (n) => {
+          const m = maps.find((x) => x.name === n)!;
+          return `${m.name} (${m.width}×${m.height})`;
+        },
+        (n) => (l.map = n),
+      ),
+    ),
+    line(
+      "c2",
+      fit(t("setup.seed"), 14),
+      field("seed", ` ${l.seed}`, CFG - 21, () => editSeed()),
+      " ",
+      tight("seednew", "↻", () => {
+        l.seed = Math.floor(Math.random() * SEED_MAX);
+      }),
+    ),
+    row(" ", { key: "c3" }),
+    line(
+      "c4",
+      fit(t("setup.victory"), 14),
+      select(
+        "mode",
+        CFG - 16,
+        modes,
+        l.mode.kind,
+        (k) => t(k === "damageRace" ? "victory.damage" : "victory.destroyAll"),
+        (k) => {
+          if (k === "destroyAll") l.mode = { kind: "destroyAll" };
+          else if (l.mode.kind !== "damageRace")
+            l.mode = { kind: "damageRace", turns: TURN_LIMIT_DEFAULT };
+        },
+      ),
+    ),
+    l.mode.kind === "damageRace"
+      ? line("c5", fit(t("setup.turnLimit"), 14), field("turns", ` ${l.mode.turns}`, 6, editTurns))
+      : row(" ", { key: "c5" }),
+    ...blank(2),
+    ...bvRows(),
+    row(" ", { key: "c10" }),
+  ];
+  const problem = loadoutProblem(l);
+  out.push(
+    row(fit(problem ? t(problem.key, problem.vars) : "", CFG, "center"), {
+      key: "c11",
+      cls: "ia-err",
+    }),
+    row(" ", { key: "c12" }),
+    line(
+      "c13",
+      " ".repeat((CFG - 17) >> 1),
+      button("launch", fit(t("setup.launch"), 13, "center"), () => doLaunch(), true),
+    ),
+  );
+  return out;
 }
 
-// ------------------------------------------------------------ modals
+function bvRows(): TuiNode[] {
+  const H = h();
+  const a = sideBv(app.loadout.sides[0]);
+  const b = sideBv(app.loadout.sides[1]);
+  const close = Math.abs(a - b) < Math.min(a, b) * 0.05;
+  const cls = (mine: number, other: number) =>
+    close ? "ia-bv-even" : mine > other ? "ia-bv-high" : "ia-bv-low";
+  const head =
+    fit(t("setup.side1").toUpperCase(), 12, "center") +
+    "    " +
+    fit(t("setup.side2").toUpperCase(), 12, "center");
+  const left = " ".repeat((CFG - 28) >> 1);
+  return [
+    row(left + head, { key: "c8" }),
+    H.el(
+      "div",
+      { key: "c9", class: "ia-row" },
+      left,
+      H.el("span", { class: cls(a, b) }, fit(`BV ${a}`, 12, "center")),
+      " vs ",
+      H.el("span", { class: cls(b, a) }, fit(`BV ${b}`, 12, "center")),
+    ),
+  ];
+}
+
+// ------------------------------------------------------------ input dialogs
+
+function inputDialog(
+  title: string,
+  label: string,
+  value: string,
+  apply: (v: string) => string | null,
+): void {
+  app.modal = { kind: "input", title, label, value, cols: 24, error: null, apply };
+}
+
+function editId(s: Slot): void {
+  inputDialog(t("idDialog.title", { id: s.id }), t("idDialog.label"), s.id, (v) => {
+    const id = v.trim();
+    const problem = idProblem(app.loadout, s, id);
+    if (problem) return t(problem);
+    s.id = id;
+    return null;
+  });
+}
+
+function editSeed(): void {
+  const l = app.loadout;
+  inputDialog(
+    t("seedDialog.title"),
+    t("seedDialog.label", { max: SEED_MAX }),
+    String(l.seed),
+    (v) => {
+      const n = Number(v.trim());
+      if (!/^\d+$/.test(v.trim()) || n > SEED_MAX) return t("seedDialog.error", { max: SEED_MAX });
+      l.seed = n;
+      return null;
+    },
+  );
+}
+
+function editTurns(): void {
+  const l = app.loadout;
+  if (l.mode.kind !== "damageRace") return;
+  const range = { min: TURN_LIMIT_MIN, max: TURN_LIMIT_MAX };
+  inputDialog(t("turnsDialog.title"), t("turnsDialog.label", range), String(l.mode.turns), (v) => {
+    const n = Number(v.trim());
+    if (!/^\d+$/.test(v.trim()) || n < TURN_LIMIT_MIN || n > TURN_LIMIT_MAX)
+      return t("turnsDialog.error", range);
+    l.mode = { kind: "damageRace", turns: n };
+    return null;
+  });
+}
+
+function submitInput(m: Extract<Modal, { kind: "input" }>): void {
+  const err = m.apply(m.value);
+  if (err === null) app.modal = null;
+  else m.error = err;
+}
+
+function inputWindow(m: Extract<Modal, { kind: "input" }>): TuiNode {
+  const H = h();
+  const cols = 48;
+  return modal(
+    { cols, title: m.title, pad: 1 },
+    row(m.label, { key: "label" }),
+    row(" ", { key: "b0" }),
+    line(
+      "field",
+      H.input({
+        key: "inp",
+        cols: m.cols,
+        value: m.value,
+        attrs: { spellcheck: "false", autocomplete: "off" },
+        onInput: (e: Event) => {
+          m.value = (e.target as HTMLInputElement).value;
+        },
+        onKeydown: (e: Event) => {
+          const k = (e as KeyboardEvent).key;
+          if (k === "Enter") submitInput(m);
+          else if (k === "Escape") app.modal = null;
+          else return;
+          e.preventDefault();
+          rerender();
+        },
+      }),
+    ),
+    row(m.error ?? " ", { key: "err", cls: "ia-err" }),
+    okCancel(cols - 4, () => submitInput(m)),
+  );
+}
+
+/** [ OK ] [ Cancel ] at the right of a `width`-cell row, after `lead`. */
+function okCancel(width: number, ok: () => void, lead?: TuiNode, leadCols = 0): TuiNode {
+  const okText = t("btn.ok");
+  const cancelText = t("btn.cancel");
+  const used = leadCols + kitLen(okText) + 4 + kitLen(cancelText) + 4 + 1;
+  return line(
+    "btns",
+    ...(lead ? [lead] : []),
+    " ".repeat(Math.max(1, width - used)),
+    button("ok", okText, ok),
+    " ",
+    button("cancel", cancelText, () => {
+      app.modal = null;
+    }),
+  );
+}
+
+// ------------------------------------------------------------ policy dialog
+
+function policyWindow(m: Extract<Modal, { kind: "policy" }>): TuiNode {
+  const d = m.draft;
+  const onOff = [true, false] as const;
+  const toOnOff = (v: boolean) => t(v ? "on" : "off");
+  const items: [string, TuiNode][] = [
+    [
+      "policy.ammo",
+      select(
+        "ammo",
+        16,
+        AMMO,
+        d.ammoPolicy,
+        (x) => t(`ammo.${x}`),
+        (x) => (d.ammoPolicy = x),
+      ),
+    ],
+    [
+      "policy.autoEject",
+      select("eject", 16, onOff, d.autoEject, toOnOff, (x) => (d.autoEject = x)),
+    ],
+    [
+      "policy.heatFlamer",
+      select("flamer", 16, onOff, d.heatFlamer, toOnOff, (x) => (d.heatFlamer = x)),
+    ],
+    [
+      "policy.ams",
+      select(
+        "ams",
+        16,
+        AMS,
+        d.amsPolicy,
+        (x) => t(`ams.${x}`),
+        (x) => (d.amsPolicy = x),
+      ),
+    ],
+  ];
+  const slot = app.loadout.sides[m.side][m.index]!;
+  const cols = 46;
+  const defaults = t("btn.defaults");
+  return modal(
+    { cols, title: t("policy.title", { id: slot.id }), pad: 1 },
+    ...items.map(([k, c]) => line(k, fit(t(k), 24), c)),
+    row(" ", { key: "b0" }),
+    okCancel(
+      cols - 4,
+      () => {
+        slot.policy = { ...d };
+        app.modal = null;
+      },
+      button("defaults", defaults, () => {
+        m.draft = { ...DEFAULT_UNIT_POLICY };
+      }),
+      kitLen(defaults) + 4,
+    ),
+  );
+}
+
+// ------------------------------------------------------------ Choose 'Mech
 
 function mechModal(side: 0 | 1, index: number): Modal {
   const f = defaultFilter();
@@ -366,22 +519,384 @@ function mechModal(side: 0 | 1, index: number): Modal {
       0,
       list.findIndex((m) => m.model === model),
     ),
-    field: -1,
+    reveal: true,
   };
 }
+
+function chooseMech(m: Extract<Modal, { kind: "mech" }>, model: string): void {
+  const slot = app.loadout.sides[m.side][m.index];
+  if (slot) slot.model = model;
+  app.modal = null;
+}
+
+function refilter(m: Extract<Modal, { kind: "mech" }>): void {
+  m.cursor = 0;
+  m.reveal = true;
+}
+
+function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
+  const H = h();
+  const f = m.filter;
+  const list = filterMechs(f);
+  const total = filterMechs(defaultFilter()).length;
+  m.cursor = Math.min(m.cursor, Math.max(0, list.length - 1));
+  const chip = (c: WeightClass, i: number): (TuiNode | string)[] => {
+    const label = `${t(`wclass.${c}`)}(${i + 1})`;
+    return [
+      H.check(
+        {
+          key: `cls-${c}`,
+          checked: f.classes.includes(c),
+          onChange: () => {
+            toggleClass(m, c);
+            rerender();
+          },
+        },
+        label,
+      ),
+      " ".repeat(Math.max(1, 9 - kitLen(label))),
+    ];
+  };
+  const search = H.input({
+    key: "search",
+    cols: 17,
+    placeholder: t("mech.search"),
+    value: f.text,
+    attrs: { spellcheck: "false", autocomplete: "off" },
+    onInput: (e: Event) => {
+      f.text = (e.target as HTMLInputElement).value;
+      refilter(m);
+      rerender();
+    },
+    onKeydown: (e: Event) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key === "Escape") (ke.target as HTMLElement).blur();
+      else if (ke.key === "ArrowDown" || ke.key === "ArrowUp" || ke.key === "Enter") mechKey(ke, m);
+      else return;
+      ke.preventDefault();
+      rerender();
+    },
+  });
+  const flat = (key: string, text: string, run: () => void) =>
+    H.btn({ key, variant: "bare", onClick: run }, text);
+  const sortText = `${t("mech.sort")}(S):${t(`sort.${f.sort}`)}`;
+  const options = H.box(
+    { key: "opts", cols: 50, rows: 6, pad: 0, title: t("mech.options") },
+    line("o1", "/ ", search, "  ", ...chip("light", 0), ...chip("medium", 1)),
+    line("o2", " ".repeat(21), ...chip("heavy", 2), ...chip("assault", 3)),
+    line(
+      "o3",
+      flat("tech", `${t("mech.tech")}(T):${t(`tech.${f.tech}`)}`, () => cycleTech(m)),
+      flat("pack", `${t("mech.pack")}(K):${f.pack}`, () => cyclePack(m)),
+      flat("era", `${t("mech.era")}(E):≤${f.introMax}`, () => cycleEra(m)),
+    ),
+    line(
+      "o4",
+      flat("sort", sortText, () => cycleSort(m)),
+      fit(t("mech.matched", { n: list.length, total }), 48 - kitLen(sortText) - 2, "right"),
+    ),
+  );
+  const rows = list.map((e, i) =>
+    H.el(
+      "div",
+      {
+        key: e.model,
+        class: `ia-row${i === m.cursor ? " sel" : ""}`,
+        attrs: { "data-click": "" },
+        onClick: () => {
+          m.cursor = i;
+        },
+        on: {
+          dblclick: () => {
+            chooseMech(m, e.model);
+            rerender();
+          },
+        },
+      },
+      `  ${fit(e.model, 11)} ${fit(e.name, 13)}${fit(e.tonnage, 3, "right")} ${fit(e.bv, 5, "right")} ${fit(e.intro, 4, "right")}  ${fit(e.pack, 4)}`,
+    ),
+  );
+  const listBox = H.scroll(
+    { key: "list", cols: 50, rows: 20, pad: 0, title: listHeader(), class: "ia-mechlist" },
+    ...(rows.length ? rows : [row(` ${t("mech.none")}`, { key: "none", cls: "ia-dim" })]),
+  );
+  const sel = list[m.cursor];
+  const cancelText = t("btn.cancel");
+  const useText = t("mech.use", { model: sel ? sel.model : "-" });
+  const right: TuiNode[] = [
+    selectedBox(sel?.model ?? null),
+    row(" ", { key: "rb" }),
+    line(
+      "btns",
+      " ".repeat(Math.max(0, (43 - kitLen(cancelText) - kitLen(useText) - 9) >> 1)),
+      button("cancel", cancelText, () => {
+        app.modal = null;
+      }),
+      " ",
+      h().btn(
+        {
+          key: "use",
+          disabled: !sel,
+          onClick: () => {
+            if (sel) chooseMech(m, sel.model);
+          },
+        },
+        useText,
+      ),
+    ),
+  ];
+  const slot = app.loadout.sides[m.side][m.index];
+  return modal(
+    { cols: 96, rows: 28, pad: 0, title: t("mech.title", { id: slot?.id ?? "" }) },
+    H.el(
+      "div",
+      {
+        key: "cols",
+        style: {
+          display: "grid",
+          "grid-template-columns": "calc(50 * var(--cw)) calc(1 * var(--cw)) calc(43 * var(--cw))",
+        },
+      },
+      H.el("div", { key: "left" }, options, listBox),
+      H.el("div", {}),
+      H.el("div", { key: "right" }, ...right),
+    ),
+  );
+}
+
+function toggleClass(m: Extract<Modal, { kind: "mech" }>, c: WeightClass): void {
+  const f = m.filter;
+  f.classes = f.classes.includes(c) ? f.classes.filter((x) => x !== c) : [...f.classes, c];
+  refilter(m);
+}
+
+function kitLen(s: string): number {
+  return window.TUI.compensatedLength(s);
+}
+
+/**
+ * A box title that puts each label over its content column. The kit draws a
+ * title from cell 2 after one space, so content cell x sits under title cell
+ * x - 2; rows start with two spaces to line up. Widths count cells, so wide
+ * (Korean) labels keep the columns after them in place.
+ */
+function columnTitle(labels: readonly [number, string][]): string {
+  let out = "";
+  let at = 0;
+  for (const [x, label] of labels) {
+    out += "─".repeat(Math.max(0, x - 2 - at)) + label;
+    at = Math.max(at, x - 2) + kitLen(label);
+  }
+  return out;
+}
+
+/** 'Mech list columns: model 2, chassis 14, ton 27–29, BV 31–35 (label at 32), era 37–40, pack 43. */
+function listHeader(): string {
+  const bv = "BV";
+  const ton = t("mech.colTon");
+  return columnTitle([
+    [2, t("mech.colModel")],
+    [14, t("mech.colChassis")],
+    [30 - kitLen(ton), ton],
+    [34 - kitLen(bv), bv],
+    [37, t("mech.colEra")],
+    [43, t("mech.colPack")],
+  ]);
+}
+
+const SHORT: Record<Location, string> = {
+  head: "HD",
+  centerTorso: "CT",
+  leftTorso: "LT",
+  rightTorso: "RT",
+  leftArm: "LA",
+  rightArm: "RA",
+  leftLeg: "LL",
+  rightLeg: "RL",
+};
+
+function selectedBox(model: string | null): TuiNode {
+  const H = h();
+  const lines: TuiNode[] = [];
+  if (model === null) {
+    lines.push(row(` ${t("mech.none")}`, { key: "none", cls: "ia-dim" }));
+    return H.box({ key: "sel", cols: 43, rows: 23, pad: 0, title: t("mech.selected") }, ...lines);
+  }
+  const def = mechDef(model);
+  const cls = def.weightClass.toLowerCase();
+  lines.push(
+    row(fit(`${def.model} ${def.name}`, 41), { key: "i0", cls: "ia-bright" }),
+    row(fit(`${t(`wclass.${cls}`)} ${def.tonnage}t ${def.techBase}`, 41), { key: "i1" }),
+    row(fit(`${t("mech.era")} ${def.intro}   BV ${def.bv}`, 41), { key: "i2" }),
+    row(
+      fit(
+        `${t("mech.walk")} ${def.walking}  ${t("mech.run")} ${def.running}  ${t("mech.jump")} ${def.jumping}`,
+        41,
+      ),
+      { key: "i3" },
+    ),
+  );
+  // Ammo: every mount of a weapon shares one pool; the first mount shows the
+  // shots, the others point at it (`#N`, as the terminal sheet does).
+  const pools = designTotalsByWeaponName(def);
+  const mounts = Object.values(def.weapons);
+  const first = new Map<string, number>();
+  mounts.forEach((w, i) => {
+    if (!first.has(w.weapon)) first.set(w.weapon, i + 1);
+  });
+  const wrows = mounts.map((w, i) => {
+    const lead = first.get(w.weapon)!;
+    const pool = pools[w.weapon];
+    const shot = pool === undefined ? "" : lead === i + 1 ? String(pool) : `#${lead}`;
+    const name = w.weapon + (w.rearFacing ? " (R)" : "");
+    return row(
+      `  ${fit(i + 1, 2, "right")} ${fit(name, 23)} ${fit(locName(w.location), 4)} ${fit(shot, 4, "right")}`,
+      { key: `w${i}` },
+    );
+  });
+  // Weapon rows: index 2–3, name 5, location 29, shots 34–37 (right-aligned).
+  const shot = t("mech.shot");
+  const weaponTitle = columnTitle([
+    [3, "#"],
+    [5, `${t("mech.weapon")}(${mounts.length})`],
+    [29, t("mech.loc")],
+    [38 - kitLen(shot), shot],
+  ]);
+  lines.push(
+    H.scroll(
+      {
+        key: `weapons-${model}`,
+        cols: 41,
+        rows: 7,
+        pad: 0,
+        title: weaponTitle,
+      },
+      ...wrows,
+    ),
+  );
+  lines.push(...armorDiagram(model));
+  return H.box({ key: "sel", cols: 43, rows: 23, pad: 0, title: t("mech.selected") }, ...lines);
+}
+
+/** Paper-doll armor: I internal, A armor, F / R torso front / rear. */
+function armorDiagram(model: string): TuiNode[] {
+  const def = mechDef(model);
+  const W = 26;
+  const grid = Array.from({ length: 10 }, () => Array.from({ length: W }, () => " "));
+  const put = (r: number, x: number, s: string) => {
+    for (let i = 0; i < s.length; i++) if (x + i < W) grid[r]![x + i] = s[i]!;
+  };
+  const cell = (r: number, x: number, s: string) => put(r, x, s.padStart(4));
+  const I = (l: Location) => `${def.internalStructure[l]}I`;
+  const A = (l: Location) => `${def.armor[l]}A`;
+  const F = (l: Location) => `${def.armor[l]}F`;
+  const R = (l: "centerTorso" | "leftTorso" | "rightTorso") => `${def.armorRear[l]}R`;
+  const tag = (l: Location) => `[${SHORT[l]}]`;
+  put(0, 11, tag("head"));
+  put(0, 22, "[HS]");
+  cell(1, 11, I("head"));
+  cell(1, 22, `-${heatDissipationMax(def)}`);
+  cell(2, 11, A("head"));
+  put(3, 6, tag("rightTorso"));
+  put(3, 11, tag("centerTorso"));
+  put(3, 16, tag("leftTorso"));
+  put(4, 1, tag("rightArm"));
+  put(4, 22, tag("leftArm"));
+  for (const [x, l] of [
+    [6, "rightTorso"],
+    [11, "centerTorso"],
+    [16, "leftTorso"],
+  ] as const) {
+    cell(4, x, I(l));
+    cell(5, x, F(l));
+    cell(6, x, R(l));
+  }
+  for (const [x, l] of [
+    [1, "rightArm"],
+    [22, "leftArm"],
+  ] as const) {
+    cell(5, x, I(l));
+    cell(6, x, A(l));
+  }
+  put(7, 6, tag("rightLeg"));
+  put(7, 16, tag("leftLeg"));
+  for (const [x, l] of [
+    [6, "rightLeg"],
+    [16, "leftLeg"],
+  ] as const) {
+    cell(8, x, I(l));
+    cell(9, x, A(l));
+  }
+  const off = " ".repeat((41 - W) >> 1);
+  return grid.map((r, i) => row(fit(off + r.join(""), 41), { key: `a${i}` }));
+}
+
+function cycleTech(m: Extract<Modal, { kind: "mech" }>): void {
+  const f = m.filter;
+  f.tech = f.tech === "any" ? "is" : f.tech === "is" ? "clan" : "any";
+  refilter(m);
+}
+
+function cyclePack(m: Extract<Modal, { kind: "mech" }>): void {
+  const f = m.filter;
+  f.pack = f.pack === "any" ? "base" : f.pack === "base" ? "sw" : "any";
+  refilter(m);
+}
+
+function cycleEra(m: Extract<Modal, { kind: "mech" }>): void {
+  const f = m.filter;
+  f.introMax = ERAS[(ERAS.indexOf(f.introMax) + 1) % ERAS.length]!;
+  refilter(m);
+}
+
+function cycleSort(m: Extract<Modal, { kind: "mech" }>): void {
+  const sorts = ["ton", "name", "bv", "intro"] as const;
+  const f = m.filter;
+  f.sort = sorts[(sorts.indexOf(f.sort) + 1) % sorts.length]!;
+  refilter(m);
+}
+
+function mechKey(e: KeyboardEvent, m: Extract<Modal, { kind: "mech" }>): boolean {
+  const list = filterMechs(m.filter);
+  const move = (to: number) => {
+    m.cursor = Math.max(0, Math.min(list.length - 1, to));
+    m.reveal = true;
+  };
+  if (e.key === "Escape") app.modal = null;
+  else if (e.key === "/") {
+    document.querySelector<HTMLInputElement>("#app .ia-modal input")?.focus();
+  } else if (e.key === "ArrowDown") move(m.cursor + 1);
+  else if (e.key === "ArrowUp") move(m.cursor - 1);
+  else if (e.key === "PageDown") move(m.cursor + 18);
+  else if (e.key === "PageUp") move(m.cursor - 18);
+  else if (e.key === "Home") move(0);
+  else if (e.key === "End") move(list.length - 1);
+  else if (e.key === "Enter") {
+    const sel = list[m.cursor];
+    if (sel) chooseMech(m, sel.model);
+  } else if (/^Digit[1-4]$/.test(e.code)) {
+    const c = CLASSES[Number(e.code.slice(5)) - 1]!;
+    const f = m.filter;
+    f.classes = f.classes.includes(c) ? f.classes.filter((x) => x !== c) : [...f.classes, c];
+    refilter(m);
+  } else if (e.code === "KeyT") cycleTech(m);
+  else if (e.code === "KeyK") cyclePack(m);
+  else if (e.code === "KeyE") cycleEra(m);
+  else if (e.code === "KeyS") cycleSort(m);
+  else return false;
+  return true;
+}
+
+// ------------------------------------------------------------ modals, keys
 
 function modalNode(m: Modal): TuiNode | null {
   switch (m.kind) {
     case "mech":
       return mechBrowser(m);
-    case "pilot":
-      return pilotDialog(m);
-    case "control":
-      return controlDialog(m);
+    case "input":
+      return inputWindow(m);
     case "policy":
-      return policyDialog(m);
-    case "generate":
-      return generateDialog(m);
+      return policyWindow(m);
     case "help":
       return helpWindow();
     case "message":
@@ -396,205 +911,6 @@ function modalNode(m: Modal): TuiNode | null {
   }
 }
 
-function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
-  const H = h();
-  const list = filterMechs(m.filter);
-  const page = 20;
-  const start = Math.max(0, Math.min(m.cursor - 8, list.length - page));
-  const f = m.filter;
-  const classes = CLASSES.map(
-    (c, i) => `${f.classes.includes(c) ? "[x]" : "[ ]"}${i + 1}${t(`class.${c}`)}`,
-  ).join(" ");
-  const filterLine1 = `/ ${fit(f.text || t("mech.search"), 16)}  ${classes}`;
-  const filterLine2 = `T ${t("mech.tech")}:${fit(t(`tech.${f.tech}`), 6)}  K ${t("mech.pack")}:${fit(f.pack, 5)}  E ${t("mech.era")}:≤${f.introMax}  S ${t("mech.sort")}:${fit(t(`sort.${f.sort}`), 7)}  ${list.length}/${filterMechs(defaultFilter()).length}`;
-  const rows = list.slice(start, start + page).map((e, k) => {
-    const i = start + k;
-    return row(
-      `${i === m.cursor ? "▸" : " "}${fit(e.model, 13)}${fit(e.name, 16)}${fit(e.tonnage, 4, "right")}${fit(e.bv, 6, "right")}${fit(e.intro, 6, "right")} ${e.pack === "sw" ? "s" : "b"}`,
-      {
-        sel: i === m.cursor,
-        key: e.model,
-        onClick: () => {
-          if (m.cursor === i) chooseMech(m, e.model);
-          else m.cursor = i;
-        },
-      },
-    );
-  });
-  const sel = list[m.cursor];
-  const card: TuiNode[] = [];
-  if (sel) {
-    const def = resolved(sel.model);
-    card.push(
-      row(fit(`${def.model}  ${def.name}  ${def.tonnage} t  ${def.techBase}  ${def.intro}`, 44), {
-        cls: "ia-bright",
-        key: "c0",
-      }),
-      row(
-        fit(
-          `${t("mech.walk")} ${def.walking}  ${t("mech.run")} ${def.running}  ${t("mech.jump")} ${def.jumping}    BV ${def.bv}`,
-          44,
-        ),
-        { key: "c1" },
-      ),
-      row("─".repeat(44), { cls: "ia-dim", key: "c2" }),
-      row(
-        ` #  ${fit(t("mech.weapon"), 18)}${fit(t("mech.loc"), 4)}${fit(t("mech.heat"), 4, "right")}${fit(t("mech.dmg"), 5, "right")} ${t("mech.range")}`,
-        { cls: "ia-dim", key: "c3" },
-      ),
-      ...Object.values(def.weapons)
-        .slice(0, 13)
-        .map((w, i) => {
-          const wd = weaponDefFor(w);
-          const dmg = wd.damage ?? (wd.missiles ? `${wd.missiles}×${wd.missileDamage ?? 1}` : "-");
-          return row(
-            `${fit(i + 1, 2, "right")}  ${fit(w.weapon + (w.rearFacing ? " (R)" : ""), 18)}${fit(locName(w.location), 4)}${fit(wd.heat ?? 0, 4, "right")}${fit(dmg, 5, "right")} ${wd.short}/${wd.medium}/${wd.long}`,
-            { key: `w${i}` },
-          );
-        }),
-    );
-    const armor =
-      Object.values(def.armor).reduce((a, b) => a + (b ?? 0), 0) +
-      Object.values(def.armorRear).reduce((a, b) => a + (b ?? 0), 0);
-    card.push(row(" ", { key: "c9" }), row(fit(`${t("mech.armor")} ${armor}`, 44), { key: "ca" }));
-  }
-  return modal(
-    {
-      cols: 96,
-      rows: 27,
-      title: t("mech.title", { id: slotId(m.side, m.index) }),
-      footer: t("mech.footer"),
-    },
-    row(filterLine1, { key: "f1" }),
-    row(filterLine2, { key: "f2" }),
-    H.el(
-      "div",
-      {
-        style: {
-          display: "grid",
-          "grid-template-columns": "calc(48 * var(--cw)) 1fr",
-          "column-gap": "calc(1 * var(--cw))",
-        },
-      },
-      H.el("div", {}, ...rows),
-      H.el("div", {}, ...card),
-    ),
-  );
-}
-
-function chooseMech(m: Extract<Modal, { kind: "mech" }>, model: string): void {
-  const slots = app.loadout.sides[m.side];
-  const slot = slots[m.index];
-  if (slot) slot.model = model;
-  else slots.push(newSlot(model, m.side === 1 ? "gladiator" : null));
-  app.modal = null;
-}
-
-function pilotDialog(m: Extract<Modal, { kind: "pilot" }>): TuiNode {
-  const s = app.loadout.sides[m.side][m.index]!;
-  const items: [string, number][] = [
-    ["pilot.gunnery", s.gunnery],
-    ["pilot.piloting", s.piloting],
-    ["pilot.hitMax", s.pilotHitMax],
-  ];
-  return modal(
-    {
-      cols: 44,
-      title: t("pilot.title", { id: slotId(m.side, m.index) }),
-      footer: t("dialog.footer"),
-    },
-    ...items.map(([k, v], i) =>
-      row(`${i === m.cursor ? "▸" : " "} ${fit(t(k), 22)}◂ ${fit(v, 3, "right")} ▸`, {
-        sel: i === m.cursor,
-        key: k,
-      }),
-    ),
-    ...blank(1),
-    row(t("pilot.presets"), { cls: "ia-dim", key: "pre" }),
-  );
-}
-
-function controlDialog(m: Extract<Modal, { kind: "control" }>): TuiNode {
-  const opts: (PersonaKey | null)[] = [null, ...PERSONA_KEYS];
-  return modal(
-    {
-      cols: 44,
-      title: t("control.title", { id: slotId(m.side, m.index) }),
-      footer: t("dialog.footer"),
-    },
-    ...opts.map((p, i) =>
-      row(`${i === m.cursor ? "▸" : " "} ${controlName(p)}`, {
-        sel: i === m.cursor,
-        key: String(p),
-      }),
-    ),
-  );
-}
-
-function policyItems(s: Slot): [string, string, (d: number) => void][] {
-  const cyc = <T>(list: readonly T[], v: T, d: number): T =>
-    list[(list.indexOf(v) + d + list.length) % list.length]!;
-  return [
-    [
-      "policy.ammo",
-      t(`ammo.${s.policy.ammoPolicy}`),
-      (d) => (s.policy.ammoPolicy = cyc(AMMO, s.policy.ammoPolicy, d)),
-    ],
-    [
-      "policy.autoEject",
-      s.policy.autoEject ? t("on") : t("off"),
-      () => (s.policy.autoEject = !s.policy.autoEject),
-    ],
-    [
-      "policy.heatFlamer",
-      s.policy.heatFlamer ? t("on") : t("off"),
-      () => (s.policy.heatFlamer = !s.policy.heatFlamer),
-    ],
-    [
-      "policy.ams",
-      t(`ams.${s.policy.amsPolicy}`),
-      (d) => (s.policy.amsPolicy = cyc(AMS, s.policy.amsPolicy, d)),
-    ],
-  ];
-}
-
-function policyDialog(m: Extract<Modal, { kind: "policy" }>): TuiNode {
-  const s = app.loadout.sides[m.side][m.index]!;
-  return modal(
-    {
-      cols: 50,
-      title: t("policy.title", { id: slotId(m.side, m.index) }),
-      footer: t("dialog.footer"),
-    },
-    ...policyItems(s).map(([k, v], i) =>
-      row(`${i === m.cursor ? "▸" : " "} ${fit(t(k), 24)}◂ ${fit(v, 12)} ▸`, {
-        sel: i === m.cursor,
-        key: k,
-      }),
-    ),
-  );
-}
-
-const MATCH = ["gen.matchBv", "gen.matchFree"];
-const PERSONA_MODES = ["gen.personaRandom", "gen.personaNone"];
-
-function generateDialog(m: Extract<Modal, { kind: "generate" }>): TuiNode {
-  const items: [string, string][] = [
-    ["gen.count", String(m.count)],
-    ["gen.match", t(MATCH[m.match]!)],
-    ["gen.personas", t(PERSONA_MODES[m.personas]!)],
-  ];
-  return modal(
-    { cols: 52, title: t("gen.title", { side: m.side + 1 }), footer: t("gen.footer") },
-    ...items.map(([k, v], i) =>
-      row(`${i === m.cursor ? "▸" : " "} ${fit(t(k), 18)}◂ ${fit(v, 24)} ▸`, {
-        sel: i === m.cursor,
-        key: k,
-      }),
-    ),
-  );
-}
-
 export function helpWindow(): TuiNode {
   const lines = t("help.text").split("\n");
   return modal(
@@ -603,149 +919,76 @@ export function helpWindow(): TuiNode {
   );
 }
 
-/** Keys while a setup modal is open. */
-function modalKey(e: KeyboardEvent, m: Modal): boolean {
-  const close = () => {
-    app.modal = null;
-  };
-  if (m.kind === "help" || m.kind === "message") {
-    close();
+/** Focusable controls of the open modal, in screen order. */
+function modalFocusables(): HTMLElement[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "#app .ia-modal button:not(:disabled), #app .ia-modal input:not([type=hidden])",
+    ),
+  ).filter((el) => el.offsetParent !== null);
+}
+
+export function setupKey(e: KeyboardEvent): boolean {
+  const m = app.modal;
+  if (m) {
+    if (m.kind === "help" || m.kind === "message") {
+      app.modal = null;
+      return true;
+    }
+    if (e.key === "Tab") {
+      // Keep Tab inside the dialog.
+      const els = modalFocusables();
+      if (els.length === 0) return true;
+      const i = els.indexOf(document.activeElement as HTMLElement);
+      const next = i < 0 ? 0 : (i + (e.shiftKey ? els.length - 1 : 1)) % els.length;
+      els[next]!.focus();
+      return true;
+    }
+    if (m.kind === "mech") return mechKey(e, m);
+    if (e.key === "Escape") {
+      app.modal = null;
+      return true;
+    }
+    if (m.kind === "input" && e.key === "Enter") {
+      submitInput(m);
+      return true;
+    }
+    return false;
+  }
+  if (e.key === "F10") {
+    doLaunch();
     return true;
   }
-  if (m.kind === "mech") return mechKey(e, m);
-  const vertical = (n: number) => {
-    const c = m as { cursor: number };
-    if (e.key === "ArrowDown") c.cursor = (c.cursor + 1) % n;
-    else if (e.key === "ArrowUp") c.cursor = (c.cursor + n - 1) % n;
-    else return false;
-    return true;
-  };
   if (e.key === "Escape") {
-    close();
+    app.screen = "title";
     return true;
-  }
-  if (m.kind === "control") {
-    if (vertical(PERSONA_KEYS.length + 1)) return true;
-    if (e.key === "Enter") {
-      const s = app.loadout.sides[m.side][m.index]!;
-      s.persona = m.cursor === 0 ? null : PERSONA_KEYS[m.cursor - 1]!;
-      close();
-      return true;
-    }
-    return false;
-  }
-  if (m.kind === "pilot") {
-    if (vertical(3)) return true;
-    const s = app.loadout.sides[m.side][m.index]!;
-    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (d !== 0) {
-      if (m.cursor === 0) s.gunnery = Math.max(0, Math.min(7, s.gunnery + d));
-      else if (m.cursor === 1) s.piloting = Math.max(0, Math.min(7, s.piloting + d));
-      else s.pilotHitMax = Math.max(1, Math.min(6, s.pilotHitMax + d));
-      return true;
-    }
-    const presets: Record<string, [number, number]> = {
-      Digit1: [5, 6],
-      Digit2: [4, 5],
-      Digit3: [3, 4],
-      Digit4: [2, 3],
-    };
-    const p = presets[e.code];
-    if (p) {
-      [s.gunnery, s.piloting] = p;
-      return true;
-    }
-    if (e.key === "Enter") close();
-    return e.key === "Enter";
-  }
-  if (m.kind === "policy") {
-    if (vertical(4)) return true;
-    const s = app.loadout.sides[m.side][m.index]!;
-    const d = e.key === "ArrowRight" || e.key === " " ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (d !== 0) {
-      policyItems(s)[m.cursor]![2](d);
-      return true;
-    }
-    if (e.key === "Enter") close();
-    return e.key === "Enter";
-  }
-  if (m.kind === "generate") {
-    if (vertical(3)) return true;
-    const d = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-    if (d !== 0) {
-      if (m.cursor === 0) m.count = Math.max(1, Math.min(MAX_SLOTS, m.count + d));
-      else if (m.cursor === 1) m.match = (m.match + 1) % 2;
-      else m.personas = (m.personas + 1) % 2;
-      return true;
-    }
-    if (e.key === "Enter") {
-      const other = app.loadout.sides[(1 - m.side) as 0 | 1];
-      const rng = createRng((Date.now() & 0x7fffffff) >>> 0);
-      const slots = generateSide(rng, {
-        count: m.count,
-        bvTarget: m.match === 0 ? sideBv(other) : 0,
-        classes: [],
-        personas: m.personas === 0 ? "random" : "none",
-      });
-      if (slots.length > 0) app.loadout.sides[m.side] = slots;
-      app.cursors.side[m.side] = 0;
-      close();
-      return true;
-    }
-    return false;
   }
   return false;
 }
 
-function mechKey(e: KeyboardEvent, m: Extract<Modal, { kind: "mech" }>): boolean {
-  const f = m.filter;
-  const list = filterMechs(f);
-  if (m.field === 0) {
-    // typing into the name search
-    if (e.key === "Escape" || e.key === "Enter") m.field = -1;
-    else if (e.key === "Backspace") f.text = f.text.slice(0, -1);
-    else if (e.key.length === 1) f.text += e.key;
-    else return false;
-    m.cursor = 0;
-    return true;
+/** After each setup render: focus a newly opened dialog, keep the list cursor in view. */
+export function setupAfterRender(): void {
+  const m = app.modal;
+  const win = document.querySelector<HTMLElement>("#app .ia-modal");
+  if (win && !win.dataset.focused) {
+    win.dataset.focused = "1";
+    const inp = win.querySelector<HTMLInputElement>("input.tui-input");
+    if (m?.kind === "input" && inp) {
+      inp.focus();
+      inp.select();
+    } else if (m?.kind !== "mech") modalFocusables()[0]?.focus();
   }
-  if (e.key === "Escape") app.modal = null;
-  else if (e.key === "/") m.field = 0;
-  else if (e.key === "ArrowDown") m.cursor = Math.min(list.length - 1, m.cursor + 1);
-  else if (e.key === "ArrowUp") m.cursor = Math.max(0, m.cursor - 1);
-  else if (e.key === "PageDown") m.cursor = Math.min(list.length - 1, m.cursor + 20);
-  else if (e.key === "PageUp") m.cursor = Math.max(0, m.cursor - 20);
-  else if (e.key === "Home") m.cursor = 0;
-  else if (e.key === "End") m.cursor = list.length - 1;
-  else if (e.key === "Enter") {
-    const sel = list[m.cursor];
-    if (sel) chooseMech(m, sel.model);
-  } else if (/^Digit[1-4]$/.test(e.code)) {
-    const c = CLASSES[Number(e.code.slice(5)) - 1]!;
-    f.classes = f.classes.includes(c) ? f.classes.filter((x) => x !== c) : [...f.classes, c];
-    m.cursor = 0;
-  } else if (e.code === "KeyT") {
-    f.tech = f.tech === "any" ? "is" : f.tech === "is" ? "clan" : "any";
-    m.cursor = 0;
-  } else if (e.code === "KeyK") {
-    f.pack = f.pack === "any" ? "base" : f.pack === "base" ? "sw" : "any";
-    m.cursor = 0;
-  } else if (e.code === "KeyE") {
-    f.introMax = ERAS[(ERAS.indexOf(f.introMax) + 1) % ERAS.length]!;
-    m.cursor = 0;
-  } else if (e.code === "KeyS") {
-    const sorts = ["ton", "name", "bv", "intro"] as const;
-    f.sort = sorts[(sorts.indexOf(f.sort) + 1) % sorts.length]!;
-  } else return false;
-  return true;
+  if (m?.kind === "mech" && m.reveal) {
+    m.reveal = false;
+    document
+      .querySelector<HTMLElement>("#app .ia-mechlist .ia-row.sel")
+      ?.scrollIntoView({ block: "nearest" });
+  }
 }
 
-/** Map preview for the Map tab: the persistent canvas shows the cursor map. */
 export function setupMapPreview(): void {
-  if (app.tab !== 2 || !app.mapView) return;
-  const name = mapNames()[app.cursors.map];
-  if (!name) return;
-  const map = ensureMapRegistered(name);
+  if (!app.mapView) return;
+  const map = ensureMapRegistered(app.loadout.map);
   if (map) app.mapView.setMap(mapSource(map));
   app.mapView.overlays = {};
   app.mapView.banners = [];

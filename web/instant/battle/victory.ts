@@ -1,11 +1,11 @@
 /**
- * Victory modes (plan §10.2). The engine never decides the winner: both
+ * Engagement modes (plan §10.2). The engine never decides the winner: both
  * modes are stoppers handed to `gameLoop`, and the tallies are read from unit
  * state.
  *
- * - Destroy All (Standup Fight, TW p. 259): ends when one side has no unit
- *   left in play.
- * - Damage Race: ends after turn N (or earlier like Destroy All); the side
+ * - Annihilation (`destroyAll`; Standup Fight, TW p. 259): ends when one side
+ *   has no unit left in play.
+ * - Attrition (`damageRace`): ends after turn N (or earlier like Annihilation); the side
  *   that dealt more armor + structure damage wins, ties go to the TW p. 257
  *   BV score, then a draw. A destroyed unit or a hull counts its whole total.
  */

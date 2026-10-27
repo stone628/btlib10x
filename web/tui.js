@@ -746,7 +746,7 @@
     if (sel.id) btn.id = `${sel.id}-tui`;
     btn.setAttribute("aria-haspopup", "listbox");
     const label = span("tui-select-label");
-    btn.append(label, span("tui-select-arrow", "▾"));
+    btn.append(label, span("tui-select-arrow", "▼"));
     sel.classList.add("tui-native");
     sel.after(btn);
     const sync = () => {
@@ -2439,6 +2439,17 @@
         }
         wrap.appendChild(sel);
         return wrap;
+      },
+      // A new value keeps the element (and its focus); new options rebuild it.
+      patch(el, k, v) {
+        if (k !== "value") return false;
+        const sel = el.querySelector("select");
+        if (!sel) return false;
+        sel.value = String(v ?? "");
+        const label = sel._tuiButton?.querySelector(".tui-select-label");
+        if (label)
+          label.textContent = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex].text : "";
+        return true;
       },
       children: "replace",
     },

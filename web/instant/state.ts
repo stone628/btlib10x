@@ -2,7 +2,7 @@
  * Application state shared by every screen. Screens are TUI prefabs that read
  * this object; any change calls `rerender()`, which updates the mounted scene.
  */
-import type { ClubKind, Facing, HexCoord, PhysicalAttackDecl } from "btlib10x";
+import type { ClubKind, Facing, HexCoord, PhysicalAttackDecl, UnitPolicy } from "btlib10x";
 import type { BattleController } from "./battle/controller";
 import type { Edge, RollOff } from "./battle/deploy";
 import type { MapView } from "./map/view";
@@ -27,18 +27,27 @@ export interface DeployState {
 }
 
 export type Modal =
-  | { kind: "mech"; side: 0 | 1; index: number; filter: MechFilter; cursor: number; field: number }
-  | { kind: "pilot"; side: 0 | 1; index: number; cursor: number }
-  | { kind: "control"; side: 0 | 1; index: number; cursor: number }
-  | { kind: "policy"; side: 0 | 1; index: number; cursor: number }
   | {
-      kind: "generate";
+      kind: "mech";
       side: 0 | 1;
+      index: number;
+      filter: MechFilter;
+      /** Index into the filtered list. */
       cursor: number;
-      count: number;
-      match: number;
-      personas: number;
+      /** Bring the cursor row into view after the next render (keyboard moves). */
+      reveal: boolean;
     }
+  | {
+      kind: "input";
+      title: string;
+      label: string;
+      value: string;
+      cols: number;
+      error: string | null;
+      /** Applies the value; returns an error message to keep the dialog open. */
+      apply: (value: string) => string | null;
+    }
+  | { kind: "policy"; side: 0 | 1; index: number; draft: UnitPolicy }
   | { kind: "battleMenu"; cursor: number }
   | { kind: "sheet"; unitId: string }
   | { kind: "log" }
@@ -55,9 +64,9 @@ export type AttackRow =
 export interface App {
   screen: ScreenId;
   loadout: Loadout;
-  /** Setup tab: 0 Side 1, 1 Side 2, 2 Map, 3 Rules. */
+  /** Debrief tab. */
   tab: number;
-  cursors: { side: [number, number]; map: number; rules: number; title: number };
+  cursors: { title: number };
   modal: Modal | null;
   deploy: DeployState | null;
   battle: BattleController | null;
@@ -76,7 +85,7 @@ export const app: App = {
   screen: "loading",
   loadout: { sides: [[], []], map: "quickstart", mode: { kind: "destroyAll" }, seed: 42 },
   tab: 0,
-  cursors: { side: [0, 0], map: 0, rules: 0, title: 0 },
+  cursors: { title: 0 },
   modal: null,
   deploy: null,
   battle: null,

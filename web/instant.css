@@ -258,3 +258,27 @@
 .ia-hint[data-click]:hover {
   color: var(--tui-bright);
 }
+
+/* New Battle: side titles in team colours, BV comparison */
+.ia-side1 > .tui-frame .tui-title {
+  color: var(--ia-team1);
+}
+.ia-side2 > .tui-frame .tui-title {
+  color: var(--ia-team2);
+}
+.ia-bv-even {
+  color: var(--c-green);
+}
+.ia-bv-high {
+  color: var(--tui-blue);
+}
+.ia-bv-low {
+  color: var(--tui-red);
+}
+.ia-mechlist .ia-row[data-click] {
+  cursor: pointer;
+}
+/* inline fields keep their cell width inside boxes (the kit stretches them) */
+.tui-box .ia-row > .tui-input {
+  width: calc(var(--cols, 20) * var(--cw));
+}

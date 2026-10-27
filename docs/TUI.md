@@ -200,12 +200,12 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 | Stacks, grid | `data-tui="hstack"`, `"vstack"`, `"grid"`, `"spacer"` | Place children in cell-sized slots; see [Layout](#layout). |
 | Window | `<div data-tui="window" data-closable>` | Box with double border, centered title, shadow, `[×]` action. Fires cancelable `tui-close`, then sets `hidden`. |
 | Dialog | `await TUI.dialog({ title, text, buttons, cols, border, tone, theme, defaultIndex })` | Modal over a dimmed overlay. Resolves to the button label, or `null` on Esc / `[×]`. Tab is trapped; ← → move between buttons. |
-| Button | `<button class="tui-btn">OK</button>` | `[ OK ]`. `data-variant="angle"` gives `< OK >`, `bare` drops brackets. `.is-primary`. Pressed = reverse video; focus = `[▸ OK ◂]`. CSS only. |
+| Button | `<button class="tui-btn">OK</button>` | `[ OK ]`. `data-variant="angle"` gives `< OK >`, `bare` drops brackets, `tight` gives `[OK]`, `field` shows the label in a field-coloured band (a value that opens an editor). `.is-primary`. Pressed = reverse video; focus = `[▸ OK ◂]`. CSS only. |
 | Boxed button | `<button data-tui="button" data-border="rounded">Save</button>` | 3-row box around the label. |
 | Text input | `<input class="tui-input" style="--cols:24">` | Field-colored band; `data-variant="line"` for an underline. Inside a box it fills the width. `<span class="tui-prompt">&gt; </span>` for a prompt. |
 | Checkbox | `<label class="tui-check"><input type="checkbox"><span class="tui-mark"></span><span>Label</span></label>` | `[ ]` `[x]` `[-]`. CSS only, native input kept for a11y. |
 | Radio | same with `tui-radio` and `type="radio"` | `( )` `(•)`. |
-| Select | `<select data-tui="select" data-cols="20">` | Native select stays as the source of truth (hidden); a cell-sized button opens a box-drawn popup. `change` fires on the select. |
+| Select | `<select data-tui="select" data-cols="20">` | Native select stays as the source of truth (hidden); a cell-sized button (label, then `▼` in the last cell) opens a box-drawn popup; a second click closes it. `change` fires on the select. In a scene, a new `value` prop updates the label in place (focus survives). |
 | Menu | `<div data-tui="menu" data-title="File">` with child items, `<hr>` for separators | `data-key` shows a shortcut, `data-value` is reported, `disabled` greys out, `<u>x</u>` is a hotkey letter. ↑ ↓ Home End Enter. Fires `tui-select` `{index, value}`. |
 | List | `<div data-tui="list" data-selected="0">` | Like menu but with a `▸` cursor and a persistent selection. |
 | Menubar | `<nav data-tui="menubar"><div data-label="<u>F</u>ile">items…</div></nav>` | Opens menus as popups; ← → move across menus. `data-right` pushes a menu to the right. Fires `tui-select` `{menu, value}` on the nav. |

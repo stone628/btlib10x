@@ -3,7 +3,7 @@ import { randomBattle } from "../flow";
 import { t } from "../i18n";
 import { app, rerender } from "../state";
 import type { TuiNode } from "../tui";
-import { blank, fit, h, kit, row, statusbar } from "./common";
+import { blank, h, kit, row, statusbar } from "./common";
 
 const ART = [
   "██████╗ ████████╗ ██╗ ██████╗ ██╗  ██╗",
@@ -43,21 +43,19 @@ export function titleScreen(): TuiNode {
   const items = titleItems();
   const cur = Math.min(app.cursors.title, items.length - 1);
   const labelCols = Math.max(...items.map((it) => kit().compensatedLength(t(it.label))));
-  const menu = items.map((it, i) =>
-    row(` ${i === cur ? "▸" : " "} ${fit(t(it.label), labelCols)} `, {
-      sel: i === cur,
-      key: it.label,
-      onHover: () => {
-        if (app.cursors.title === i) return;
+  const menu = H.menu(
+    {
+      key: "menu",
+      cols: labelCols + 6,
+      onSelect: (e: Event) => {
+        const i = (e as CustomEvent<{ index: number }>).detail.index;
         app.cursors.title = i;
+        items[i]?.run();
         rerender();
       },
-      onClick: () => {
-        app.cursors.title = i;
-        it.run();
-        rerender();
-      },
-    }),
+      on: { mousemove: syncCursor, keydown: syncCursor },
+    },
+    ...items.map((it) => H.item({ key: it.label, value: it.label }, t(it.label))),
   );
   // logo, gap, subtitle, gap ×3, boxed menu, gap, info line
   const used = ART.length + 1 + 1 + 3 + (items.length + 2) + 1 + 1;
@@ -73,11 +71,7 @@ export function titleScreen(): TuiNode {
       ...blank(1),
       row(t("title.subtitle"), { cls: "ia-center ia-bright", key: "sub" }),
       ...blank(3),
-      H.el(
-        "div",
-        { style: { display: "flex", "justify-content": "center" } },
-        H.box({ cols: labelCols + 6, pad: 0, border: "single" }, ...menu),
-      ),
+      H.el("div", { style: { display: "flex", "justify-content": "center" } }, menu),
       ...blank(1),
       row(t(items[cur]!.info), { cls: "ia-center", key: "info" }),
     ),
@@ -92,12 +86,32 @@ export function titleScreen(): TuiNode {
   );
 }
 
-export function titleKey(e: KeyboardEvent): boolean {
-  const items = titleItems();
-  if (e.key === "ArrowDown") app.cursors.title = (app.cursors.title + 1) % items.length;
-  else if (e.key === "ArrowUp")
-    app.cursors.title = (app.cursors.title + items.length - 1) % items.length;
-  else if (e.key === "Enter") items[app.cursors.title]!.run();
-  else return false;
-  return true;
+/** The kit menu's own cursor (hover, arrows); read once its handler has run. */
+interface MenuCtl {
+  readonly active: number;
+  set(i: number): void;
+}
+
+function menuCtl(el: Element | null): MenuCtl | null {
+  return (el as { _tui?: { menu?: MenuCtl } } | null)?._tui?.menu ?? null;
+}
+
+function syncCursor(e: Event): void {
+  const el = e.currentTarget as Element;
+  setTimeout(() => {
+    const active = menuCtl(el)?.active ?? -1;
+    if (active < 0 || active === app.cursors.title) return;
+    app.cursors.title = active;
+    rerender();
+  }, 0);
+}
+
+/** After a title render: the menu shows the remembered item and takes the keys. */
+export function titleAfterRender(): void {
+  const el = document.querySelector<HTMLElement>('#app [data-tui="menu"]');
+  const ctl = menuCtl(el);
+  if (!el || !ctl) return;
+  if (ctl.active !== app.cursors.title) ctl.set(app.cursors.title);
+  if (!app.modal && (document.activeElement === document.body || !document.activeElement))
+    el.focus();
 }

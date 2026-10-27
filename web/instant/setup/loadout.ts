@@ -16,7 +16,10 @@ import type { VictoryMode } from "../battle/victory";
 import { createRng } from "../rng";
 
 export interface Slot {
-  model: string;
+  /** Unit id in the battle (log, banners); user-editable, see `ID_PATTERN`. */
+  id: string;
+  /** Null: an empty slot added by [+], not chosen yet. */
+  model: string | null;
   gunnery: number;
   piloting: number;
   pilotHitMax: number;
@@ -33,13 +36,63 @@ export interface Loadout {
 }
 
 export const MAX_SLOTS = 4;
+export const PILOT_HIT_MIN = 4;
+/** House rule: up to 8 (TW kills the MechWarrior on the 6th hit, TW p.41-42). */
+export const PILOT_HIT_MAX = 8;
+export const TURN_LIMIT_DEFAULT = 10;
+export const TURN_LIMIT_MIN = 3;
+export const TURN_LIMIT_MAX = 30;
 
+/** 1–12 letters, digits, `-` or `_`. */
+export const ID_PATTERN = /^[A-Za-z0-9_-]{1,12}$/;
+
+/** Default id of a slot position: A1…A4, B1…B4. */
 export function slotId(side: 0 | 1, index: number): string {
   return `${side === 0 ? "A" : "B"}${index + 1}`;
 }
 
-export function newSlot(model: string, persona: PersonaKey | null): Slot {
+/** The first default id (A1, A2, … / B1, …) no slot of the loadout uses. */
+export function freeId(l: Loadout, side: 0 | 1): string {
+  const used = new Set(l.sides.flat().map((s) => s.id.toLowerCase()));
+  for (let i = 0; ; i++) {
+    const id = slotId(side, i);
+    if (!used.has(id.toLowerCase())) return id;
+  }
+}
+
+/** Why `id` cannot name `slot`: a message key, or null when it can. */
+export function idProblem(
+  l: Loadout,
+  slot: Slot,
+  id: string,
+): "err.idFormat" | "err.idTaken" | null {
+  if (!ID_PATTERN.test(id)) return "err.idFormat";
+  const lower = id.toLowerCase();
+  if (l.sides.flat().some((s) => s !== slot && s.id.toLowerCase() === lower)) return "err.idTaken";
+  return null;
+}
+
+/** Why the loadout cannot launch yet, or null when it can. */
+export function loadoutProblem(
+  l: Loadout,
+): { key: "err.emptySide" | "err.emptySlot" | "err.idTaken"; vars: Record<string, string> } | null {
+  for (const side of [0, 1] as const) {
+    if (l.sides[side].length === 0)
+      return { key: "err.emptySide", vars: { side: String(side + 1) } };
+    const empty = l.sides[side].find((s) => s.model === null);
+    if (empty) return { key: "err.emptySlot", vars: { side: String(side + 1), id: empty.id } };
+  }
+  const seen = new Set<string>();
+  for (const s of l.sides.flat()) {
+    if (seen.has(s.id.toLowerCase())) return { key: "err.idTaken", vars: { id: s.id } };
+    seen.add(s.id.toLowerCase());
+  }
+  return null;
+}
+
+export function newSlot(model: string | null, persona: PersonaKey | null, id: string): Slot {
   return {
+    id,
     model,
     gunnery: 4,
     piloting: 5,
@@ -52,8 +105,8 @@ export function newSlot(model: string, persona: PersonaKey | null): Slot {
 export function defaultLoadout(): Loadout {
   return {
     sides: [
-      [newSlot("HBK-4G", null), newSlot("CN9-YLW2", "alpha")],
-      [newSlot("GRF-1N", "longtom"), newSlot("ENF-4R", "gladiator")],
+      [newSlot("HBK-4G", null, "A1"), newSlot("CN9-YLW2", "alpha", "A2")],
+      [newSlot("GRF-1N", "longtom", "B1"), newSlot("ENF-4R", "gladiator", "B2")],
     ],
     map: "quickstart",
     mode: { kind: "destroyAll" },
@@ -74,7 +127,8 @@ export function weightClass(tons: number): WeightClass {
   return tons < 40 ? "light" : tons < 60 ? "medium" : tons < 80 ? "heavy" : "assault";
 }
 
-export function bvOf(model: string): number {
+export function bvOf(model: string | null): number {
+  if (model === null) return 0;
   return catalogMechs().find((m) => m.model === model)?.bv ?? 0;
 }
 
@@ -131,6 +185,8 @@ export interface GenerateOptions {
   bvTarget: number;
   classes: WeightClass[];
   personas: "random" | "none";
+  /** Side whose default ids (A… / B…) the slots get; 0 when omitted. */
+  side?: 0 | 1;
 }
 
 /**
@@ -143,7 +199,9 @@ export function generateSide(rng: Rng, o: GenerateOptions): Slot[] {
   );
   if (pool.length === 0) return [];
   const persona = (): PersonaKey | null => (o.personas === "none" ? null : pick(rng, PERSONA_KEYS));
-  const slots = Array.from({ length: o.count }, () => newSlot(pick(rng, pool).model, persona()));
+  const slots = Array.from({ length: o.count }, (_, i) =>
+    newSlot(pick(rng, pool).model, persona(), slotId(o.side ?? 0, i)),
+  );
   if (o.bvTarget > 0) {
     for (let round = 0; round < 60; round++) {
       const total = sideBv(slots);
@@ -166,7 +224,13 @@ export function randomLoadout(seed: number, maps: readonly string[]): Loadout {
   a.slice(1).forEach((s) => {
     s.persona = pick(rng, PERSONA_KEYS);
   });
-  const b = generateSide(rng, { count, bvTarget: sideBv(a), classes: [], personas: "random" });
+  const b = generateSide(rng, {
+    count,
+    bvTarget: sideBv(a),
+    classes: [],
+    personas: "random",
+    side: 1,
+  });
   return { sides: [a, b], map: pick(rng, maps), mode: { kind: "destroyAll" }, seed };
 }
 
@@ -188,9 +252,16 @@ export function loadLoadout(): Loadout | null {
     const known = new Set(catalogMechs().map((m) => m.model));
     if (!Array.isArray(l.sides) || l.sides.length !== 2) return null;
     for (const side of l.sides) {
-      if (!Array.isArray(side) || side.length < 1 || side.length > MAX_SLOTS) return null;
-      for (const s of side) if (!known.has(s.model)) return null;
+      if (!Array.isArray(side) || side.length > MAX_SLOTS) return null;
+      for (const s of side) if (s.model !== null && !known.has(s.model)) return null;
     }
+    // Loadouts saved before ids were editable: give each slot its default id.
+    l.sides.forEach((side, si) => {
+      side.forEach((s, i) => {
+        if (typeof s.id !== "string" || !ID_PATTERN.test(s.id)) s.id = slotId(si as 0 | 1, i);
+        s.pilotHitMax = Math.max(PILOT_HIT_MIN, Math.min(PILOT_HIT_MAX, s.pilotHitMax));
+      });
+    });
     return l;
   } catch {
     return null;

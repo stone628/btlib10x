@@ -404,6 +404,22 @@
 .tui-btn[data-variant="bare"]::after {
   content: " ";
 }
+/* tight: [x] with no inner spaces, for icon-sized buttons and fixed-width labels */
+.tui-btn[data-variant="tight"]::before {
+  content: "[";
+}
+.tui-btn[data-variant="tight"]::after {
+  content: "]";
+}
+/* field: a value in a field-coloured band that opens an editor when pressed */
+.tui-btn[data-variant="field"] {
+  background: var(--tui-field);
+  text-align: left;
+}
+.tui-btn[data-variant="field"]::before,
+.tui-btn[data-variant="field"]::after {
+  content: "";
+}
 .tui-btn:hover {
   background: var(--tui-surface-2);
 }
@@ -424,6 +440,21 @@
 }
 .tui-btn[data-variant="angle"]:focus-visible::after {
   content: "◂>";
+}
+.tui-btn[data-variant="tight"]:focus-visible::before {
+  content: "[";
+}
+.tui-btn[data-variant="tight"]:focus-visible::after {
+  content: "]";
+}
+.tui-btn[data-variant="tight"]:focus-visible,
+.tui-btn[data-variant="field"]:focus-visible {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.tui-btn[data-variant="field"]:focus-visible::before,
+.tui-btn[data-variant="field"]:focus-visible::after {
+  content: "";
 }
 .tui-btn.is-primary {
   color: var(--tui-accent);
@@ -611,7 +642,6 @@ button.tui-box.is-pressed {
 }
 .tui-select .tui-select-arrow {
   color: var(--tui-accent);
-  padding-right: var(--cw);
 }
 .tui-select:hover {
   background: var(--tui-surface-2);

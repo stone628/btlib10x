@@ -24,7 +24,7 @@ import {
 import { t } from "./i18n";
 import type { Banner, MapSource } from "./map/view";
 import { MapView } from "./map/view";
-import { type Loadout, mechDef, randomLoadout, saveLoadout, slotId } from "./setup/loadout";
+import { type Loadout, loadoutProblem, mechDef, randomLoadout, saveLoadout } from "./setup/loadout";
 import { app, type Placement, rerender } from "./state";
 
 export interface DeployUnit {
@@ -40,10 +40,10 @@ export function deployUnits(l: Loadout): DeployUnit[] {
   l.sides.forEach((side, s) => {
     side.forEach((slot, i) => {
       out.push({
-        id: slotId(s as 0 | 1, i),
+        id: slot.id,
         side: s as 0 | 1,
         index: i,
-        model: slot.model,
+        model: slot.model ?? "",
         player: slot.persona === null,
       });
     });
@@ -90,7 +90,8 @@ export function ensureMapView(): MapView {
 
 export function launch(): void {
   const l = app.loadout;
-  if (l.sides[0].length === 0 || l.sides[1].length === 0) throw new Error(t("err.emptySide"));
+  const problem = loadoutProblem(l);
+  if (problem) throw new Error(t(problem.key, problem.vars));
   saveLoadout(l);
   const rng = setupRng(l.seed);
   const roll = rollOff(rng);
@@ -181,12 +182,12 @@ export function beginBattle(): void {
   if (missing) throw new Error(t("err.notPlaced", { id: missing.id }));
   const inits = units.map((u) => {
     const slot = l.sides[u.side][u.index]!;
-    mechDef(slot.model);
+    mechDef(u.model);
     const p = d.placements[u.id]!;
     const skill = (n: number) => Math.max(0, Math.min(7, Math.round(n))) as UnitSkillRange;
     return buildUnitInit(
       u.id,
-      slot.model,
+      u.model,
       u.side === 0 ? 1 : 2,
       p.hex,
       p.facing,

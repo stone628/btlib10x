@@ -47,6 +47,11 @@ export interface TuiH {
   statusbar: TuiBuilder;
   kbd: TuiBuilder;
   btn: TuiBuilder;
+  input: TuiBuilder;
+  select: TuiBuilder;
+  check: TuiBuilder;
+  menu: TuiBuilder;
+  item: TuiBuilder;
   button: TuiBuilder;
   seg: TuiBuilder;
   text: TuiBuilder;

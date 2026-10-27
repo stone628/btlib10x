@@ -99,7 +99,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td>3</td><td>Data behind chunks</td><td>Same engine data, shown in a different UI. The app calls the engine directly (<code>suggestFireTargets</code>, <code>reachableLandings</code>, …) and never parses terminal output.</td><td>§4, §8.6</td></tr>
 <tr><td>4</td><td>Starting positions</td><td>Follow TW p. 256: 2D6 roll-off for home edges, units placed along the home edge; the first placement is free (house rule).</td><td>§10.1</td></tr>
 <tr><td>5</td><td>Maps</td><td>All engine maps (<code>beginner</code>, <code>quickstart</code>, <code>test</code>, <code>testground</code>), plus Instant-Action-only maps in their own pack.</td><td>§8.3, §14</td></tr>
-<tr><td>6</td><td>Victory</td><td>Two modes: Destroy All, and Damage Race (more damage dealt by the end of turn N).</td><td>§10.2</td></tr>
+<tr><td>6</td><td>Victory</td><td>Two engagement modes: Annihilation, and Attrition (more damage dealt by the end of turn N).</td><td>§10.2</td></tr>
 <tr><td>7</td><td>Board look</td><td>Vector hex + banner-glyph view; the §6 banner is the starter design.</td><td>§6</td></tr>
 <tr><td>8</td><td>i18n</td><td>A separate catalog for Instant Action only.</td><td>§13</td></tr>
 <tr><td>9</td><td>Name and URL</td><td><code>/instant.html</code>, "bt10x Instant Action".</td><td>§14</td></tr>
@@ -119,7 +119,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td><code>map_viewer_vector.html</code> (generated from <code>ref/mapviewer/</code>: <code>common.js</code> + the vector renderer)</td><td><code>web/instant/map/</code></td><td>Port to TS; take the map from <code>MapDef</code> instead of an embedded line; drop the glyph-cell layers (<code>base</code>/<code>pillar</code>/<code>plane</code>) and keep the vector path; add terrain fills, overlays, banners and a click handler (§6).</td></tr>
 <tr><td><code>web/terminal/persona*.ts</code></td><td><code>web/instant/ai/</code></td><td><code>decide()</code> returns <code>Action[]</code> (§5) instead of command strings; trace text goes through the Instant Action catalog.</td></tr>
 <tr><td><code>web/terminal/rng.ts</code></td><td><code>web/instant/rng.ts</code></td><td>Unchanged (mulberry32 <code>{ d6() }</code>), so the same seed gives the same battle as the terminal.</td></tr>
-<tr><td><code>checkSessionVictory</code> (<code>session.over.ts</code>)</td><td><code>web/instant/battle/victory.ts</code></td><td>Becomes the Destroy All stopper; Damage Race added beside it.</td></tr>
+<tr><td><code>checkSessionVictory</code> (<code>session.over.ts</code>)</td><td><code>web/instant/battle/victory.ts</code></td><td>Becomes the Annihilation stopper; Attrition added beside it.</td></tr>
 <tr><td><code>rollback.ts</code> (snapshot idea only)</td><td><code>web/instant/battle/undo.ts</code></td><td>Snapshot = <code>structuredClone</code> of battle state, RNG state, AI context and the activation draft; 10 deep.</td></tr>
 <tr><td><code>handleSessionGameEvents</code>, <code>resolutionLines</code>, <code>critLines</code>, … (<code>session.common.ts</code>, <code>session.attack.ts</code>)</td><td><code>web/instant/log/</code></td><td>Rewritten as GameEvent &rarr; localized log entries with structured spans; the terminal wording is the reference, not the code path.</td></tr>
 <tr><td><code>infoMechQuery</code> filter grammar (<code>table.ts</code>)</td><td><code>web/instant/setup/mechfilter.ts</code></td><td>Filters become UI controls (class, tonnage, tech, era, pack, sort) over <code>catalogMechs()</code>; no query text.</td></tr>
@@ -152,7 +152,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
     actions.ts        Action types and validation (§5)
     draft.ts          per-activation draft: mode, chosen landing, twist, checked weapons, physicals
     deploy.ts         TW p. 256 home edges and entry hexes (§10.1)
-    victory.ts        Destroy All + Damage Race stoppers and the debrief tally (§10.2)
+    victory.ts        Annihilation + Attrition stoppers and the debrief tally (§10.2)
     undo.ts           snapshot stack
   ai/                 copied persona player; decide() → Action[]
   log/                GameEvent → log entries (spans)
@@ -240,18 +240,18 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
             │         Enter     │      R: Random battle                   │
             │                   ▼              │                          │
             │   ┌───────────────────────────┐  │                          │
-            │   │ 1 Setup                   │◀─┼──────── Esc ───────┐     │
-            │   │ [Side 1][Side 2][Map][Rules]│ │                    │     │
-            │   └──┬────────┬──────┬─────────┘  │                    │     │
-            │  Enter on  Enter on  F10 Launch   │                    │     │
-            │  a slot    map       │            ▼                    │     │
-            │   ▼          ▼       ▼                                 │     │
-            │ ┌────────┐ ┌──────┐ ┌───────────────────────────────┐  │     │
-            │ │1a Mech │ │1b Map│ │ 2 Deployment (TW p. 256)      │──┘     │
-            │ │browser │ │picker│ │ roll-off → choose home edge → │        │
-            │ └────────┘ └──────┘ │ place units on edge hexes     │        │
-            │  modals, return     └───────────────┬───────────────┘        │
-            │  to Setup                   Enter: Begin                     │
+            │   │ 1 New Battle              │◀─┼──────── Esc ───────┐     │
+            │   │ sides · map · engagement  │  │                    │     │
+            │   └─┬────────────────┬────────┘  │                    │     │
+            │  click on            F10 Launch   │                    │     │
+            │  'Mech               │            ▼                    │     │
+            │     ▼                ▼                                 │     │
+            │ ┌────────┐          ┌───────────────────────────────┐  │     │
+            │ │1a Mech │          │ 2 Deployment (TW p. 256)      │──┘     │
+            │ │dialog  │          │ roll-off → choose home edge → │        │
+            │ └────────┘          │ place units on edge hexes     │        │
+            │  modal, returns     └───────────────┬───────────────┘        │
+            │  to New Battle              Enter: Begin                     │
             │                                     ▼                        │
             │                         ┌───────────────────┐                │
             │                         │ 3 Battle          │── F9 Withdraw ─┤
@@ -261,7 +261,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
             │                                   ▼                          │
             │                         ┌───────────────────┐                │
             └──── R Rematch ──────────│ 4 Debrief         │── Enter ───────┘
-                 (same loadout, seed) └───────────────────┘   (Setup, loadout kept)</code></pre>
+                 (same loadout, seed) └───────────────────┘   (New Battle, loadout kept)</code></pre>
 <p><kbd>Enter</kbd> goes forward, <kbd>Esc</kbd> goes back one level, and anything that throws away a battle (withdraw, new setup) asks first. The loadout is kept in <code>localStorage</code> (every access guarded) so a reload returns to the last setup.</p>
 
 <section class="bt10x">
@@ -282,134 +282,138 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td>2560&times;1440 (~2560&times;1330)</td><td>35 px</td><td>2100&times;1316</td></tr>
 </table></div>
 <p>The height is the limit on every common desktop window. Pane budget for the battle screen: 1 title row, 23 map / side-panel rows, 1 log title row, 5 log rows, 1 bottom border, 1 status row. The side panel is 29 columns in the movement phase and widens to 45 in the attack phase so the fire table fits; the map gives up those columns.</p>
-<p>All mockups below are drawn at exact size in Bt10x Mono. Modals: the 'Mech browser is a 96&times;27 window and the map picker 80&times;20, both centred on the screen behind them.</p>
+<p>All mockups below are drawn at exact size in Bt10x Mono. Modals: Choose 'Mech is a 96&times;28 window, centred on the screen behind it.</p>
 
 <h3>0. Title</h3>
-<pre class="screen"><code>╔══════════════════════════════════════════════════════════════════════════════════════════════════╗
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                            B T 1 0 X                                             ║
-║                                                                                                  ║
-║                                   I N S T A N T   A C T I O N                                    ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                ┌────────────────────────────────┐                                ║
-║                                │ ▸ New battle           Enter   │                                ║
-║                                │   Random battle        R       │                                ║
-║                                │   Rematch last         M       │                                ║
-║                                │   Settings             S       │                                ║
-║                                │   Help                 F1      │                                ║
-║                                └────────────────────────────────┘                                ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-╟──────────────────────────────────────────────────────────────────────────────────────────────────╢
-║ last: A1 HBK-4G, A2 CN9-YLW2 vs 2 random · quickstart · Destroy All                              ║
-║ Unofficial fan project. BattleTech and 'Mech are trademarks of their owners.                     ║
+<p>The logo, the subtitle and a two-item menu, centred on the 100&times;31 screen with no frame. The line under the menu explains the item under the cursor.</p>
+<pre class="screen"><code>                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                               ██████╗ ████████╗ ██╗ ██████╗ ██╗  ██╗                               
+                               ██╔══██╗╚══██╔══╝███║██╔═████╗╚██╗██╔╝                               
+                               ██████╔╝   ██║   ╚██║██║██╔██║ ╚███╔╝                                
+                               ██╔══██╗   ██║    ██║████╔╝██║ ██╔██╗                                
+                               ██████╔╝   ██║    ██║╚██████╔╝██╔╝ ██╗                               
+                               ╚═════╝    ╚═╝    ╚═╝ ╚═════╝ ╚═╝  ╚═╝                               
+                                                                                                    
+                                    I N S T A N T   A C T I O N                                     
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                        ┌─────────────────┐                                         
+                                        │ ▸ New battle    │                                         
+                                        │   Random battle │                                         
+                                        └─────────────────┘                                         
+                                                                                                    
+                Set up a match of up to 4 vs 4: pick 'Mechs, pilots, map and rules.                 
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+                                                                                                    
+ ↑↓ Select  Enter OK  F1 Help                                                       v261027-d761082 </code></pre>
+<p>The menu is the kit Menu component. Mouse first: hovering an item moves the cursor to it and a click runs it; <kbd>↑</kbd> <kbd>↓</kbd> and <kbd>Enter</kbd> do the same from the keyboard, <kbd>F1</kbd> (or a click on the hint) opens help. <strong>New battle</strong> opens the New Battle screen with the last loadout; <strong>Random battle</strong> builds a full loadout (random map, 2&ndash;4 'Mechs a side, BV-matched, random personas for side 2) and goes straight to deployment. The page header carries the version and the EN / 한국어 switch.</p>
+
+<h3>8.1 New Battle (screen 1)</h3>
+<p>One 100&times;31 window above the status line: both sides (up to 4 'Mechs each), the map preview and the engagement options. Mouse is the primary input; every value is a button, a field or a dropdown on its row.</p>
+<pre class="screen"><code>╔═══════════════════════════════════════════ New Battle ═══════════════════════════════════════════╗
+║┌SIDE 1──────────────────────────────────────────────────────────────────────────────────────────┐║
+║│     ID   'Mech                           BV  Gunn   Pilot  MaxHit  Control             Policy  │║
+║│[-] A1   [HBK-4G Hunchback          ]  1041   4 ▼    5 ▼    6 ▼     Player          ▼  […]      │║
+║│[-] A2   [CN9-YLW2 Centurion        ]  1415   4 ▼    5 ▼    6 ▼     Alpha Striker   ▼  […]      │║
+║│[-] A3   [           N/A            ]     -   4 ▼    5 ▼    6 ▼     Alpha Striker   ▼  […]      │║
+║│[+]                                                                                             │║
+║└────────────────────────────────────────────────────────────────────────────────────────────────┘║
+║┌SIDE 2──────────────────────────────────────────────────────────────────────────────────────────┐║
+║│     ID   'Mech                           BV  Gunn   Pilot  MaxHit  Control             Policy  │║
+║│[-] B1   [GRF-1N Griffin            ]  1272   3 ▼    4 ▼    6 ▼     Long Tom        ▼  […]      │║
+║│[-] B2   [ENF-4R Enforcer           ]  1032   4 ▼    5 ▼    6 ▼     Gladiator       ▼  […]      │║
+║│[-] Kod… [KGC-000 King Crab         ]  2743   4 ▼    5 ▼    8 ▼     Gladiator       ▼  […]      │║
+║│[-] B4   [AS7-D Atlas               ]  1897   2 ▼    3 ▼    6 ▼     Alpha Striker   ▼  […]      │║
+║└────────────────────────────────────────────────────────────────────────────────────────────────┘║
+║┌────────────────────────────────────────────────┐                                                ║
+║│                                                │  Map            testground (16×26)           ▼ ║
+║│                                                │  Random Seed    1931126837               [↻]   ║
+║│                                                │                                                ║
+║│                                                │  Engagement     Attrition                    ▼ ║
+║│                                                │  Turn Limit     10                             ║
+║│                                                │                                                ║
+║│         map view · testground (16×26)          │                                                ║
+║│                                                │              SIDE 1          SIDE 2            ║
+║│                                                │             BV 2456    vs   BV 6944            ║
+║│                                                │                                                ║
+║│                                                │             Side 1: A3 has no 'Mech.           ║
+║│                                                │                                                ║
+║│                                                │                 [ LAUNCH   F10 ]               ║
+║└────────────────────────────────────────────────┘                                                ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════════════╝
- ↑↓ Select   Enter OK   F1 Help                                                     v261025-aa4d608 </code></pre>
-<p>Random battle builds a full loadout (random map, 2&ndash;4 units a side, random personas for side 2, BV-matched) and goes straight to deployment.</p>
+ Tab Next Enter Open Esc Title F10 Launch F1 Help                                                   </code></pre>
 
-<h3>8.1 Setup (screen 1)</h3>
-<p>Four tabs. Side 1 and Side 2 share one prefab. The right column always shows the totals and the launch button.</p>
-<pre class="screen"><code>╔═ New battle ═════════════════════════════════════════════════════════════════════════════════════╗
-║ [ Side 1 ]  Side 2   Map   Rules                                                                 ║
-╟────────────────────────────────────────────────────────────────────┬─────────────────────────────╢
-║  #  ID   'Mech                   t    BV  G/P  Control             │                             ║
-║ ────────────────────────────────────────────────────────────────── │ SIDE 1  3 units     BV 3 728║
-║ ▸1  A1   HBK-4G   Hunchback     50  1041  4/5  Player              │ SIDE 2  3 units     BV 3 801║
-║  2  A2   CN9-YLW2 Centurion     50  1415  4/5  Alpha Striker       │ balance               +2.0 %║
-║  3  A3   GRF-1N   Griffin       55  1272  4/5  Player              │                             ║
-║  4   -   (empty)                                                   │ map    quickstart  15×16    ║
-║                                                                    │ mode   Destroy All          ║
-║                                                                    │ seed   42                   ║
-║                                                                    │ AI     instant · brief      ║
-║                                                                    │                             ║
-║                                                                    ├─────────────────────────────╢
-║                                                                    │                             ║
-║                                                                    │ Side 1 home edge is rolled  ║
-║                                                                    │ at deployment (TW p. 256).  ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║                                                                    │                             ║
-║ ────────────────────────────────────────────────────────────────── │    ┌────────────────────┐   ║
-║ Enter 'Mech…   P Pilot…   C Control…   O Policies…                 │    │    LAUNCH   F10    │   ║
-║ Ins Add slot   Del Remove   Alt+↑↓ Reorder   G Generate side…      │    └────────────────────┘   ║
-║                                                                    │                             ║
-╚════════════════════════════════════════════════════════════════════╧═════════════════════════════╝
- Tab Next tab  ↑↓ Slot  Enter 'Mech  F10 Launch  Esc Title  F1 Help                                 </code></pre>
-
-<h4>Menu tree</h4>
-<pre><code>Setup
-├─ Side 1 / Side 2                one table per side; ids A1..A4 / B1..B4 (editable)
-│  ├─ Enter  'Mech…               → 1a 'Mech browser
-│  ├─ P      Pilot…               dialog: gunnery 0–8, piloting 0–8, pilot hits to KO (pilotHitMax)
-│  ├─ C      Control…             Player │ persona: Alpha Striker, Long Tom, Jump Jockey,
-│  │                              Hull-Down, Pit Fighter, Gladiator, Dispossessed
-│  ├─ O      Policies…            ammo policy (exposed, core, spread, least first),
-│  │                              auto-eject on/off, flamer heat on/off,
-│  │                              AMS (expected, first hit, priority, off)
-│  ├─ Ins/Del Add / remove slot   1–4 slots per side
-│  └─ G      Generate side…       count 1–4 │ match: BV ±10 % of the other side, tonnage, mirror │
-│                                 weight class │ era │ tech │ pack │ skill preset │ personas: random,
-│                                 one for all, none (all Player)
-├─ Map
-│  └─ Enter  Map…                 → 1b Map picker
-└─ Rules
-   ├─ Victory        (•) Destroy All   ( ) Damage Race, turns [ 8 ]      §10.2
-   ├─ Seed           [ 42 ]  [ Random ]
-   ├─ AI pace        (•) Instant  ( ) Step (Space per activation)  ( ) Timed 600 ms
-   ├─ AI reasoning   ( ) Off  (•) Brief  ( ) Full      (persona trace in the log)
-   ├─ Language       English │ 한국어
-   └─ Theme          green │ amber │ paper</code></pre>
+<h4>Controls</h4>
+<pre><code>New Battle
+├─ SIDE 1 / SIDE 2                one row per 'Mech, 0–4 rows; [+] under the last row while fewer than 4
+│  ├─ [-]      Remove             removes the row
+│  ├─ ID       input dialog       1–12 letters, digits, - or _; unique across both sides (case-insensitive);
+│  │                              OK / Cancel, a message line on a bad format; shown as Kod… past 4 cells
+│  ├─ 'Mech    → 1a Choose 'Mech  a new row is N/A until a 'Mech is chosen
+│  ├─ Gunn     dropdown 0–7
+│  ├─ Pilot    dropdown 0–7
+│  ├─ MaxHit   dropdown 4–8       pilot hits to knock out; 6 is TW (the 6th hit kills, TW p. 41–42),
+│  │                              7–8 a house rule (the consciousness table is scaled)
+│  ├─ Control  dropdown           Player │ Alpha Striker, Long Tom, Jump Jockey, Hull-Down,
+│  │                              Pit Fighter, Gladiator, Dispossessed
+│  └─ Policy […] dialog           ammo policy (exposed, core, spread, least first), auto-eject on/off,
+│                                 flamer heat on/off, AMS (expected, first hit, priority, off);
+│                                 Defaults / OK / Cancel
+├─ Map          dropdown          every catalog map as name (W×H); the preview shows the chosen map
+├─ Random Seed  input dialog      0–2147483647; [↻] rolls a new seed
+├─ Engagement   dropdown          Annihilation │ Attrition (§10.2)
+├─ Turn Limit   input dialog      Attrition only; 3–30, default 10
+├─ SIDE 1 vs SIDE 2 BV            both green under 5 % apart (of the lower), else higher blue, lower red
+└─ [ LAUNCH F10 ]                 blocked, with the reason in red above it, while a side is empty,
+                                  a row has no 'Mech or two units share an ID</code></pre>
+<p>Every control is a TUI kit component: Select (dropdowns), Button (<code>tight</code> <code>[x]</code>, <code>field</code> values that open an editor, plain <code>[ OK ]</code>), Input and Check, so focus is the browser's own. Keyboard: <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> move the focus between controls (kept inside an open dialog), <kbd>Enter</kbd> / <kbd>Space</kbd> press the focused one, <kbd>↑</kbd> <kbd>↓</kbd> open a focused Select, <kbd>Esc</kbd> closes a dialog or returns to the title, <kbd>F10</kbd> launches, <kbd>F1</kbd> help. A second click on an open dropdown closes it. AI pace and AI reasoning are set in the battle screen; the map preview draws no hex coordinates.</p>
 <p>"Control" is per unit, exactly like <code>pp &lt;id&gt; &lt;persona|off&gt;</code>: Player units are played by the person at the keyboard, persona units by the copied AI. A battle with Player units on both sides is hotseat; one with no Player units is a spectator battle.</p>
 
-<h3>8.2 'Mech browser (modal 1a)</h3>
-<pre class="screen"><code>╔═ Choose 'Mech · A1 ══════════════════════════════════════════════════════════════════════════╗
-║ Name [hunch_______]  Class [x]L [x]M [x]H [x]A  Tech [IS ▾]  Era [≤3050 ▾]  Pack [all ▾]     ║
-║ Tonnage [ 20]-[100]   Sort [tonnage ▾]                                            6 of 406   ║
-╟───────────────────────────────────────────────┬──────────────────────────────────────────────╢
-║ Model     Name         t    BV  Intro  P      │ HBK-4G  Hunchback  50 t  IS  2572  base      ║
-║ ▸HBK-4G   Hunchback   50  1041  2572   b      │ walk 4  run 6  jump 0          BV 1041       ║
-║  HBK-4P   Hunchback   50  1150  2572   s      │ ──────────────────────────────────────────   ║
-║  HBK-4J   Hunchback   50  1093  2572   s      │  #  Weapon         Loc  Ht  Dmg  Range       ║
-║  HBK-5M   Hunchback   50  1207  3052   s      │  1  AC/20          RT    7   20  3/6/9       ║
-║  HBK-5N   Hunchback   50  1094  3052   s      │  2  Medium Laser   LA    3    5  3/6/9       ║
-║  HBK-6S   Hunchback   50  1311  3067   s      │  3  Medium Laser   RA    3    5  3/6/9       ║
-║                                               │  4  Small Laser    H     1    3  1/2/3       ║
-║                                               │                                              ║
-║                                               │ armor  ███████████████▉░  160 / 169          ║
-║                                               │ heat sinks 13 · ammo AC/20 10, 5             ║
-║                                               │                                              ║
-║                                               │ [ Critical slots…  C ]                       ║
-║                                               │                                              ║
-║                                               │                                              ║
-║                                               │                                              ║
-║                                               │                                              ║
-║                                               │                                              ║
-║                                               │                                              ║
-║                                               │                                              ║
-║                                               │                                              ║
-║                                               │                                              ║
-╚══ Tab Field  ↑↓ List  Enter Choose  C Crit slots  Esc Cancel ════════════════════════════════╝</code></pre>
-<p>The filters are the same set <code>info mech</code> accepts (name text, class, tonnage range, tech, intro year, pack, sort), as form controls. The card reads the resolved <code>MechDef</code> via <code>mechDefFor</code>; "Critical slots" opens the 3-row chart in a window.</p>
+<h3>8.2 Choose 'Mech (modal 1a)</h3>
+<pre class="screen"><code>╔═════════════════════════════════════ Choose 'Mech · A2 ══════════════════════════════════════╗
+║┌Search Options──────────────────────────────────┐ ┌Selected─────────────────────────────────┐║
+║│/ name…              [ ]Light(1)   [ ]Medium(2) │ │BSW-X1 Bushwacker                        │║
+║│                     [ ]Heavy(3)   [ ]Assault(4)│ │Medium 55t Inner Sphere                  │║
+║│tech(T):any  pack(K):any  era(E):≤3150          │ │era 3053   BV 1223                       │║
+║│sort(S):tonnage                 400/400 matched │ │walk 5  run 8  jump 0                    │║
+║└────────────────────────────────────────────────┘ │┌#─Weapon(6)───────────────────Loc─Shot┐ │║
+║┌Model───────Chassis───────Ton────BV─Era───Pack──┐ ││1 LRM 5                       LA    24▲││║
+║│AS7-K       Atlas         100  2208 3060  base ▲│ ││2 AC/10                       RA    10█││║
+║│CRK-5003-1b Crockett       85  1253 2857  sw   █│ ││3 LRM 5                       LT    #1█││║
+║│DRG-1N      Dragon         60  1125 2754  sw   █│ ││4 Machine Gun                 LT   100░││║
+║│QKD-4G      Quickdraw      60  1192 2779  sw   █│ ││5 Machine Gun                 RT    #4▼││║
+║│BSW-X1      Bushwacker     55  1223 3053  base ░│ │└───────────────────────────────────────┘│║
+║│GRF-1N      Griffin        55  1272 2492  base ░│ │                  [HD]       [HS]        │║
+║│GRF-2N      Griffin        55  1606 2751  sw   ░│ │                   3I         -22        │║
+║│HOP-4B      Hoplite        55  1162 2581  sw   ░│ │                   9A                    │║
+║│KTO-18      Kintaro        55  1150 2587  sw   ░│ │             [RT] [CT] [LT]              │║
+║│SHD-2H      Shadow Hawk    55  1064 2550  sw   ░│ │        [RA]  13I  18I  13I  [LA]        │║
+║│WVR-6R      Wolverine      55  1101 2575  base ░│ │         9I   22F  26F  22F   9I         │║
+║│WVR-7H      Wolverine      55  1224 3058  sw   ░│ │        11A    4R   8R   4R  11A         │║
+║│CN9-A       Centurion      50   945 2801  sw   ░│ │             [RL]      [LL]              │║
+║│CN9-YLW2    Centurion      50  1415 3051  base ░│ │              13I       13I              │║
+║│ENF-4R      Enforcer       50  1032 3050  base ░│ │              22A       22A              │║
+║│HBK-4G      Hunchback      50  1041 2572  base ░│ └─────────────────────────────────────────┘║
+║│HBK-4P      Hunchback      50  1102 2572  sw   ░│                                            ║
+║│HBK-5M      Hunchback      50  1267 3050  sw   ▼│          [ Cancel ] [ Use BSW-X1 ]         ║
+║└────────────────────────────────────────────────┘                                            ║
+╚══════════════════════════════════════════════════════════════════════════════════════════════╝</code></pre>
+<p>A 96&times;28 window. Search Options: a name field (<kbd>/</kbd> focuses it), weight-class chips (<kbd>1</kbd>&ndash;<kbd>4</kbd>), tech (<kbd>T</kbd>), pack (<kbd>K</kbd>), era (<kbd>E</kbd>) and sort (<kbd>S</kbd>); each chip is also clickable. The 'Mech list (18 rows) and the weapon list (5 rows) are scroll boxes: the right border is the scrollbar, and both scroll with the mouse wheel. One click selects a row, a double click or <kbd>Enter</kbd> uses it. "Shot" is the ammo of that weapon's shared pool; a later mount of the same weapon points at the first one (<code>#1</code>), as the terminal sheet does. The paper doll lists internal structure (I), armor (A) and torso front / rear (F / R); [HS] is the heat dissipation per turn.</p>
 
 <h3>8.3 Map picker (modal 1b)</h3>
+<p><em>Superseded:</em> the New Battle screen picks the map with a dropdown and shows the preview beside it (§8.1).</p>
 <pre class="screen"><code>╔═ Choose map ═══════════════════╤═════════════════════════════════════════════╗
 ║                                │                                             ║
 ║ ▸ quickstart   15×16  engine   │                                             ║
@@ -472,7 +476,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 </ol>
 
 <h3>8.5 Battle, movement phase (screen 3)</h3>
-<pre class="screen"><code>╔═ Turn 3 · Movement · A1 HBK-4G (Player) ═══════════════════════════╤═ A1 HBK-4G ══ Destroy All ══╗
+<pre class="screen"><code>╔═ Turn 3 · Movement · A1 HBK-4G (Player) ══════════════════════════╤═ A1 HBK-4G ══ Annihilation ══╗
 ║                                                                    │ heat ███▌░░░░░░  7   +1 TN  ║
 ║                                                                    │ MP   walk 4  run 6  jump 0  ║
 ║                                                                    │ pilot ■■□□□□   G4 P5        ║
@@ -512,7 +516,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <p><strong>More…</strong> (only the entries legal now): Stand up + walk / run / stand still, Drop prone + turn / stay, Turn in place (prone), Stay prone, Shut down, Start up, Eject, Abandon (house rule). A shut-down unit that has movement priority sees only Start up and Pass, as in the terminal.</p>
 
 <h3>8.6 Battle, attack phase</h3>
-<pre class="screen"><code>╔═ Turn 3 · Attack · A1 HBK-4G (Player) ═════════════╤═ A1 HBK-4G ══════════════════ Destroy All ══╗
+<pre class="screen"><code>╔═ Turn 3 · Attack · A1 HBK-4G (Player) ════════════╤═ A1 HBK-4G ══════════════════ Annihilation ══╗
 ║                                                    │ heat ███▌░░░░░░  7   +1 TN                  ║
 ║                                                    │ MP   walk 4  run 6  jump 0                  ║
 ║                                                    │ pilot ■■□□□□   G4 P5                        ║
@@ -569,7 +573,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 └─ Withdraw           F9   end the battle and return to Setup (confirm)</code></pre>
 
 <h3>8.8 Debrief (screen 4)</h3>
-<pre class="screen"><code>╔═ Debrief · Side 1 wins · Destroy All · turn 7 ═══════════════════════════════════════════════════╗
+<pre class="screen"><code>╔═ Debrief · Side 1 wins · Annihilation · turn 7 ══════════════════════════════════════════════════╗
 ║ [ Result ]  Units   Salvage   Log                                                                ║
 ╟──────────────────────────────────────────────────────────────────────────────────────────────────╢
 ║                                                                                                  ║
@@ -611,8 +615,8 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><th>Scope</th><th>Keys</th></tr>
 <tr><td>Global</td><td><kbd>F1</kbd> help for this screen · <kbd>Esc</kbd> back / clear / close · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> next / previous panel or field · <kbd>Enter</kbd> choose / confirm</td></tr>
 <tr><td>Lists, menus, tables</td><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Home</kbd> <kbd>End</kbd> <kbd>PgUp</kbd> <kbd>PgDn</kbd> · <kbd>Space</kbd> toggle a checkbox · underlined letter in a menu</td></tr>
-<tr><td>Title</td><td><kbd>Enter</kbd> new battle · <kbd>R</kbd> random battle · <kbd>M</kbd> rematch last · <kbd>S</kbd> settings</td></tr>
-<tr><td>Setup</td><td><kbd>Enter</kbd> 'Mech · <kbd>P</kbd> pilot · <kbd>C</kbd> control · <kbd>O</kbd> policies · <kbd>Ins</kbd> / <kbd>Del</kbd> slot · <kbd>Alt+↑↓</kbd> reorder · <kbd>G</kbd> generate side · <kbd>F10</kbd> launch</td></tr>
+<tr><td>Title</td><td><kbd>↑</kbd> <kbd>↓</kbd> select · <kbd>Enter</kbd> choose · <kbd>F1</kbd> help · mouse: hover selects, click runs</td></tr>
+<tr><td>New Battle</td><td>mouse: click any button, field or dropdown · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> move the focus · <kbd>Enter</kbd> / <kbd>Space</kbd> press · <kbd>↑</kbd> <kbd>↓</kbd> open a dropdown · <kbd>F10</kbd> launch · Choose 'Mech: <kbd>/</kbd> search · <kbd>1</kbd>&ndash;<kbd>4</kbd> class · <kbd>T</kbd> <kbd>K</kbd> <kbd>E</kbd> <kbd>S</kbd> filters · wheel scroll</td></tr>
 <tr><td>Deployment</td><td><kbd>↑</kbd> <kbd>↓</kbd> unit · <kbd>[</kbd> <kbd>]</kbd> facing · <kbd>A</kbd> auto-place side · <kbd>Enter</kbd> begin · mouse: click an edge hex</td></tr>
 <tr><td>Map view (any battle screen)</td><td><kbd>,</kbd> <kbd>.</kbd> rotate · <kbd>+</kbd> <kbd>-</kbd> zoom · <kbd>V</kbd> tilt preset · <kbd>Home</kbd> north-up · <kbd>F</kbd> centre on actor · mouse: drag rotate, wheel zoom</td></tr>
 <tr><td>Movement</td><td><kbd>W</kbd> walk · <kbd>R</kbd> run · <kbd>J</kbd> jump · <kbd>S</kbd> stand still · <kbd>M</kbd> more · <kbd>D</kbd> done · <kbd>Esc</kbd> clear · mouse: click landing hex, then facing popup (keyboard)</td></tr>
@@ -633,21 +637,21 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td>Leaving by the home edge = retreat; other edges = destroyed (p. 257)</td><td>Not modelled: the engine keeps units on the map. Withdraw (F9) ends the whole battle instead.</td></tr>
 </table></div>
 
-<h3>10.2 Victory modes</h3>
+<h3>10.2 Engagement modes</h3>
 <div class="wrap"><table>
 <tr><th>Mode</th><th>Ends</th><th>Winner</th></tr>
-<tr><td><strong>Destroy All</strong> (Standup Fight, TW p. 259)</td><td>When one side has no unit left in play (destroyed, or removed: ejected, killed, abandoned hull); the copied <code>checkSessionVictory</code> logic.</td><td>The side with units left; both gone at once is a draw.</td></tr>
-<tr><td><strong>Damage Race</strong> (turns N, default 8, range 3&ndash;30)</td><td>At the end of turn N (after the heat and end phases), or earlier if Destroy All's condition is met.</td><td>The side that dealt more damage. Ties go to the higher <code>scoreReport</code> score, then a draw.</td></tr>
+<tr><td><strong>Annihilation</strong> (Standup Fight, TW p. 259)</td><td>When one side has no unit left in play (destroyed, or removed: ejected, killed, abandoned hull); the copied <code>checkSessionVictory</code> logic.</td><td>The side with units left; both gone at once is a draw.</td></tr>
+<tr><td><strong>Attrition</strong> (turn limit N, default 10, range 3&ndash;30)</td><td>At the end of turn N (after the heat and end phases), or earlier if Annihilation's condition is met.</td><td>The side that dealt more damage. Ties go to the higher <code>scoreReport</code> score, then a draw.</td></tr>
 </table></div>
 <p><strong>Damage dealt by a side</strong> = the armor and internal structure points the opposing side's units have lost since the battle started, read from unit state (start totals from the resolved <code>MechDef</code>, current from <code>unit.damage</code>). It counts every source that hit the enemy (weapons, physical attacks, falls, ammo explosions). A destroyed location counts all its points; a destroyed unit, and a unit left as a hull (pilot ejected, killed or abandoned), counts its whole armor + structure total (decided, §16). It needs no new engine event, and it is the same number the debrief shows. Both stoppers are passed to <code>gameLoop</code>; the engine never decides the winner (<code>docs/VISION.md</code>: victory belongs to the caller).</p>
-<p>The battle header shows the mode: <code>Damage Race · turn 5 of 8 · Side 1 132 – 96 Side 2</code>.</p>
+<p>The battle header shows the mode: <code>Attrition · turn 5/10 · 132 : 96</code>. The names are the app's own (TW p. 257 has no named modes); the code keeps the ids <code>destroyAll</code> / <code>damageRace</code>, which saved loadouts use.</p>
 
 <h2 id="prefabs">11. Prefab catalogue</h2>
 <div class="wrap"><table>
 <tr><th>Prefab</th><th>Kit parts</th><th>Main props</th></tr>
 <tr><td><code>ia-screen</code></td><td>window + body + statusbar</td><td>title, keymap</td></tr>
 <tr><td><code>ia-title</code></td><td>ia-screen + menu</td><td>last loadout line</td></tr>
-<tr><td><code>ia-setup</code></td><td>split(tabs, ia-side-summary)</td><td>loadout, active tab</td></tr>
+<tr><td><code>ia-setup</code></td><td>box(side boxes, raw map, option rows) of kit select / btn / input / check</td><td>loadout</td></tr>
 <tr><td><code>ia-roster</code></td><td>table with row select</td><td>side, slots</td></tr>
 <tr><td><code>ia-pilot-dialog</code>, <code>ia-control-dialog</code>, <code>ia-policy-dialog</code></td><td>dialog + inputs / radio / select</td><td>unit slot</td></tr>
 <tr><td><code>ia-generate-dialog</code></td><td>dialog + select + check</td><td>generator options</td></tr>
@@ -671,9 +675,9 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <h2 id="parity">12. Feature parity with the terminal</h2>
 <div class="wrap"><table>
 <tr><th>Terminal</th><th>Instant Action</th></tr>
-<tr><td><code>map</code>, <code>add</code>, <code>set</code>, <code>rm</code>, <code>seed</code>, <code>status</code> (setup)</td><td>Setup tabs, dialogs; deployment screen for position and facing</td></tr>
+<tr><td><code>map</code>, <code>add</code>, <code>set</code>, <code>rm</code>, <code>seed</code>, <code>status</code> (setup)</td><td>New Battle controls and dialogs; deployment screen for position and facing</td></tr>
 <tr><td><code>start</code></td><td>Launch &rarr; Deployment &rarr; Begin</td></tr>
-<tr><td><code>pp &lt;id&gt; &lt;persona|off&gt;</code>, <code>pp setup</code>, <code>pp trace</code></td><td>Control dialog, Random battle / Generate side, Rules &rarr; AI reasoning</td></tr>
+<tr><td><code>pp &lt;id&gt; &lt;persona|off&gt;</code>, <code>pp setup</code>, <code>pp trace</code></td><td>Control dropdown, Random battle, AI reasoning toggle in the battle screen</td></tr>
 <tr><td><code>pp go</code>, <code>pp why</code></td><td>AI acts automatically (Step pace: <kbd>Space</kbd>); Battle menu &rarr; AI reasoning</td></tr>
 <tr><td><code>mode …</code> (all 12 forms), <code>place</code>, <code>done</code>, <code>cancel</code>, <code>status</code></td><td>Orders radio + More…, map click + facing popup, Done, Clear, draft line</td></tr>
 <tr><td><code>torso</code>, <code>fire</code>, <code>candidate</code></td><td>Twist radio, check table, target cycling</td></tr>
@@ -682,7 +686,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td><code>board</code>, <code>log</code>, <code>clear</code></td><td>The map is always visible; the log pane (with a Clear item)</td></tr>
 <tr><td><code>rollback</code></td><td>Undo (<kbd>Ctrl+Z</kbd>)</td></tr>
 <tr><td><code>salvage</code>, <code>rematch</code>, <code>reset</code></td><td>Debrief tabs, Rematch, New battle</td></tr>
-<tr><td><code>info mech</code>, <code>info map</code>, <code>info weapon</code>, <code>table …</code></td><td>'Mech browser, map picker, weapon details in the card's weapon rows, Reference tables</td></tr>
+<tr><td><code>info mech</code>, <code>info map</code>, <code>info weapon</code>, <code>table …</code></td><td>Choose 'Mech dialog, Map dropdown with preview, weapon list in Choose 'Mech, Reference tables</td></tr>
 <tr><td><code>lang</code>, <code>ver</code>, <code>help</code></td><td>Settings, title footer, <kbd>F1</kbd></td></tr>
 <tr><td>Replay block, <code>autoplay</code></td><td>Not included (decided: no replay for now). A battle with no Player units replaces autoplay as a demo.</td></tr>
 </table></div>
@@ -719,7 +723,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <li>Deployment: roll-off is seed-stable; offered hexes are on the chosen edge, legal to enter and unoccupied; auto-placement never stacks.</li>
 <li>Actions: every terminal command form has an Action that the controller accepts in the matching phase, and an illegal one leaves state unchanged (undo snapshot restored).</li>
 <li>Same seed, same battle: a scripted battle played through Actions ends in the same state as the terminal session playing the equivalent commands (the test may import both; the boundary rule applies to app code only).</li>
-<li>Victory: Destroy All and Damage Race end on the right turn with the right winner; the damage tally matches a hand-computed case; ties fall through to the BV score.</li>
+<li>Victory: Annihilation and Attrition end on the right turn with the right winner; the damage tally matches a hand-computed case; ties fall through to the BV score.</li>
 <li>AI: a full all-persona Random battle with a fixed seed reaches the debrief.</li>
 <li>Map: hit testing returns the clicked hex at 0°, 60°, 240° and several tilts, including elevated hexes.</li>
 </ul>
@@ -728,10 +732,10 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <div class="wrap"><table>
 <tr><th>#</th><th>Scope</th><th>Done when</th></tr>
 <tr><td>M0</td><td>Page with the centred 100&times;32 screen and font scaling, build entry, dist entry, <code>tui.d.ts</code>, i18n skeleton, catalogs loading; vector map port with terrain fills and click hit test</td><td><code>/instant.html</code> shows the title and a map preview of every engine map</td></tr>
-<tr><td>M1</td><td>Setup (sides, 'Mech browser, map picker, rules), deployment per TW p. 256, controller with Destroy All, movement orders + banners</td><td>Two Player units can deploy and move for several turns</td></tr>
+<tr><td>M1</td><td>Setup (sides, 'Mech browser, map picker, rules), deployment per TW p. 256, controller with Annihilation, movement orders + banners</td><td>Two Player units can deploy and move for several turns</td></tr>
 <tr><td>M2</td><td>Attack orders (check table, twist, targets, physical, club), log formatter, unit card, sheet / heat / policy windows</td><td>A whole hotseat battle is playable from the menus alone</td></tr>
 <tr><td>M3</td><td>Copied persona AI on Actions, AI pace, reasoning window, Random battle / Generate side, undo</td><td>Player vs AI and AI vs AI battles finish</td></tr>
-<tr><td>M4</td><td>Damage Race, debrief (result, units, salvage, log), rematch, Instant-Action map pack, landing link, docs</td><td>Shipped in <code>dist:web</code>, in English and Korean</td></tr>
+<tr><td>M4</td><td>Attrition, debrief (result, units, salvage, log), rematch, Instant-Action map pack, landing link, docs</td><td>Shipped in <code>dist:web</code>, in English and Korean</td></tr>
 </table></div>
 
 <h2 id="open">16. Decisions on the open questions</h2>
@@ -742,7 +746,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td>2</td><td>Banner-glyph view</td><td>The §6 banner is the starter design; it will change later.</td></tr>
 <tr><td>3</td><td>Replays</td><td>No replay for now.</td></tr>
 <tr><td>4</td><td>Terminal-only rules logic</td><td>Adopt the same logic in <code>web/instant/</code>, not shared with the terminal and not moved into the engine.</td></tr>
-<tr><td>5</td><td>Damage Race scoring</td><td>A destroyed unit or a hull counts its whole armor + structure (§10.2).</td></tr>
+<tr><td>5</td><td>Attrition scoring</td><td>A destroyed unit or a hull counts its whole armor + structure (§10.2).</td></tr>
 <tr><td>6</td><td>Instant-Action map pack</td><td>Sources stay in <code>web/instant/maps/</code> (§14).</td></tr>
 <tr><td>7</td><td>Number of sides</td><td>Two sides only.</td></tr>
 </table></div>

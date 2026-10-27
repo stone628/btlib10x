@@ -97,7 +97,7 @@ describe("Instant Action deployment (TW p. 256)", () => {
 });
 
 describe("Instant Action victory modes", () => {
-  it("Destroy All ends with one side left in play", () => {
+  it("Annihilation ends with one side left in play", () => {
     const b = battle({ kind: "destroyAll" }, ALL_AI);
     runAi(b);
     expect(b.result).not.toBeNull();
@@ -111,7 +111,7 @@ describe("Instant Action victory modes", () => {
     if (alive.size === 1) expect(r.winnerTeam).toBe([...alive][0]);
   });
 
-  it("Damage Race stops after turn N and the bigger damage dealer wins", () => {
+  it("Attrition stops after turn N and the bigger damage dealer wins", () => {
     const b = battle({ kind: "damageRace", turns: 3 }, ALL_AI);
     runAi(b);
     const r = b.result!;

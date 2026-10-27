@@ -102,6 +102,8 @@ export class MapView {
   panY = 0;
   overlays: Overlays = {};
   banners: Banner[] = [];
+  /** Draw each hex's CCRR coordinate on its face. */
+  showCoords = true;
   onPick: ((hex: HexCoord, ev: MouseEvent) => void) | null = null;
   private drawn: Shape[] = [];
   private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
@@ -429,7 +431,7 @@ export class MapView {
           ctx.lineTo(g.b[0], g.b[1]);
         }
       ctx.stroke();
-      if (s.top && s.label && v.fs >= 6) this.drawLabel(v, s, d);
+      if (s.top && s.label && this.showCoords && v.fs >= 6) this.drawLabel(v, s, d);
       if (s.top) this.drawMarks(v, s, k);
     });
     this.drawn = list;
