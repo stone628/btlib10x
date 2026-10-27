@@ -38,9 +38,9 @@ export const en = {
   "title.subtitle": "I N S T A N T   A C T I O N",
   "title.new": "New battle",
   "title.random": "Random battle",
-  "title.settings": "Settings",
-  "title.help": "Help",
-  "title.last": "last: {a} vs {b} · {map} · BV {bv}",
+  "title.info.new": "Set up a match of up to 4 vs 4: pick 'Mechs, pilots, map and rules.",
+  "title.info.random":
+    "Jump straight in: 2 to 4 random 'Mechs a side, BV-matched, on a random map.",
 
   "setup.title": "New battle",
   "setup.summary": "Summary",
@@ -328,7 +328,7 @@ export const en = {
 
   "help.title": "Help",
   "help.text":
-    "Keyboard drives every menu; hexes are picked with the mouse.\n\nTitle  Enter new battle · R random battle · S settings\nSetup  Tab tabs · ↑↓ slot · Enter 'Mech · P pilot · C control\n       O policies · G generate side · F10 launch\nDeploy 1-4 edge · ↑↓ unit · click edge hex · [ ] facing · Enter begin\nMove   W R J S mode · click a tinted hex · pick facing · D done\nAttack Tab target · T twist · Space/1-9 weapon · A all · X physical\n       D done · Esc clear\nAny    F2 menu · I sheet · L log · Ctrl+Z undo · Space next AI step\nMap    , . rotate · + - zoom · V tilt · Home reset · drag to rotate\n       middle-button drag to pan",
+    "Keyboard drives every menu; hexes are picked with the mouse.\n\nTitle  ↑↓ select · Enter choose · click an item\nSetup  Tab tabs · ↑↓ slot · Enter 'Mech · P pilot · C control\n       O policies · G generate side · F10 launch\nDeploy 1-4 edge · ↑↓ unit · click edge hex · [ ] facing · Enter begin\nMove   W R J S mode · click a tinted hex · pick facing · D done\nAttack Tab target · T twist · Space/1-9 weapon · A all · X physical\n       D done · Esc clear\nAny    F2 menu · I sheet · L log · Ctrl+Z undo · Space next AI step\nMap    , . rotate · + - zoom · V tilt · Home reset · drag to rotate\n       middle-button drag to pan",
 } as const;
 
 export type MessageKey = keyof typeof en;

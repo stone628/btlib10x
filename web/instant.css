@@ -251,3 +251,10 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
+
+.ia-hint[data-click] {
+  cursor: pointer;
+}
+.ia-hint[data-click]:hover {
+  color: var(--tui-bright);
+}

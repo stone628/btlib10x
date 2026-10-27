@@ -16,6 +16,7 @@ export interface RowOpts {
   onClick?: () => void;
   key?: string | number;
   tip?: string;
+  onHover?: () => void;
 }
 
 /** One text row; `sel` draws it in reverse video. */
@@ -29,6 +30,10 @@ export function row(text: string, o: RowOpts = {}): TuiNode {
     props.onClick = () => fn();
     props.attrs = { "data-click": "" };
   }
+  if (o.onHover) {
+    const fn = o.onHover;
+    props.on = { mouseenter: () => fn() };
+  }
   return h().el("div", props, text);
 }
 
@@ -36,11 +41,33 @@ export function blank(n = 1): TuiNode[] {
   return Array.from({ length: n }, (_, i) => row(" ", { key: `blank${i}` }));
 }
 
-/** Status bar from [key, label] pairs; labels are message keys. */
-export function statusbar(pairs: ReadonlyArray<readonly [string, string]>, right = ""): TuiNode {
+/**
+ * Status bar from [key, label] pairs; labels are message keys. A pair with an
+ * action is also clickable.
+ */
+export function statusbar(
+  pairs: ReadonlyArray<readonly [string, string, (() => void)?]>,
+  right = "",
+): TuiNode {
   const H = h();
   const kids: TuiChild[] = [];
-  for (const [k, label] of pairs) kids.push(H.kbd(k), H.text(t(label)));
+  for (const [k, label, run] of pairs) {
+    if (!run) kids.push(H.kbd(k), H.text(t(label)));
+    else
+      kids.push(
+        H.el(
+          "span",
+          {
+            key: `hint-${k}`,
+            class: "ia-hint",
+            attrs: { "data-click": "" },
+            onClick: () => run(),
+          },
+          H.kbd(k),
+          H.text(t(label)),
+        ),
+      );
+  }
   kids.push(H.el("span", { class: "tui-grow" }));
   if (right) kids.push(H.text(right));
   return H.statusbar(...kids);

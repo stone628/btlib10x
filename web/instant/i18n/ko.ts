@@ -38,9 +38,8 @@ export const ko: Catalog = {
   "dialog.footer": "↑↓ 선택  ←→ 변경  Enter 확인  Esc 닫기",
   "title.new": "새 전투",
   "title.random": "무작위 전투",
-  "title.settings": "설정",
-  "title.help": "도움말",
-  "title.last": "지난 전투: {a} 대 {b} · {map} · BV {bv}",
+  "title.info.new": "최대 4대4 전투를 구성합니다. 'Mech, 파일럿, 맵, 규칙을 직접 고릅니다.",
+  "title.info.random": "바로 시작합니다. 양측 2~4대의 무작위 'Mech, BV 균형, 무작위 맵.",
   "setup.title": "새 전투",
   "setup.summary": "요약",
   "setup.side1": "1진영",
@@ -290,5 +289,5 @@ export const ko: Catalog = {
   "err.nothingToUndo": "되돌릴 것이 없습니다.",
   "help.title": "도움말",
   "help.text":
-    "모든 메뉴는 키보드로, 헥스는 마우스로 고릅니다.\n\n타이틀 Enter 새 전투 · R 무작위 전투 · S 설정\n설정   Tab 탭 · ↑↓ 슬롯 · Enter 'Mech · P 파일럿 · C 조종\n       O 정책 · G 진영 생성 · F10 출격\n배치   1-4 가장자리 · ↑↓ 유닛 · 가장자리 헥스 클릭 · [ ] 방향 · Enter 시작\n이동   W R J S 방식 · 색칠된 헥스 클릭 · 방향 고르기 · D 완료\n공격   Tab 목표 · T 상체 · Space/1-9 무기 · A 전체 · X 물리\n       D 완료 · Esc 취소\n공통   F2 메뉴 · I 시트 · L 기록 · Ctrl+Z 되돌리기 · Space 다음 AI\n지도   , . 회전 · + - 확대 · V 기울기 · Home 초기화 · 끌어서 회전\n       휠 버튼으로 끌어서 이동",
+    "모든 메뉴는 키보드로, 헥스는 마우스로 고릅니다.\n\n타이틀 ↑↓ 선택 · Enter 고르기 · 항목 클릭\n설정   Tab 탭 · ↑↓ 슬롯 · Enter 'Mech · P 파일럿 · C 조종\n       O 정책 · G 진영 생성 · F10 출격\n배치   1-4 가장자리 · ↑↓ 유닛 · 가장자리 헥스 클릭 · [ ] 방향 · Enter 시작\n이동   W R J S 방식 · 색칠된 헥스 클릭 · 방향 고르기 · D 완료\n공격   Tab 목표 · T 상체 · Space/1-9 무기 · A 전체 · X 물리\n       D 완료 · Esc 취소\n공통   F2 메뉴 · I 시트 · L 기록 · Ctrl+Z 되돌리기 · Space 다음 AI\n지도   , . 회전 · + - 확대 · V 기울기 · Home 초기화 · 끌어서 회전\n       휠 버튼으로 끌어서 이동",
 };
