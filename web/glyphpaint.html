@@ -175,8 +175,8 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
     </fieldset>
     <fieldset><legend><span lang="en">Tools</span><span lang="ko">도구</span></legend>
       <div class="seg" id="tools"></div>
-      <label style="margin-top:6px" data-tip="bsize"><span lang="en">size</span><span lang="ko">크기</span> <input type="number" id="bsize" min="1" max="9" value="1"></label>
-      <label class="opt" data-tip="cFill"><input type="checkbox" id="cFill"> <span lang="en">filled rect</span><span lang="ko">채운 사각형</span></label>
+      <label style="margin-top:6px" data-tip="bsize"><span lang="en">size</span><span lang="ko">크기</span> <select id="bsize"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option><option>9</option></select></label>
+      <label style="margin-top:4px; display:flex; gap:4px; align-items:center" data-tip="ttext"><span lang="en">text</span><span lang="ko">텍스트</span> <input type="text" id="ttext" style="flex:1; min-width:0"></label>
     </fieldset>
     <fieldset><legend><span lang="en">Brush</span><span lang="ko">브러시</span></legend>
       <button type="button" id="brushGlyph" data-tip="brushGlyph">#</button>
@@ -191,7 +191,6 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
       <select id="palSel" style="width:100%" data-tip="palSel"></select>
       <div class="row" style="margin-top:4px"><button type="button" id="pNew" data-tip="pNew"><span lang="en">New</span><span lang="ko">새로</span></button><button type="button" id="pDup" data-tip="pDup"><span lang="en">Dup</span><span lang="ko">복제</span></button><button type="button" id="pEdit" data-tip="pEdit"><span lang="en">Edit…</span><span lang="ko">편집…</span></button></div>
       <div id="strip" data-tip="strip"></div>
-      <div class="hint" style="margin-top:4px"><span lang="en">click = use glyph</span><span lang="ko">클릭 = 글리프 사용</span></div>
     </fieldset>
   </aside>
 
@@ -213,11 +212,11 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
       <div id="cellInfo"></div>
     </fieldset>
     <fieldset><legend><span lang="en">Keys</span><span lang="ko">단축키</span></legend>
-      <div class="hint keys" lang="en">B pencil<br>E eraser<br>L line<br>R rect<br>G fill<br>I pick<br>
+      <div class="hint keys" lang="en">B pencil<br>E eraser<br>L line<br>R rect (again: filled / outline)<br>G fill<br>I pick<br>T text<br>
       Ctrl+Z / Ctrl+Y undo / redo<br>Ctrl+C / X / V copy / cut / paste<br>Del clear selection<br>Ctrl+A select all<br>Esc deselect<br>
       Space-drag scene pan<br>Ctrl+wheel zoom<br>Alt+click pick cell<br>Ctrl+S save<br>
       Touch: two-finger drag scene pan</div>
-      <div class="hint keys" lang="ko">B 연필<br>E 지우개<br>L 직선<br>R 사각형<br>G 채우기<br>I 스포이트<br>
+      <div class="hint keys" lang="ko">B 연필<br>E 지우개<br>L 직선<br>R 사각형 (한 번 더: 채움 / 테두리)<br>G 채우기<br>I 스포이트<br>T 텍스트<br>
       Ctrl+Z / Ctrl+Y 되돌리기 / 다시 실행<br>Ctrl+C / X / V 복사 / 잘라내기 / 붙여넣기<br>Del 선택 영역 지우기<br>Ctrl+A 모두 선택<br>Esc 선택 해제<br>
       Space+드래그 화면 이동<br>Ctrl+휠 확대 / 축소<br>Alt+클릭 셀 스포이트<br>Ctrl+S 저장<br>
       터치: 두 손가락 드래그로 화면 이동</div>
@@ -283,7 +282,7 @@ const STR = {
     buttons: ['left', 'middle', 'right'],
     hintPaint: ['Shift+left = Select'],
     hintSelect: ['Shift+left = glyph brush', 'middle = pan', 'right = layer pan'],
-    tools: { pencil: 'Pencil', line: 'Line', rect: 'Rect', fill: 'Fill', pick: 'Pick', eraser: 'Eraser' },
+    tools: { pencil: 'Pencil', line: 'Line', rect: 'Rect', fill: 'Fill', pick: 'Pick', eraser: 'Eraser', text: 'Text' },
     states: { top: 'top', translucent: 'translucent', covered: 'covered', hidden: 'hidden' },
     fg: 'fg', bg: 'bg', bgOnly: 'bg only',
     noCells: (x, y) => `no cells at ${x},${y}`,
@@ -317,6 +316,10 @@ const STR = {
       loaded: name => `loaded ${name}`,
       loadFailed: m => `load failed: ${m}`,
       notFile: 'not a glyphpaint file',
+      rectFill: f => `rect: ${f ? 'filled' : 'outline'}`,
+      textEmpty: 'type the text to place in the text box first',
+      textNone: 'no room for the text here',
+      textPlaced: (n, name) => `placed ${n} characters on "${name}"`,
     },
     ask: {
       discard: 'Discard the current scene?',
@@ -325,7 +328,7 @@ const STR = {
       firstAt: (x, y, name) => `${x},${y} on layer "${name}"`,
     },
     // controls inside the modal dialogs (the backdrop covers the status line, so these are tooltips)
-    placeholder: { gpName: 'palette name', gpQ: 'search: char, U+2588, or block name', gpText: 'paste characters to add to the palette' },
+    placeholder: { gpName: 'palette name', gpQ: 'search: char, U+2588, or block name', gpText: 'paste characters to add to the palette', ttext: 'text for the text tool' },
     titles: { gpName: 'palette name', gpBrush: 'add the current brush glyph', bExpJson: 'layered snapshot, coordinates rebased to the area' },
     aria: { zOut: 'zoom out', zIn: 'zoom in', lUp: 'move layer up', lDn: 'move layer down', sbg: 'scene background', brushGlyph: 'glyph brush',
             sw: 'scene width', sh: 'scene height', fcol: 'foreground colour', gcol: 'background colour', falpha: 'foreground opacity',
@@ -351,12 +354,13 @@ const STR = {
       'mode-bg': 'Left-drag paints cell backgrounds with the BG colour using the current tool. Shift+right-drag does the same.',
       'tool-pencil': 'Pencil (B): paint the cells under the pointer, brush size wide.',
       'tool-line': 'Line (L): drag from start to end to draw a straight line.',
-      'tool-rect': 'Rect (R): drag a rectangle outline, or a solid one with "filled rect" on.',
+      'tool-rect': 'Rect (R): drag a rectangle. Press R (or click Rect) again to switch between outline □ and filled ■.',
       'tool-fill': 'Fill (G): flood-fill the connected area with the same glyph / colour, inside the scene and the selection.',
       'tool-pick': 'Pick (I): copy the drag mode\'s glyph or colour from the topmost visible cell into the brush. Alt+click picks all three.',
       'tool-eraser': 'Eraser (E): remove glyphs (Glyph mode) or backgrounds (BG mode) under the pointer, brush size wide.',
+      'tool-text': 'Text (T): click a cell to write the text box there in the FG colour, starting at that cell. CJK characters take two cells. Spaces leave cells as they are; characters past the scene edge or outside the selection are skipped.',
       bsize: 'Brush size in cells (1–9) for the pencil and the eraser.',
-      cFill: 'The rect tool draws solid rectangles instead of outlines.',
+      ttext: 'The text the text tool (T) writes.',
       brushGlyph: 'The glyph the brush paints, shown in the brush colours. Click to open the glyph palette editor.',
       fg: 'Foreground (glyph) colour. Pick it, or type #rrggbb.',
       falpha: 'Foreground opacity. At 0% glyphs are invisible; save and export warn about such cells.',
@@ -391,7 +395,7 @@ const STR = {
     buttons: ['왼쪽', '가운데', '오른쪽'],
     hintPaint: ['Shift+왼쪽 = 선택'],
     hintSelect: ['Shift+왼쪽 = 글리프 브러시', '가운데 = 화면 이동', '오른쪽 = 레이어 이동'],
-    tools: { pencil: '연필', line: '직선', rect: '사각형', fill: '채우기', pick: '스포이트', eraser: '지우개' },
+    tools: { pencil: '연필', line: '직선', rect: '사각형', fill: '채우기', pick: '스포이트', eraser: '지우개', text: '텍스트' },
     states: { top: '맨 위', translucent: '반투명', covered: '가려짐', hidden: '숨김' },
     fg: '전경', bg: '배경', bgOnly: '배경만',
     noCells: (x, y) => `${x},${y}에 셀 없음`,
@@ -425,6 +429,10 @@ const STR = {
       loaded: name => `${name} 불러옴`,
       loadFailed: m => `불러오기 실패: ${m}`,
       notFile: 'glyphpaint 파일이 아닙니다',
+      rectFill: f => `사각형: ${f ? '채움' : '테두리'}`,
+      textEmpty: '먼저 텍스트 칸에 넣을 글자를 입력하세요',
+      textNone: '여기에는 텍스트를 넣을 자리가 없습니다',
+      textPlaced: (n, name) => `"${name}"에 글자 ${n}개를 넣음`,
     },
     ask: {
       discard: '현재 장면을 버릴까요?',
@@ -432,7 +440,7 @@ const STR = {
       invisible: (n, first) => `전경 알파가 0이라 보이지 않는 글리프 셀이 ${n}개 있습니다 (첫 번째: ${first}). 그래도 계속할까요?`,
       firstAt: (x, y, name) => `레이어 "${name}"의 ${x},${y}`,
     },
-    placeholder: { gpName: '팔레트 이름', gpQ: '검색: 문자, U+2588 또는 블록 이름', gpText: '팔레트에 추가할 문자를 붙여넣으세요' },
+    placeholder: { gpName: '팔레트 이름', gpQ: '검색: 문자, U+2588 또는 블록 이름', gpText: '팔레트에 추가할 문자를 붙여넣으세요', ttext: '텍스트 도구로 넣을 글자' },
     titles: { gpName: '팔레트 이름', gpBrush: '현재 브러시 글리프 추가', bExpJson: '레이어를 유지한 스냅숏, 좌표는 영역 기준으로 다시 맞춤' },
     aria: { zOut: '축소', zIn: '확대', lUp: '레이어 위로', lDn: '레이어 아래로', sbg: '장면 배경색', brushGlyph: '글리프 브러시',
             sw: '장면 너비', sh: '장면 높이', fcol: '전경색', gcol: '배경색', falpha: '전경 불투명도',
@@ -457,12 +465,13 @@ const STR = {
       'mode-bg': '왼쪽 드래그로 현재 도구를 써서 셀 배경을 배경색으로 칠합니다. Shift+오른쪽 드래그도 같습니다.',
       'tool-pencil': '연필 (B): 포인터 아래의 셀을 브러시 크기만큼 칠합니다.',
       'tool-line': '직선 (L): 시작점에서 끝점까지 드래그해 직선을 그립니다.',
-      'tool-rect': '사각형 (R): 드래그해 사각형 테두리를 그립니다. "채운 사각형"을 켜면 속까지 채웁니다.',
+      'tool-rect': '사각형 (R): 드래그해 사각형을 그립니다. R을 한 번 더 누르거나 사각형을 다시 누르면 테두리 □와 채움 ■이 바뀝니다.',
       'tool-fill': '채우기 (G): 같은 글리프 / 색으로 이어진 영역을 채웁니다. 장면과 선택 영역 안에서만 동작합니다.',
       'tool-pick': '스포이트 (I): 맨 위에 보이는 셀에서 드래그 모드에 해당하는 글리프나 색을 브러시로 가져옵니다. Alt+클릭은 세 가지를 모두 가져옵니다.',
       'tool-eraser': '지우개 (E): 포인터 아래의 글리프(글리프 모드)나 배경(배경 모드)을 브러시 크기만큼 지웁니다.',
+      'tool-text': '텍스트 (T): 셀을 누르면 그 셀부터 텍스트 칸의 글자를 전경색으로 씁니다. 한중일 문자는 두 칸을 차지합니다. 공백은 셀을 그대로 두고, 장면 밖이나 선택 영역 밖의 글자는 건너뜁니다.',
       bsize: '연필과 지우개의 브러시 크기(셀 단위, 1–9).',
-      cFill: '사각형 도구가 테두리 대신 속이 찬 사각형을 그립니다.',
+      ttext: '텍스트 도구(T)가 쓰는 글자.',
       brushGlyph: '브러시가 칠하는 글리프를 브러시 색으로 보여 줍니다. 누르면 글리프 팔레트 편집기가 열립니다.',
       fg: '전경(글리프) 색. 고르거나 #rrggbb로 입력합니다.',
       falpha: '전경 불투명도. 0%면 글리프가 보이지 않으며, 저장·내보내기 때 그런 셀을 경고합니다.',
@@ -507,7 +516,7 @@ function blockOf(cp) {
 const NONE = '00000000';
 const S = {
   w: 80, h: 40, bg: '#0b0f0b', layers: [], focus: 0, palettes: [], pal: 0,
-  fs: 20, grid: true, bounds: true, sel: null, tool: 'pencil', mode: 'select', fillRect: false,
+  fs: 20, grid: true, bounds: true, sel: null, tool: 'pencil', mode: 'select', fillRect: false, text: '',
   brush: { g: '#', fg: { hex: '#d7e4d7', a: 1 }, bg: { hex: '#335533', a: 1 }, size: 1 },
   recent: { fg: [], bg: [] },
 };
@@ -700,6 +709,15 @@ function drawOverlay() {
   }
   const panning = !!drag && ['pan', 'pan2', 'layerpan'].includes(drag.type);
   if (hover && !panning && inScene(hover.x, hover.y)) {
+    if (!drag && S.tool === 'text' && isPaint(resolve(0, shiftDown))) {
+      ctx.font = `${S.fs}px ${FONT}`; ctx.textBaseline = 'alphabetic';
+      for (const [x, y, g, w] of textCells(hover.x, hover.y)) {
+        if (!inScene(x, y)) continue;
+        const ok = textFits(x, y, w);
+        ctx.fillStyle = ok ? 'rgba(216,194,106,.25)' : 'rgba(255,90,90,.25)'; ctx.fillRect(X(x), Y(y), w * cw, ch);
+        if (ok) { ctx.fillStyle = css(fgStr()); ctx.fillText(g, X(x), Y(y) + S.fs * 91 / 96); }
+      }
+    }
     const brushy = isPaint(resolve(0, shiftDown)) && ['pencil', 'eraser'].includes(S.tool);
     const n = brushy ? S.brush.size : 1, o = Math.floor((n - 1) / 2);
     ctx.strokeStyle = brushy ? '#fff' : 'rgba(255,255,255,.6)'; ctx.strokeRect(X(hover.x - o) + .5, Y(hover.y - o) + .5, n * cw, n * ch);
@@ -977,6 +995,31 @@ function syncAll(reset) {
   layoutCanvas(reset ? 'reset' : 'keep'); syncLayers(); syncPalSel(); syncBrush(); syncInfo(); addRecent('fg'); addRecent('bg'); redraw(); histBtns();
 }
 
+// ---------- text tool ----------
+// CJK (East Asian wide) characters take two cells: the glyph sits in the left cell, the right one is left as it is.
+const WIDE = /^[\u1100-\u115f\u2e80-\u303e\u3041-\u33ff\u3400-\u4dbf\u4e00-\u9fff\ua000-\ua4cf\ua960-\ua97f\uac00-\ud7a3\uf900-\ufaff\ufe30-\ufe4f\uff00-\uff60\uffe0-\uffe6\u{20000}-\u{3fffd}]/u;
+// cells the text tool writes with its anchor at x, y: [x, y, glyph, width]; whitespace only advances
+function textCells(x, y) {
+  const out = [];
+  for (const g of graphemes(S.text)) { const w = WIDE.test(g) ? 2 : 1; if (g.trim()) out.push([x, y, g, w]); x += w; }
+  return out;
+}
+const textFits = (x, y, w) => inSceneRect(x, y) && inSceneRect(x + w - 1, y) && inSel(x, y) && inSel(x + w - 1, y);
+// One click writes the whole text in the FG colour (cell backgrounds kept) as one undo step.
+function stampText(c) {
+  const t = T();
+  if (!S.text) { msg(t.msg.textEmpty); $('#ttext').focus(); return; }
+  const L = cur(); pushUndo(); let placed = 0, n = 0;
+  for (const [x, y, g, w] of textCells(c.x, c.y)) {
+    if (!textFits(x, y, w)) continue;
+    const k = K(x - L.ox, y - L.oy), o = L.cells.get(k), v = normCell(g, fgStr(), o ? o[2] : NONE); placed++;
+    if (o && o[0] === v[0] && o[1] === v[1] && o[2] === v[2]) continue;
+    L.cells.set(k, v); n++;
+  }
+  if (!n) popUndo(); else { fixOffset(); touch(); syncLayers(); addRecent('fg'); }
+  msg(placed ? t.msg.textPlaced(placed, L.name) : t.msg.textNone); redraw();
+}
+
 // ---------- drag modes & pointer ----------
 const MODES = ['select', 'scenepan', 'layerpan', 'glyph', 'fg', 'bg'];
 const isPaint = m => m === 'glyph' || m === 'fg' || m === 'bg';
@@ -1000,9 +1043,20 @@ function setMode(m) {
   S.mode = m; for (const b of document.querySelectorAll('#modes button')) b.classList.toggle('on', b.dataset.mode === m);
   modeInfo(); redraw(); saveView();
 }
-const TOOLS = [['pencil', 'B'], ['line', 'L'], ['rect', 'R'], ['fill', 'G'], ['pick', 'I'], ['eraser', 'E']];
+const TOOLS = [['pencil', 'B'], ['line', 'L'], ['rect', 'R'], ['fill', 'G'], ['pick', 'I'], ['eraser', 'E'], ['text', 'T']];
 function setTool(t) {
   S.tool = t; for (const b of document.querySelectorAll('#tools button')) b.classList.toggle('on', b.dataset.tool === t); redraw(); saveView();
+}
+// the Rect button shows its fill state: □ outline, ■ filled
+function toolLabels() {
+  const t = T();
+  for (const b of document.querySelectorAll('#tools button')) b.firstChild.textContent = t.tools[b.dataset.tool] + (b.dataset.tool === 'rect' ? (S.fillRect ? ' ■' : ' □') : '');
+}
+// A tool chosen by key or button. Choosing Rect again flips filled / outline; Text with an empty text box focuses it.
+function chooseTool(t) {
+  if (t === 'rect' && S.tool === 'rect') { S.fillRect = !S.fillRect; toolLabels(); msg(T().msg.rectFill(S.fillRect)); saveView(); return; }
+  setTool(t);
+  if (t === 'text' && !S.text) $('#ttext').focus();
 }
 const cellAt = e => { const r = ov.getBoundingClientRect(); return { x: Math.floor((e.clientX - r.left) / cwpx()) + W.x0, y: Math.floor((e.clientY - r.top) / chpx()) + W.y0 }; };
 const clampC = c => ({ x: Math.max(W.x0, Math.min(W.x0 + W.w - 1, c.x)), y: Math.max(W.y0, Math.min(W.y0 + W.h - 1, c.y)) });
@@ -1018,6 +1072,7 @@ function startPaint(c, target) {
   if (!editable()) { drag = { type: 'none' }; return; }
   const t = S.tool, erase = t === 'eraser';
   if (t === 'pick') { pickTarget(c.x, c.y, target); drag = { type: 'none' }; return; }
+  if (t === 'text') { stampText(c); drag = { type: 'none' }; return; }
   if (erase && target === 'fg') { msg(T().msg.eraseFg); drag = { type: 'none' }; return; }
   if (t === 'fill') {
     pushUndo(); if (floodFill(c.x, c.y, target)) { fixOffset(); redraw(); touch(); syncLayers(); recents(target); } else popUndo();
@@ -1265,12 +1320,13 @@ function touch() { clearTimeout(saveT); relayout(); saveT = setTimeout(() => { t
 
 // ---------- wiring ----------
 for (const id of MODES) { const b = mk('button', { type: 'button' }); b.dataset.mode = id; b.dataset.tip = `mode-${id}`; b.onclick = () => setMode(id); $('#modes').append(b); }
-for (const [id, k] of TOOLS) { const b = mk('button', { type: 'button' }, mk('span'), mk('small', { textContent: k })); b.dataset.tool = id; b.dataset.tip = `tool-${id}`; b.onclick = () => setTool(id); $('#tools').append(b); }
+for (const [id, k] of TOOLS) { const b = mk('button', { type: 'button' }, mk('span'), mk('small', { textContent: k })); b.dataset.tool = id; b.dataset.tip = `tool-${id}`; b.onclick = () => chooseTool(id); $('#tools').append(b); }
 $('#bUndo').onclick = doUndo; $('#bRedo').onclick = doRedo;
 $('#zIn').onclick = () => zoom(1); $('#zOut').onclick = () => zoom(-1);
 $('#cGrid').onchange = e => { S.grid = e.target.checked; redraw(); saveView(); }; $('#cBounds').onchange = e => { S.bounds = e.target.checked; redraw(); saveView(); };
-$('#cFill').onchange = e => { S.fillRect = e.target.checked; saveView(); };
-$('#bsize').oninput = e => { S.brush.size = Math.max(1, Math.min(9, +e.target.value || 1)); redraw(); saveView(); };
+$('#bsize').onchange = e => { S.brush.size = Math.max(1, Math.min(9, +e.target.value || 1)); redraw(); saveView(); };
+$('#ttext').oninput = e => { S.text = e.target.value; redraw(); saveView(); };
+$('#ttext').addEventListener('keydown', e => { if (e.key === 'Enter') e.target.blur(); });
 const sceneSize = () => { pushUndo(); S.w = Math.max(1, Math.min(500, +$('#sw').value || S.w)); S.h = Math.max(1, Math.min(500, +$('#sh').value || S.h)); S.sel = null; layoutCanvas('keep'); syncInfo(); redraw(); touch(); };
 $('#sw').onchange = sceneSize; $('#sh').onchange = sceneSize;
 $('#sbg').oninput = e => { S.bg = e.target.value; redraw(); touch(); };
@@ -1320,7 +1376,7 @@ addEventListener('keydown', e => {
   }
   if (k === ' ') { if (!spaceDown) { spaceDown = true; modeInfo(); } e.preventDefault(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { doClearSel(); return; }
-  const tool = TOOLS.find(x => x[1].toLowerCase() === k); if (tool) setTool(tool[0]);
+  const tool = TOOLS.find(x => x[1].toLowerCase() === k); if (tool) { e.preventDefault(); chooseTool(tool[0]); }
 });
 addEventListener('keyup', e => {
   if (e.key === 'Shift') { shiftDown = false; modeInfo(); }
@@ -1345,7 +1401,7 @@ function loadPalettes() {
 // view preferences (zoom, grid, tool, mode...) persist across reloads, separate from the document
 const VIEW_KEY = 'glyphpaint.view';
 function saveView() {
-  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ fs: S.fs, grid: S.grid, bounds: S.bounds, tool: S.tool, mode: S.mode, fillRect: S.fillRect, size: S.brush.size })); } catch (e) {}
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ fs: S.fs, grid: S.grid, bounds: S.bounds, tool: S.tool, mode: S.mode, fillRect: S.fillRect, size: S.brush.size, text: S.text })); } catch (e) {}
 }
 function loadView() {
   try {
@@ -1357,8 +1413,9 @@ function loadView() {
     if (TOOLS.some(t => t[0] === v.tool)) S.tool = v.tool;
     if (MODES.includes(v.mode)) S.mode = v.mode;
     S.brush.size = Math.max(1, Math.min(9, v.size | 0 || 1));
+    if (typeof v.text === 'string') S.text = v.text;
   } catch (e) {}
-  $('#cFill').checked = S.fillRect; $('#bsize').value = S.brush.size;
+  $('#bsize').value = String(S.brush.size); $('#ttext').value = S.text;
 }
 // ---------- help ----------
 // Hovering or focusing a [data-tip] control shows its help over the status line (dialog controls use titles instead).
@@ -1379,7 +1436,7 @@ function localize() {
   const t = T();
   document.title = t.title;
   for (const b of document.querySelectorAll('#modes button')) b.textContent = t.modes[b.dataset.mode];
-  for (const b of document.querySelectorAll('#tools button')) b.firstChild.textContent = t.tools[b.dataset.tool];
+  toolLabels();
   for (const [id, s] of Object.entries(t.placeholder)) $(`#${id}`).placeholder = s;
   for (const [id, s] of Object.entries(t.titles)) $(`#${id}`).title = s;
   for (const [id, s] of Object.entries(t.aria)) $(`#${id}`).setAttribute('aria-label', s);
@@ -1397,7 +1454,7 @@ function boot() {
 }
 boot();
 // dev/test hook
-window.__gp = { savePalettes, loadPalettes, saveView, loadView, W: () => W, S, K, kx, ky, loadDoc, saveDoc, snapshotArea, paintScene, resolve, applyAt, floodFill, pickTarget, invisibleGlyphs, normCell, doCopy, doPaste, mergeDown, mergeVisible, addLayer, pushUndo, doUndo, doRedo, cur, setMode, setTool, NONE };
+window.__gp = { savePalettes, loadPalettes, saveView, loadView, W: () => W, S, K, kx, ky, loadDoc, saveDoc, snapshotArea, paintScene, resolve, applyAt, floodFill, textCells, stampText, chooseTool, pickTarget, invisibleGlyphs, normCell, doCopy, doPaste, mergeDown, mergeVisible, addLayer, pushUndo, doUndo, doRedo, cur, setMode, setTool, NONE };
 })();
 </script>
 </body>
