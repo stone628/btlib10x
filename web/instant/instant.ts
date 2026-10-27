@@ -69,8 +69,10 @@ function afterRender(): void {
   const slot = document.querySelector<HTMLElement>("#app .ia-mapslot");
   if (!slot) return;
   const view = ensureMapView();
-  if (view.canvas.parentElement !== slot) slot.replaceChildren(view.canvas);
-  view.showCoords = app.screen !== "setup";
+  if (view.canvas.parentElement !== slot) {
+    slot.replaceChildren(view.canvas);
+    view.clearHover();
+  }
   if (app.screen === "battle") battleOverlays();
   else if (app.screen === "deploy") deployOverlays();
   else if (app.screen === "setup") setupMapPreview();

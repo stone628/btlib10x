@@ -4,7 +4,8 @@
  * prisms on the btlib10x odd-q offset grid, free rotation, view tilt and
  * elevation to scale (a level is 6 m on a 30 m hex, TW pp. 36, 167). Faces are
  * painted back to front; every edge is stroked once by the last shape that
- * has it. Added here: terrain fills, overlays, unit banners and click picking.
+ * has it. Added here: terrain fills, overlays, facing triangles, unit banners
+ * and click picking.
  */
 import type { Facing, HexCoord, TerrainType } from "btlib10x";
 
@@ -42,7 +43,6 @@ export interface Overlays {
 }
 
 const FACINGS: readonly Facing[] = ["n", "ne", "se", "s", "sw", "nw"];
-const ARROWS = ["↑", "↗", "↘", "↓", "↙", "↖"];
 const SQ3 = Math.sqrt(3);
 const HEX_R = 2.1; // circumradius in font sizes: corner to corner = 7 cells of 0.6
 const LEVEL_H = (SQ3 * 6) / 30;
@@ -102,8 +102,8 @@ export class MapView {
   panY = 0;
   overlays: Overlays = {};
   banners: Banner[] = [];
-  /** Draw each hex's CCRR coordinate on its face. */
-  showCoords = true;
+  /** Draw every hex's CCRR coordinate on its face; off, only the hovered hex's. */
+  showCoords = false;
   onPick: ((hex: HexCoord, ev: MouseEvent) => void) | null = null;
   private drawn: Shape[] = [];
   private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
@@ -118,7 +118,8 @@ export class MapView {
       const v = this.view();
       const r = canvas.getBoundingClientRect();
       return (
-        (Math.atan2(e.clientX - r.left - v.ox, -(e.clientY - r.top - v.oy) / v.sq) * 180) / Math.PI
+        (Math.atan2(e.clientX - r.left - v.W / 2, -(e.clientY - r.top - v.H / 2) / v.sq) * 180) /
+        Math.PI
       );
     };
     // Middle (scroll) button drag pans the map.
@@ -148,7 +149,10 @@ export class MapView {
         const delta = pointerAngle(e) - drag.start;
         if (Math.abs(delta) > 4) drag.moved = true;
         if (drag.moved) {
-          this.angle = (((drag.angle - delta) % 360) + 360) % 360;
+          const angle = (((drag.angle - delta) % 360) + 360) % 360;
+          this.anchored(null, () => {
+            this.angle = angle;
+          });
           this.render();
         }
         return;
@@ -182,7 +186,8 @@ export class MapView {
       "wheel",
       (e) => {
         e.preventDefault();
-        this.zoom(e.deltaY < 0 ? 2 : -2);
+        const r = canvas.getBoundingClientRect();
+        this.zoom(e.deltaY < 0 ? 2 : -2, [e.clientX - r.left, e.clientY - r.top]);
       },
       { passive: false },
     );
@@ -205,17 +210,52 @@ export class MapView {
     this.world = { cx, cy, radius, maxLevel };
   }
 
+  /** Forget the hovered hex (the canvas moved to another screen without a pointerleave). */
+  clearHover(): void {
+    this.hover = null;
+  }
+
   rotate(dir: number): void {
     const a = this.angle / 60;
     const steps = dir > 0 ? Math.floor(a + 1e-6) + 1 : Math.ceil(a - 1e-6) - 1;
-    this.angle = (((steps * 60) % 360) + 360) % 360;
+    this.anchored(null, () => {
+      this.angle = (((steps * 60) % 360) + 360) % 360;
+    });
     this.render();
   }
 
-  zoom(step: number): void {
+  /** Zoom about a canvas point (CSS px), the view centre by default. */
+  zoom(step: number, at: readonly [number, number] | null = null): void {
     const fs = this.fs ?? this.fitFs();
-    this.fs = Math.max(4, Math.min(48, fs + step));
+    this.anchored(at, () => {
+      this.fs = Math.max(4, Math.min(48, fs + step));
+    });
     this.render();
+  }
+
+  /**
+   * Apply a view change (zoom, rotation) keeping the ground point under a
+   * canvas point (the view centre by default) fixed on screen, by re-panning.
+   */
+  private anchored(at: readonly [number, number] | null, change: () => void): void {
+    if (!this.src) {
+      change();
+      return;
+    }
+    const v0 = this.view();
+    const [px, py] = at ?? [v0.W / 2, v0.H / 2];
+    const xr = (px - v0.ox) / v0.R;
+    const yr = (py - v0.oy) / (v0.R * v0.sq);
+    const t = (this.angle * Math.PI) / 180;
+    const w: [number, number] = [
+      xr * Math.cos(t) - yr * Math.sin(t),
+      xr * Math.sin(t) + yr * Math.cos(t),
+    ];
+    change();
+    const v1 = this.view();
+    const [qx, qy] = v1.proj(v1.rot(w), 0);
+    this.panX += px - qx;
+    this.panY += py - qy;
   }
 
   cycleTilt(): void {
@@ -431,11 +471,13 @@ export class MapView {
           ctx.lineTo(g.b[0], g.b[1]);
         }
       ctx.stroke();
-      if (s.top && s.label && this.showCoords && v.fs >= 6) this.drawLabel(v, s, d);
+      if (s.top && s.label && (this.hover === k || (this.showCoords && v.fs >= 6)))
+        this.drawLabel(v, s, d, this.hover === k);
       if (s.top) this.drawMarks(v, s, k);
     });
     this.drawn = list;
     this.drawLos(v);
+    this.drawFacings(v);
     this.drawBanners(v);
     this.drawHud(v);
   }
@@ -453,16 +495,18 @@ export class MapView {
     return null;
   }
 
-  private drawLabel(v: ReturnType<MapView["view"]>, s: Shape, d: number): void {
+  /** The hovered hex's label is drawn brighter and at least 8 px, as it is often the only one. */
+  private drawLabel(v: ReturnType<MapView["view"]>, s: Shape, d: number, hot: boolean): void {
     const ctx = this.ctx;
     const lab = s.label!;
     const top = v.normals.reduce((best, n, j) => (n[1] < v.normals[best]![1] ? j : best), 0);
     const n = v.normals[top]!;
     const r = [-n[1], n[0]] as const;
-    ctx.font = `${v.fs * LABEL_FS}px ${FONT}`;
+    const size = hot ? Math.max(8, v.fs * LABEL_FS) : v.fs * LABEL_FS;
+    ctx.font = `${size}px ${FONT}`;
     ctx.textBaseline = "top";
     const tw = ctx.measureText(lab.text).width;
-    const apo = SQ3 / 2 - (LABEL_INSET * v.fs) / v.R;
+    const apo = SQ3 / 2 - (LABEL_INSET * Math.max(v.fs, size / LABEL_FS)) / v.R;
     const [ex, ey] = v.proj([lab.h.x + n[0] * apo, lab.h.y + n[1] * apo], lab.lv);
     const a = r[0];
     const b = r[1] * v.sq;
@@ -470,7 +514,7 @@ export class MapView {
     const dd = -n[1] * v.sq;
     ctx.save();
     ctx.setTransform(d * a, d * b, d * c, d * dd, d * (ex - (a * tw) / 2), d * (ey - (b * tw) / 2));
-    ctx.fillStyle = css("--ia-map-label", "#9a9a9a");
+    ctx.fillStyle = hot ? css("--ia-map-mark", "#f0f0f0") : css("--ia-map-label", "#9a9a9a");
     ctx.fillText(lab.text, 0, 0);
     ctx.restore();
   }
@@ -513,6 +557,69 @@ export class MapView {
     ctx.restore();
   }
 
+  /** Units as sharp triangles lying on their hex face, pointing along the facing. */
+  private drawFacings(v: ReturnType<MapView["view"]>): void {
+    if (!this.src) return;
+    const ctx = this.ctx;
+    const h = SQ3 / 2; // half the hex's flat-to-flat height
+    const hw = h * 0.3;
+    const nudge = SQ3 / 16; // shifted 1/16 hex toward the facing edge
+    const items = this.banners.map((b) => {
+      const w = worldCenter(b.hex.col, b.hex.row);
+      return { b, w, y: v.rot([w[0] - this.world.cx, w[1] - this.world.cy])[1] };
+    });
+    items.sort((a, b) => a.y - b.y);
+    for (const { b, w } of items) {
+      const t = (FACINGS.indexOf(b.facing) * Math.PI) / 3;
+      const f = [Math.sin(t), -Math.cos(t)] as const; // world y points south
+      const pt = (along: number, across: number) =>
+        v.proj(
+          v.rot([
+            w[0] - this.world.cx + f[0] * (along + nudge) - f[1] * across,
+            w[1] - this.world.cy + f[1] * (along + nudge) + f[0] * across,
+          ]),
+          this.src!.levelAt(b.hex),
+        );
+      const color =
+        b.team === 0 ? css("--ia-hull", "#8a8a8a") : css(`--ia-team${b.team}`, "#4fa3ff");
+      ctx.save();
+      if (b.ghost) ctx.globalAlpha = 0.55;
+      const tri = [pt(h / 2, 0), pt(-h / 2, hw), pt(-h / 2, -hw)];
+      const path = () => {
+        ctx.beginPath();
+        for (const [x, y] of tri) ctx.lineTo(x, y);
+        ctx.closePath();
+      };
+      const edge = Math.max(1, v.fs * 0.06); // the hex wireframe's width
+      ctx.lineJoin = "miter";
+      ctx.strokeStyle = color;
+      if (b.active) {
+        // the acting unit's border doubles, growing outward only: a wide
+        // stroke clipped to outside the triangle
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(0, 0, v.W, v.H);
+        tri.forEach(([x, y], j) => {
+          if (j) ctx.lineTo(x, y);
+          else ctx.moveTo(x, y);
+        });
+        ctx.closePath();
+        ctx.clip("evenodd");
+        path();
+        ctx.lineWidth = edge * 3;
+        ctx.stroke();
+        ctx.restore();
+      }
+      path();
+      ctx.fillStyle = `color-mix(in srgb, ${color} 45%, black)`;
+      ctx.fill();
+      ctx.lineWidth = edge;
+      if (b.team === 0 || b.ghost) ctx.setLineDash([v.fs * 0.25, v.fs * 0.2]);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
   /** Units as upright signs on a pole, back to front (plan §6, starter design). */
   private drawBanners(v: ReturnType<MapView["view"]>): void {
     if (!this.src) return;
@@ -529,9 +636,7 @@ export class MapView {
     items.sort((a, b) => a.p[1] - b.p[1]);
     this.bannerBoxes = [];
     for (const { b, base } of items) {
-      const dir = (FACINGS.indexOf(b.facing) * 60 - this.angle + 360) % 360;
-      const arrow = ARROWS[Math.round(dir / 60) % 6]!;
-      const l1 = ` ${b.id} ${arrow} `;
+      const l1 = ` ${b.id} `;
       const l2 = ` ${b.sub} `;
       const cols = Math.max(l1.length, l2.length);
       const bw = cols * cw;
@@ -549,10 +654,6 @@ export class MapView {
       ctx.moveTo(base[0], base[1]);
       ctx.lineTo(base[0], y0 + bh);
       ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(base[0], base[1], Math.max(1.5, fs * 0.15), 0, Math.PI * 2);
-      ctx.fillStyle = color;
-      ctx.fill();
       ctx.fillStyle = css("--ia-banner-bg", "#0d0d0d");
       ctx.fillRect(x0, y0, bw, bh);
       if (b.team === 0 || b.ghost) ctx.setLineDash([fs * 0.25, fs * 0.2]);
@@ -571,7 +672,7 @@ export class MapView {
     }
   }
 
-  /** North arrow and the view state: rotation, zoom against fit, tilt. */
+  /** North arrow, and to its left the view state: rotation, zoom against fit, tilt. */
   private drawHud(v: ReturnType<MapView["view"]>): void {
     const ctx = this.ctx;
     const fs = 12;
@@ -609,13 +710,18 @@ export class MapView {
     ctx.textBaseline = "middle";
     ctx.fillStyle = css("--ia-map-mark", "#f0f0f0");
     ctx.fillText("N", cx - nx * 7, cy - ny * 7);
+    // view state at the indicator's top-left, outlined to read over any terrain
     const zoom = this.fs === null ? 1 : this.fs / this.fitFs();
-    const text = `${Math.round(this.angle) % 360}°  ×${zoom.toFixed(1)}  ${this.tilt}°`;
-    ctx.font = `${fs}px ${FONT}`;
+    const text = `⟲${Math.round(this.angle) % 360}° ×${zoom.toFixed(1)} ⦟${this.tilt}°`;
+    ctx.font = `${fs * 1.2}px ${FONT}`;
     ctx.textAlign = "right";
     ctx.textBaseline = "top";
-    ctx.fillStyle = css("--ia-map-label", "#9a9a9a");
-    ctx.fillText(text, v.W - 6, cy + r + 4);
+    ctx.lineJoin = "round";
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = "#000";
+    ctx.strokeText(text, cx - r - 4, cy - r);
+    ctx.fillStyle = css("--ia-map-mark", "#f0f0f0"); // the N's colour
+    ctx.fillText(text, cx - r - 4, cy - r);
     ctx.restore();
   }
 

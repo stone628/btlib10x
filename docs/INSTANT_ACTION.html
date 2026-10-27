@@ -201,7 +201,8 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <ul>
 <li>Regular flat-top hexagons on the btlib10x odd-q offset grid (even columns half a hex south), drawn on a canvas, opaque faces painted back to front, every edge stroked once.</li>
 <li>Free rotation by dragging the map, snapping in 60° steps from the keyboard; view tilt (default about 40°, 90° = straight down); elevation to scale (a level is 6 m on a 30 m hex), with walls drawn only where they face the viewer.</li>
-<li>Coordinate labels <code>CCRR</code> + level, lying flat on each face along the edge nearest the screen top.</li>
+<li>Coordinate labels <code>CCRR</code>, lying flat on the face along the edge nearest the screen top: off by default, shown only on the hovered hex (<code>MapView.showCoords</code> turns them on for every hex).</li>
+<li>HUD: a north indicator at the top right; at its top left the view state (<code>⟲</code> rotation, <code>×</code> zoom against fit, <code>⦟</code> tilt) in the N's colour, double size, outlined in black.</li>
 <li>Polygon hit testing (<code>hexAt(px, py)</code>, last-drawn first), reused for clicks.</li>
 </ul>
 <h3>What is added</h3>
@@ -212,26 +213,27 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td>Reachable</td><td>Reachable landing hexes for the chosen movement mode, tinted with the actor's team; MP cost of the cheapest path as a small number on the face.</td></tr>
 <tr><td>Target</td><td>Hexes of fireable targets outlined; the selected target filled; an LOS line from attacker to target with blocking hexes marked.</td></tr>
 <tr><td>Selection</td><td>Hovered hex outline; selected hex thick outline; the chosen landing shows a ghost banner.</td></tr>
+<tr><td>Facing</td><td>Each unit as a sharp triangle lying flat at the middle of its hex face, nudged 1/16 hex toward its facing edge, pointing along its facing, half the hex's height, filled in a darker team colour with a team-colour border (thick for the acting unit, dashed for hulls and ghosts).</td></tr>
 <tr><td>Banners</td><td>Units, drawn last (below).</td></tr>
 </table></div>
 
 <h3>Banner glyphs (units)</h3>
-<p>Starter design (decided; will change later). A unit is a small upright sign planted at its hex centre at the hex's level. It always faces the screen (billboard), so it stays readable at any rotation and tilt, while the facing arrow inside it turns with the view. Drawn on the same canvas in Bt10x Mono, back to front with the prisms so a nearer cliff hides a banner behind it.</p>
+<p>Starter design (decided; will change later). A unit is a small upright sign planted at its hex centre at the hex's level. It always faces the screen (billboard), so it stays readable at any rotation and tilt; the unit's facing is shown by the triangle on its hex, not on the banner. Drawn on the same canvas in Bt10x Mono, back to front with the prisms so a nearer cliff hides a banner behind it.</p>
 <pre><code>   ╭──────╮      ╭──────╮      ┌╌╌╌╌╌╌┐      ╭──────╮
-   │ A1 ↗ │      │ B2 ↓ │      ┆-B1 ↙ ┆      │ A3 ↑ │
+   │ A1   │      │ B2   │      ┆-B1   ┆      │ A3   │
    │▮▮▮▮▯ │      │PRN ▮▯│      └╌╌┬╌╌╌┘      │OFF   │
    ╰──┬───╯      ╰──┬───╯         ┆          ╰──┬───╯
       │             │             ┆             │
   team 1, armor   team 2, prone  hull (no team,  shut down
   80 %            armor 50 %     dashed, -id)</code></pre>
 <ul>
-<li>Line 1: unit id and the facing arrow relative to the screen (<code>↑ ↗ ↘ ↓ ↙ ↖</code>).</li>
+<li>Line 1: unit id.</li>
 <li>Line 2: a five-pip armor+structure bar, or a status word when it matters more: <code>PRN</code> prone, <code>OFF</code> shut down, <code>JMP</code> jumped this turn, <code>!!</code> heat 15+.</li>
 <li>Fill in the team colour; the acting unit's banner blinks its border; hulls are dashed and neutral, as the terminal draws <code>-id</code>.</li>
 <li>Clicking a banner selects its hex. Hover shows a tooltip with model, pilot, heat and armor by location.</li>
 </ul>
 <h3>View controls</h3>
-<p>Mouse: drag to rotate, wheel to zoom, click to select. Keyboard (only the view, never hexes): <kbd>,</kbd> / <kbd>.</kbd> rotate 60°, <kbd>+</kbd> / <kbd>-</kbd> zoom, <kbd>V</kbd> cycle tilt presets (40°, 65°, 90°), <kbd>Home</kbd> reset to north-up, <kbd>F</kbd> centre on the acting unit. The viewer's <kbd>Q</kbd> / <kbd>E</kbd> are not used, to keep letters free for orders.</p>
+<p>Mouse: drag to rotate (about the view centre), wheel to zoom (about the cursor), middle-drag to pan, click to select. Keyboard (only the view, never hexes): <kbd>,</kbd> / <kbd>.</kbd> rotate 60°, <kbd>+</kbd> / <kbd>-</kbd> zoom, <kbd>V</kbd> cycle tilt presets (40°, 65°, 90°), <kbd>Home</kbd> reset to north-up, <kbd>F</kbd> centre on the acting unit. The viewer's <kbd>Q</kbd> / <kbd>E</kbd> are not used, to keep letters free for orders.</p>
 
 <h2 id="flow">7. Screen flow</h2>
 <pre><code>                         ┌──────────────┐
