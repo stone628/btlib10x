@@ -1966,6 +1966,7 @@
 
   /* Make a painted divider draggable and keyboard-movable. */
   function handle(el, sp, k, id) {
+    if (sp.el.dataset.fixed !== undefined) return; // data-fixed: sizes are not user-adjustable
     const h = sp.dir === "h";
     el.classList.add("tui-split-handle", h ? "is-v" : "is-h");
     el.tabIndex = 0;
@@ -2313,11 +2314,16 @@
         const el = boxCreate("split")(p);
         setData(el, "dir", p.dir);
         setData(el, "sizes", Array.isArray(p.sizes) ? p.sizes.join(" ") : p.sizes);
+        setData(el, "fixed", p.fixed);
         return el;
       },
       patch(el, k, v) {
         if (k === "sizes") {
           split(el, { sizes: v ?? "" });
+          return true;
+        }
+        if (k === "fixed") {
+          setData(el, "fixed", v);
           return true;
         }
         return !el.classList.contains("is-nested") && k !== "dir" && boxPatch(el, k, v);
@@ -3076,6 +3082,8 @@
     prefab,
     dialog,
     popupMenu,
+    /* Close the open popup menu (it resolves to null); no-op when none is open. */
+    closePopup: () => closePopup(null),
     glyphs,
     i18n,
     t: (key, vars, fallback) => i18n.t(key, vars, fallback),

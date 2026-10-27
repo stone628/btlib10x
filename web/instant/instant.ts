@@ -10,7 +10,7 @@ import { fitScreen } from "./screen";
 import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
 import { h, kit, row } from "./screens/common";
 import { debriefKey, debriefScreen } from "./screens/debrief";
-import { deployKey, deployOverlays, deployScreen } from "./screens/deploy";
+import { deployAfterRender, deployKey, deployOverlays, deployScreen } from "./screens/deploy";
 import {
   helpWindow,
   setupAfterRender,
@@ -66,6 +66,7 @@ function afterRender(): void {
   });
   if (app.screen === "setup") setupAfterRender();
   else if (app.screen === "title") titleAfterRender();
+  else if (app.screen === "deploy") deployAfterRender();
   const slot = document.querySelector<HTMLElement>("#app .ia-mapslot");
   if (!slot) return;
   const view = ensureMapView();
@@ -93,7 +94,9 @@ function onKey(e: KeyboardEvent): void {
   const target = e.target instanceof Element ? e.target : null;
   const nav = ["Enter", " ", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key);
   if (target?.closest(".tui-popup")) return;
-  if (nav && target?.matches('button, [data-tui="menu"]')) return;
+  // Deployment keeps ↑ ↓ for its unit list while one of its buttons has the focus.
+  const unitKeys = app.screen === "deploy" && (e.key === "ArrowUp" || e.key === "ArrowDown");
+  if (nav && !unitKeys && target?.matches('button, [data-tui="menu"]')) return;
   let handled = false;
   if (app.screen === "title") {
     if (app.modal) {

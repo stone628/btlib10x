@@ -20,10 +20,12 @@ export interface DeployState {
   roll: RollOff;
   edges: [Edge | null, Edge | null];
   placements: Record<string, Placement>;
-  /** Index into the unit list. */
+  /** Index into the unit list (any unit; only Player units can be moved or turned). */
   cursor: number;
-  /** Cursor in the edge menu while the winner chooses. */
-  edgeCursor: number;
+  /** Edge button under the pointer while the winner chooses; tinted on the map. */
+  hoverEdge: Edge | null;
+  /** Focus the selected unit's button after the next render (keys and map picks). */
+  focusUnit: boolean;
 }
 
 export type Modal =

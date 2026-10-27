@@ -4,13 +4,16 @@ import {
   catalogMaps,
   cellAt,
   ensureMapRegistered,
+  type Facing,
   type HexCoord,
   isHull,
   isUnitOnBoard,
   type MapDef,
+  rotateFacing,
   type TerrainType,
   type UnitSkillRange,
 } from "btlib10x";
+import type { PersonaKey } from "./ai/persona.data";
 import { BattleController } from "./battle/controller";
 import {
   autoPlace,
@@ -32,7 +35,8 @@ export interface DeployUnit {
   side: 0 | 1;
   index: number;
   model: string;
-  player: boolean;
+  /** Persona in control; null for a Player unit. */
+  persona: PersonaKey | null;
 }
 
 export function deployUnits(l: Loadout): DeployUnit[] {
@@ -44,7 +48,7 @@ export function deployUnits(l: Loadout): DeployUnit[] {
         side: s as 0 | 1,
         index: i,
         model: slot.model ?? "",
-        player: slot.persona === null,
+        persona: slot.persona,
       });
     });
   });
@@ -95,7 +99,15 @@ export function launch(): void {
   saveLoadout(l);
   const rng = setupRng(l.seed);
   const roll = rollOff(rng);
-  app.deploy = { roll, edges: [null, null], placements: {}, cursor: 0, edgeCursor: 0 };
+  const cursor = deployUnits(l).findIndex((u) => u.persona === null);
+  app.deploy = {
+    roll,
+    edges: [null, null],
+    placements: {},
+    cursor: Math.max(0, cursor),
+    hoverEdge: null,
+    focusUnit: false,
+  };
   app.screen = "deploy";
   const winner = (roll.winner - 1) as 0 | 1;
   // A side without Player units chooses at once.
@@ -113,16 +125,34 @@ export function chooseEdge(edge: Edge): void {
   autoPlaceAll();
 }
 
+/** The winner's side has a Player unit, so a person picks (and may change) the edge. */
+export function playerChoosesEdge(): boolean {
+  const d = app.deploy!;
+  return sideHasPlayer(app.loadout, (d.roll.winner - 1) as 0 | 1);
+}
+
+/** Drop both edges and every placement so the winner chooses again. */
+export function changeEdge(): void {
+  const d = app.deploy!;
+  d.edges = [null, null];
+  d.placements = {};
+}
+
+/** Re-place every Player unit; persona units keep their hexes. */
+export function autoPlacePlayers(): void {
+  const d = app.deploy!;
+  for (const u of deployUnits(app.loadout)) if (u.persona === null) delete d.placements[u.id];
+  autoPlaceAll();
+}
+
 /** Place every unit not placed yet, spread along its side's edge. */
-export function autoPlaceAll(side?: 0 | 1): void {
+export function autoPlaceAll(): void {
   const d = app.deploy!;
   const map = currentMap();
   const units = deployUnits(app.loadout);
   for (const s of [0, 1] as const) {
-    if (side !== undefined && s !== side) continue;
     const edge = d.edges[s];
     if (!edge) continue;
-    if (side !== undefined) for (const u of units) if (u.side === s) delete d.placements[u.id];
     const occupied = new Set(Object.values(d.placements).map((p) => `${p.hex.col},${p.hex.row}`));
     const todo = units.filter((u) => u.side === s && !d.placements[u.id]);
     const hexes = autoPlace(map, edge, todo.length, occupied);
@@ -137,19 +167,34 @@ export function placeUnit(id: string, hex: HexCoord): void {
   const d = app.deploy!;
   const u = deployUnits(app.loadout).find((x) => x.id === id);
   if (!u) return;
+  if (u.persona !== null) throw new Error(t("err.personaUnit", { id }));
   const edge = d.edges[u.side];
   if (!edge) throw new Error(t("err.edgeFirst"));
-  const onEdge =
-    (edge === "north" && hex.row === 1) ||
-    (edge === "south" && hex.row === currentMap().height) ||
-    (edge === "west" && hex.col === 1) ||
-    (edge === "east" && hex.col === currentMap().width);
-  if (!onEdge) throw new Error(t("err.notHomeEdge"));
+  if (!onEdge(currentMap(), edge, hex)) throw new Error(t("err.notHomeEdge"));
   const other = Object.entries(d.placements).find(
     ([oid, p]) => oid !== id && p.hex.col === hex.col && p.hex.row === hex.row,
   );
   if (other) throw new Error(t("err.hexTaken", { id: other[0] }));
   d.placements[id] = { hex, facing: d.placements[id]?.facing ?? inwardFacing(edge) };
+}
+
+export function onEdge(map: MapDef, edge: Edge, hex: HexCoord): boolean {
+  return (
+    (edge === "north" && hex.row === 1) ||
+    (edge === "south" && hex.row === map.height) ||
+    (edge === "west" && hex.col === 1) ||
+    (edge === "east" && hex.col === map.width)
+  );
+}
+
+/** Turn a placed Player unit one hexside (+1 clockwise). */
+export function turnUnit(id: string, dir: 1 | -1): void {
+  const d = app.deploy!;
+  const u = deployUnits(app.loadout).find((x) => x.id === id);
+  const p = d.placements[id];
+  if (!u || !p) return;
+  if (u.persona !== null) throw new Error(t("err.personaUnit", { id }));
+  p.facing = rotateFacing(p.facing, dir) as Facing;
 }
 
 export function deployBanners(): Banner[] {

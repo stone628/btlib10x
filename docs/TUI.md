@@ -231,6 +231,7 @@ TUI.redraw(el)
 TUI.window(el, opts)
 TUI.dialog(opts)           // Promise<label | null>
 TUI.popupMenu(anchor, items, opts)  // Promise<{index} | {nav} | null>
+TUI.closePopup()           // close the open popup menu (it resolves to null)
 TUI.table({ columns: [{ label, width, align }], rows: [[text | { text, colspan, rowspan, align }]], rules, border })
 TUI.progress(el, value)
 TUI.glyphs(el)             // the border set an element resolves to
@@ -296,6 +297,8 @@ border they meet. Any number of panes and any depth of nesting work.
   is not a pane is wrapped in one.
 - Resizing: drag a divider, or Tab to it and use ← → (↑ ↓ in a `v` split), Home and End.
   The split fires `tui-resize` with `{ index, sizes, tokens }`; the kit stores nothing.
+  `data-fixed` (scene prop `fixed`) turns resizing off: the dividers are drawn but not
+  draggable or focusable.
   `TUI.split(el, { sizes: "30 1fr" })` sets sizes from script.
 - The split's top border carries pane titles, so a split takes no `data-title` of its own;
   put it in a window when the screen needs one.
@@ -342,7 +345,7 @@ every type: `key` (identity in a list), `ref` (name in `scene.refs`), `id`, `cla
 |---|---|
 | `box`, `window`, `scroll` | `cols rows title titleAlign footer footerRight border tone theme shadow pad`; window adds `closable` |
 | `tabs`, `tab` | tabs: the box props; tab: `label`, `active` |
-| `split`, `pane` | split: `dir sizes cols rows border tone theme shadow`; pane: `title min pad` |
+| `split`, `pane` | split: `dir sizes fixed cols rows border tone theme shadow`; pane: `title min pad` |
 | `hstack`, `vstack`, `grid`, `spacer` | `gap wrap align`; grid adds `columns min` |
 | `table` | `columns rows rules border selected` (same shapes as `TUI.table`) |
 | `menu`, `list` with `item`, `sep` | menu/list: box props, list adds `selected`; item: `value shortcut disabled html` |

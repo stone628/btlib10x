@@ -209,11 +209,11 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <div class="wrap"><table>
 <tr><th>Layer (paint order)</th><th>Content</th></tr>
 <tr><td>Terrain fill</td><td>Face colour per terrain type (woods, water by depth, rough, rubble, pavement, buildings by class); wreckage <code>%</code> and club tokens <code>!</code> as small glyphs on the face. Colours as CSS tokens in <code>instant.css</code>, light and dark.</td></tr>
-<tr><td>Deploy zone</td><td>Home-edge hexes tinted in the side's colour during deployment.</td></tr>
+<tr><td>Deploy zone</td><td>During deployment, the hexes the selected Player unit may take (or the edge being chosen) carry a band 1/8 of the hex's corner-to-corner width inside the hex edges, cut into six trapezoids, one per hexside. A trapezoid stands for one facing the unit may take on that hex (deployment allows all six; later phases can band only some). Each is filled in the team colour and outlined in a brighter tint of it.</td></tr>
 <tr><td>Reachable</td><td>Reachable landing hexes for the chosen movement mode, tinted with the actor's team; MP cost of the cheapest path as a small number on the face.</td></tr>
 <tr><td>Target</td><td>Hexes of fireable targets outlined; the selected target filled; an LOS line from attacker to target with blocking hexes marked.</td></tr>
 <tr><td>Selection</td><td>Hovered hex outline; selected hex thick outline; the chosen landing shows a ghost banner.</td></tr>
-<tr><td>Facing</td><td>Each unit as a sharp triangle lying flat at the middle of its hex face, nudged 1/16 hex toward its facing edge, pointing along its facing, half the hex's height, filled in a darker team colour with a team-colour border (thick for the acting unit, dashed for hulls and ghosts).</td></tr>
+<tr><td>Facing</td><td>Each unit as a sharp triangle lying flat at the middle of its hex face, nudged 1/16 hex toward its facing edge, pointing along its facing, half the hex's corner-to-corner width long, filled in a darker team colour with a team-colour border (thick for the acting unit, dashed for hulls and ghosts).</td></tr>
 <tr><td>Banners</td><td>Units, drawn last (below).</td></tr>
 </table></div>
 
@@ -439,42 +439,77 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <p>All engine maps are listed. Instant-Action-only maps come from a separate pack (§14), tagged "instant".</p>
 
 <h3>8.4 Deployment (screen 2)</h3>
-<pre class="screen"><code>╔═ Deployment ═════════════════════════════════════════════════════╤═══════════ quickstart 15×16 ══╗
-║                                                                  │ HOME EDGES                    ║
-║                                                                  │ roll-off   Side 1 9 · Side 2 6║
-║                                                                  │ Side 1 chose   South          ║
-║                                                                  │ Side 2 gets    North          ║
-║                                                                  │                               ║
-║                                                                  ├───────────────────────────────╢
-║                                                                  │ TO PLACE                      ║
-║                                                                  │ ▸ A1 HBK-4G     (06,16) ↑     ║
-║                                                                  │   A2 CN9-YLW2   not placed    ║
-║                                                                  │   A3 GRF-1N     not placed    ║
-║                                                                  │   B1 GRF-1N  AI (08,01) ↓     ║
-║                       vector map (canvas)                        │   B2 ENF-4R  AI (10,01) ↓     ║
-║                                                                  │   B3 HER-5SA AI (04,01) ↓     ║
-║                 home-edge hexes tinted per side,                 │                               ║
-║                  placed units shown as banners                   │                               ║
-║                                                                  │                               ║
-║                    click an edge hex to place                    │                               ║
-║                                                                  │                               ║
-║                                                                  │                               ║
-║                                                                  │                               ║
-║                                                                  │                               ║
-║                                                                  │                               ║
-║                                                                  │                               ║
-║                                                                  │ [ Auto-place side  A ]        ║
-║                                                                  │                               ║
-║                                                                  │ free first placement          ║
-║                                                                  │ (house rule, TW p. 256)       ║
-║                                                                  │                               ║
-║                                                                  │                               ║
-╚══════════════════════════════════════════════════════════════════╧═══════════════════════════════╝
- ↑↓ Unit  [ ] Facing  A Auto-place  Enter Begin  Esc Setup  · mouse: click an edge hex              </code></pre>
+<p>Placing units (Side 1 has the Player unit A1 and a persona wingman A2; the list shows unit IDs only):</p>
+<pre class="screen"><code>╔═ Deployment · testground ═════════════════════════════════╤═ Home edges (TW p. 256) ═════════════╗
+║                                                           │ Roll-off 2D6   Side 1 9 · Side 2 7   ║
+║                                                           │ Side 1 won and chose the edge        ║
+║                                                           │ Side 1  East     Side 2  West        ║
+║                                                           │ [  Change edge ]                     ║
+║                                                           │                                      ║
+║                                                           │ Units                                ║
+║                                                           │   Unit  Hex   Face Control           ║
+║                                                           │ ▸[A1  ] 16,07 [NW] Player            ║
+║                                                           │  [A2  ] 16,20  NW  Hull-Down         ║
+║                                                           │  [B1  ] 01,07  SE  Pit Fighter       ║
+║                                                           │  [B2  ] 01,20  SE  Alpha Striker     ║
+║                    vector map (canvas)                    │                                      ║
+║                                                           │ [  Auto-place  ]                     ║
+║            free home-edge hexes of the selected           │                                      ║
+║            Player unit marked with a team band            │                                      ║
+║                                                           │                                      ║
+║             click a marked hex: place the unit            │                                      ║
+║              click a banner: select that unit             │                                      ║
+║          click the selected banner: facing popup          │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │ First placement is free              ║
+║                                                           │ (house rule for TW p. 256)           ║
+║                                                           │                                      ║
+║                                                           │   [ Discard  Esc ]  [ Done  F10 ]    ║
+╚═══════════════════════════════════════════════════════════╧══════════════════════════════════════╝
+ ↑↓ Unit  ←→ Facing  Tab Next  Esc Discard  F10 Done                   click a marked hex to place
+<p>Choosing the edge, shown only when the roll-off winner's side has a Player unit:</p>
+<pre class="screen"><code>╔═ Deployment · testground ═════════════════════════════════╤═ Home edges (TW p. 256) ═════════════╗
+║                                                           │ Roll-off 2D6   Side 1 9 · Side 2 7   ║
+║                                                           │ Side 1 won: choose your edge         ║
+║                                                           │                                      ║
+║                                                           │             [  North  ]              ║
+║                                                           │    [  West   ]     [  East   ]       ║
+║                                                           │             [  South  ]              ║
+║                                                           │                                      ║
+║                                                           │ Side 2 takes the opposite edge.      ║
+║                                                           │ Point at an edge to preview it.      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║              map; the edge under the pointer              │                                      ║
+║             (or the focused button) is banded             │                                      ║
+║                                                           │                                      ║
+║           click an edge hex to choose that edge           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │                                      ║
+║                                                           │ First placement is free              ║
+║                                                           │ (house rule for TW p. 256)           ║
+║                                                           │         [ Discard  Esc ]             ║
+╚═══════════════════════════════════════════════════════════╧══════════════════════════════════════╝
+ Tab Next  Enter Select  Esc Discard                           click an edge hex to choose that edge
 <ol>
-<li>The app rolls 2D6 per side (re-roll ties) and shows it. The winner picks a home edge (a 4-item menu: North, South, West, East, or "Let the AI choose" for a persona side); the opposite edge goes to the other side (TW p. 256).</li>
-<li>Each Player unit is placed by selecting it in the list and clicking a tinted hex on its home edge; <kbd>[</kbd> <kbd>]</kbd> turn its facing. Persona sides are placed automatically (spread along the edge, preferring hexes the unit can legally stand in and that give cover).</li>
-<li><kbd>Enter</kbd> creates the battle (<code>createBattle</code>) and the controller rolls initiative for turn 1.</li>
+<li>The app rolls 2D6 per side (ties re-rolled and listed) and shows it. A winner side with a Player unit chooses its home edge with the four compass buttons or by clicking an edge hex; pointing at a button bands that edge on the map. A winner side without one picks at once. The other side gets the opposite edge (TW p. 256). Every unit is then auto-placed (spread along its edge, toward cover, away from deep water), facing into the map. <strong>Change edge</strong> (Player winner only) clears the edges and placements and reopens the choice.</li>
+<li>Only Player units can be moved or turned; persona units keep their auto-placed hex and facing (a try shows "… is controlled by a persona."). Select a unit with its button, its banner on the map, or <kbd>↑</kbd> <kbd>↓</kbd> (which also centres the map on it). The unit list keeps one cursor: the selected unit's button is the list's only <kbd>Tab</kbd> stop, and <kbd>↑</kbd> <kbd>↓</kbd> or a banner click move the selection and the focus together, so <kbd>Tab</kbd> enters the list on the selected unit and leaves it for the next control. The facing buttons are not <kbd>Tab</kbd> stops (<kbd>←</kbd> <kbd>→</kbd> turn instead). The selected Player unit's free home-edge hexes carry the deploy band (§6: six per-facing trapezoids, 1/8 of the hex width). Click one to move the unit there. Turn it with <kbd>←</kbd> <kbd>→</kbd>, its facing button (<code>[NW]</code>) or by clicking its banner again; both open a facing popup whose arrows follow the map rotation. <strong>Auto-place</strong> re-places every Player unit.</li>
+<li>Placement errors show on the status line. The side pane has a fixed width (the split's <code>fixed</code> option).</li>
+<li><strong>Done</strong> or <kbd>F10</kbd> creates the battle (<code>createBattle</code>) and the controller rolls initiative for turn 1. <strong>Discard</strong> (left of Done, in both steps) or <kbd>Esc</kbd> asks "Discard this battle and return to the title screen? Your New Battle setup is kept." (default No) and goes to the title.</li>
 </ol>
 
 <h3>8.5 Battle, movement phase (screen 3)</h3>
@@ -619,7 +654,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td>Lists, menus, tables</td><td><kbd>↑</kbd> <kbd>↓</kbd> <kbd>Home</kbd> <kbd>End</kbd> <kbd>PgUp</kbd> <kbd>PgDn</kbd> · <kbd>Space</kbd> toggle a checkbox · underlined letter in a menu</td></tr>
 <tr><td>Title</td><td><kbd>↑</kbd> <kbd>↓</kbd> select · <kbd>Enter</kbd> choose · <kbd>F1</kbd> help · mouse: hover selects, click runs</td></tr>
 <tr><td>New Battle</td><td>mouse: click any button, field or dropdown · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> move the focus · <kbd>Enter</kbd> / <kbd>Space</kbd> press · <kbd>↑</kbd> <kbd>↓</kbd> open a dropdown · <kbd>F10</kbd> launch · Choose 'Mech: <kbd>/</kbd> search · <kbd>1</kbd>&ndash;<kbd>4</kbd> class · <kbd>T</kbd> <kbd>K</kbd> <kbd>E</kbd> <kbd>S</kbd> filters · wheel scroll</td></tr>
-<tr><td>Deployment</td><td><kbd>↑</kbd> <kbd>↓</kbd> unit · <kbd>[</kbd> <kbd>]</kbd> facing · <kbd>A</kbd> auto-place side · <kbd>Enter</kbd> begin · mouse: click an edge hex</td></tr>
+<tr><td>Deployment</td><td><kbd>↑</kbd> <kbd>↓</kbd> unit (centres the map on it) · <kbd>←</kbd> <kbd>→</kbd> turn the Player unit · <kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> move the focus (the unit list is one stop, on the selected unit) · <kbd>Enter</kbd> press · <kbd>F10</kbd> done · <kbd>Esc</kbd> discard to the title (confirm) · mouse: edge buttons or an edge hex to choose, a marked hex to place, a banner to select, the selected banner or <code>[NW]</code> button to turn</td></tr>
 <tr><td>Map view (any battle screen)</td><td><kbd>,</kbd> <kbd>.</kbd> rotate · <kbd>+</kbd> <kbd>-</kbd> zoom · <kbd>V</kbd> tilt preset · <kbd>Home</kbd> north-up · <kbd>F</kbd> centre on actor · mouse: drag rotate, wheel zoom</td></tr>
 <tr><td>Movement</td><td><kbd>W</kbd> walk · <kbd>R</kbd> run · <kbd>J</kbd> jump · <kbd>S</kbd> stand still · <kbd>M</kbd> more · <kbd>D</kbd> done · <kbd>Esc</kbd> clear · mouse: click landing hex, then facing popup (keyboard)</td></tr>
 <tr><td>Attack</td><td><kbd>Tab</kbd> target · <kbd>T</kbd> twist · <kbd>Space</kbd> / <kbd>1</kbd>&ndash;<kbd>9</kbd> toggle weapon · <kbd>A</kbd> all · <kbd>N</kbd> none · <kbd>X</kbd> physical · <kbd>D</kbd> done · <kbd>Esc</kbd> clear</td></tr>

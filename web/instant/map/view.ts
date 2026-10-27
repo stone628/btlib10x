@@ -29,11 +29,20 @@ export interface Banner {
   readonly ghost?: boolean;
 }
 
+/** One banded hex: the team colour and the facings drawn (one trapezoid each). */
+export interface BandHex {
+  readonly team: number;
+  readonly facings: readonly Facing[];
+}
+
 export interface Overlays {
   /** "col,row" → label drawn on the face (e.g. MP cost). */
   reachable?: ReadonlyMap<string, string>;
-  /** "col,row" → team whose deploy zone this is. */
-  deploy?: ReadonlyMap<string, number>;
+  /**
+   * "col,row" → a unit may stand there with these facings: a band inside the
+   * hex edges, one trapezoid per available facing, in the team's colour.
+   */
+  deploy?: ReadonlyMap<string, BandHex>;
   targets?: ReadonlySet<string>;
   target?: string | null;
   selected?: string | null;
@@ -258,6 +267,20 @@ export class MapView {
     this.panY += py - qy;
   }
 
+  /** Pan so a hex's centre sits in the middle of the canvas. */
+  centerOn(hex: HexCoord): void {
+    if (!this.src) return;
+    const v = this.view();
+    const w = worldCenter(hex.col, hex.row);
+    const [x, y] = v.proj(
+      v.rot([w[0] - this.world.cx, w[1] - this.world.cy]),
+      this.src.levelAt(hex),
+    );
+    this.panX += v.W / 2 - x;
+    this.panY += v.H / 2 - y;
+    this.render();
+  }
+
   cycleTilt(): void {
     const i = TILTS.indexOf(this.tilt);
     this.tilt = TILTS[(i + 1) % TILTS.length]!;
@@ -453,7 +476,7 @@ export class MapView {
         if (s.top) {
           ctx.fillStyle = css(`--ia-t-${this.src!.terrainAt(s.hex)}`, "#1e1e1e");
           ctx.fill();
-          const tint = this.tintFor(k, team);
+          const tint = this.tintFor(k);
           if (tint) {
             ctx.fillStyle = tint;
             ctx.fill();
@@ -471,6 +494,8 @@ export class MapView {
           ctx.lineTo(g.b[0], g.b[1]);
         }
       ctx.stroke();
+      const dz = s.top ? this.overlays.deploy?.get(k) : undefined;
+      if (dz !== undefined) this.drawBand(s.polys[0]!, team(dz.team), dz.facings);
       if (s.top && s.label && (this.hover === k || (this.showCoords && v.fs >= 6)))
         this.drawLabel(v, s, d, this.hover === k);
       if (s.top) this.drawMarks(v, s, k);
@@ -482,17 +507,50 @@ export class MapView {
     this.drawHud(v);
   }
 
-  private tintFor(k: string, team: (n: number) => string): string | null {
+  private tintFor(k: string): string | null {
     const o = this.overlays;
     const alpha = (c: string, a: number) =>
       `color-mix(in srgb, ${c} ${Math.round(a * 100)}%, transparent)`;
     if (o.target === k) return alpha(css("--ia-target", "#ffd24a"), 0.55);
     if (o.selected === k) return alpha(css("--ia-select", "#ffffff"), 0.35);
     if (o.reachable?.has(k)) return alpha(css("--ia-reach", "#7ee787"), 0.35);
-    const dz = o.deploy?.get(k);
-    if (dz !== undefined) return alpha(team(dz), 0.3);
     if (this.hover === k) return alpha(css("--ia-select", "#ffffff"), 0.15);
     return null;
+  }
+
+  /**
+   * Deploy band: a ring 1/8 of the hex's corner-to-corner width inside its
+   * edges, cut into one trapezoid per hexside. A trapezoid is drawn for each
+   * available facing (the hexside the unit would face), filled with the team
+   * colour and outlined in a brighter tint of it.
+   */
+  private drawBand(
+    poly: readonly (readonly [number, number])[],
+    color: string,
+    facings: readonly Facing[],
+  ): void {
+    const ctx = this.ctx;
+    const cx = poly.reduce((a, p) => a + p[0], 0) / poly.length;
+    const cy = poly.reduce((a, p) => a + p[1], 0) / poly.length;
+    // 1/8 of the width (2 circumradii) is 1/4 of the radius
+    const inner = poly.map(([x, y]) => [cx + (x - cx) * 0.75, cy + (y - cy) * 0.75] as const);
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.strokeStyle = `color-mix(in srgb, ${color} 55%, white)`;
+    ctx.lineWidth = Math.max(1, ctx.lineWidth);
+    ctx.lineJoin = "miter";
+    for (const f of facings) {
+      // Corner j sits at j·60° (y down), so facing i's hexside runs from corner i+4 to i+5.
+      const i = FACINGS.indexOf(f);
+      const a = (i + 4) % 6;
+      const b = (i + 5) % 6;
+      ctx.beginPath();
+      for (const [x, y] of [poly[a]!, poly[b]!, inner[b]!, inner[a]!]) ctx.lineTo(x, y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   /** The hovered hex's label is drawn brighter and at least 8 px, as it is often the only one. */
@@ -561,8 +619,8 @@ export class MapView {
   private drawFacings(v: ReturnType<MapView["view"]>): void {
     if (!this.src) return;
     const ctx = this.ctx;
-    const h = SQ3 / 2; // half the hex's flat-to-flat height
-    const hw = h * 0.3;
+    const h = 0.5; // 1/4 the hex's corner-to-corner width (one circumradius)
+    const hw = h * 0.26;
     const nudge = SQ3 / 16; // shifted 1/16 hex toward the facing edge
     const items = this.banners.map((b) => {
       const w = worldCenter(b.hex.col, b.hex.row);

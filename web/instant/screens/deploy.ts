@@ -1,161 +1,475 @@
-/** Screen 2: deployment (TW p. 256 roll-off, home edges, placement). */
-import { type Facing, rotateFacing } from "btlib10x";
-import { EDGES, edgeHexes } from "../battle/deploy";
+/**
+ * Screen 2: deployment (TW p. 256 roll-off, home edges, placement). The map
+ * takes clicks (choose an edge, place or select a unit, turn the selected
+ * one); the side pane holds kit buttons. Persona units are placed by the
+ * engine and cannot be moved or turned.
+ */
+import type { Facing, HexCoord } from "btlib10x";
+import { PERSONAS } from "../ai/persona.data";
+import { EDGES, type Edge, edgeHexes } from "../battle/deploy";
 import {
-  autoPlaceAll,
+  autoPlacePlayers,
   beginBattle,
+  changeEdge,
   chooseEdge,
   currentMap,
+  type DeployUnit,
   deployBanners,
   deployUnits,
+  onEdge,
   placeUnit,
-  sideHasPlayer,
+  playerChoosesEdge,
+  turnUnit,
 } from "../flow";
 import { t } from "../i18n";
-import { app, rerender } from "../state";
+import type { BandHex } from "../map/view";
+import { app, kitModal, rerender } from "../state";
 import type { TuiNode } from "../tui";
-import { blank, fit, h, mapSlot, row, statusbar } from "./common";
+import { fit, h, kit, mapSlot, row, statusbar } from "./common";
+
+/** Side pane width in cells, and its content width (one cell of padding each side). */
+const PANE = 38;
+const W = PANE - 2;
+/** Content rows of the 31-row split. */
+const ROWS = 29;
+const FACINGS: readonly Facing[] = ["n", "ne", "se", "s", "sw", "nw"];
+const ARROWS = ["↑", "↗", "↘", "↓", "↙", "↖"];
+
+/** Wrap kit controls and text into one text row. */
+function line(key: string, cls: string, ...kids: (TuiNode | string)[]): TuiNode {
+  return h().el("div", { key, class: `ia-row ${cls}`.trim() }, ...kids);
+}
+
+function hexText(hex: HexCoord): string {
+  return `${String(hex.col).padStart(2, "0")},${String(hex.row).padStart(2, "0")}`;
+}
+
+function controlName(u: DeployUnit): string {
+  return u.persona === null ? t("ctl.player") : PERSONAS[u.persona].name;
+}
+
+function report(run: () => void): void {
+  try {
+    run();
+    app.error = null;
+  } catch (e) {
+    app.error = e instanceof Error ? e.message : String(e);
+  }
+  rerender();
+}
 
 export function deployScreen(): TuiNode {
   const H = h();
   const d = app.deploy!;
-  const winner = d.roll.winner;
   const choosing = d.edges[0] === null;
-  const side: TuiNode[] = [
-    row(t("deploy.homeEdges"), { cls: "ia-bright", key: "he" }),
-    row(
-      fit(t("deploy.rolls", { rolls: d.roll.rolls.map(([a, b]) => `${a}:${b}`).join(", ") }), 29),
-      { key: "rolls" },
-    ),
-    row(fit(t("deploy.winner", { side: winner }), 29), { key: "win" }),
-  ];
-  if (choosing) {
-    side.push(row(fit(t("deploy.choose"), 29), { cls: "ia-accent", key: "ch" }));
-    EDGES.forEach((e, i) => {
-      side.push(
-        row(`${i === d.edgeCursor ? "▸" : " "} ${i + 1} ${t(`edge.${e}`)}`, {
-          sel: i === d.edgeCursor,
-          key: e,
-          onClick: () => chooseEdge(e),
-        }),
-      );
-    });
-  } else {
-    side.push(
-      row(fit(`${t("setup.side1")}: ${t(`edge.${d.edges[0]}`)}`, 29), {
-        cls: "ia-team1",
-        key: "e1",
-      }),
-      row(fit(`${t("setup.side2")}: ${t(`edge.${d.edges[1]}`)}`, 29), {
-        cls: "ia-team2",
-        key: "e2",
-      }),
-      ...blank(1),
-      row(t("deploy.toPlace"), { cls: "ia-bright", key: "tp" }),
-    );
-    deployUnits(app.loadout).forEach((u, i) => {
-      const p = d.placements[u.id];
-      const where = p
-        ? `(${String(p.hex.col).padStart(2, "0")},${String(p.hex.row).padStart(2, "0")}) ${p.facing.toUpperCase()}`
-        : t("deploy.notPlaced");
-      side.push(
-        row(
-          `${i === d.cursor ? "▸" : " "}${fit(u.id, 3)} ${fit(u.model, 9)}${u.player ? " " : "*"}${fit(where, 12, "right")}`,
-          {
-            sel: i === d.cursor,
-            cls: u.side === 0 ? "ia-team1" : "ia-team2",
-            key: u.id,
-            onClick: () => {
-              d.cursor = i;
-            },
-          },
-        ),
-      );
-    });
-    side.push(...blank(1), row(fit(t("deploy.aiMark"), 29), { cls: "ia-dim", key: "aim" }));
-  }
-  side.push(
-    ...blank(1),
-    row(fit(t("deploy.free"), 29), { cls: "ia-dim", key: "free" }),
-    row(fit(t("deploy.tw"), 29), { cls: "ia-dim", key: "tw" }),
-  );
+  const side = choosing ? edgeRows() : unitRows();
   return H.el(
     "div",
     { class: "ia-root" },
     H.split(
-      { cols: 100, rows: 31, border: "double", sizes: "1fr 31" },
+      { cols: 100, rows: 31, border: "double", sizes: `1fr ${PANE}`, fixed: true },
       H.pane({ title: t("deploy.title", { map: app.loadout.map }), pad: 0 }, mapSlot()),
       H.pane(t("deploy.side"), ...side),
     ),
     statusbar(
       choosing
         ? [
-            ["1-4", "key.edge"],
-            ["Enter", "key.ok"],
-            ["Esc", "key.setup"],
+            ["Tab", "key.next"],
+            ["Enter", "key.select"],
+            ["Esc", "key.discard", confirmDiscard],
           ]
         : [
             ["↑↓", "key.unit"],
-            ["[ ]", "key.facing"],
-            ["A", "key.autoPlace"],
-            ["Enter", "key.begin"],
-            ["Esc", "key.setup"],
+            ["←→", "key.facing"],
+            ["Tab", "key.next"],
+            ["Esc", "key.discard", confirmDiscard],
+            ["F10", "key.done", done],
           ],
-      t("deploy.mouse"),
+      app.error ? `! ${app.error}` : t(choosing ? "deploy.mouseChoose" : "deploy.mouse"),
     ),
   );
 }
 
-/** Map overlays for the deploy screen: home-edge zones and placed units. */
+/** Roll-off lines shared by both steps. */
+function rollRows(): TuiNode[] {
+  const d = app.deploy!;
+  const rolls = d.roll.rolls;
+  const [a, b] = rolls[rolls.length - 1]!;
+  const out = [row(fit(t("deploy.rolls", { a, b }), W), { key: "rolls" })];
+  if (rolls.length > 1) {
+    const ties = rolls
+      .slice(0, -1)
+      .map(([x, y]) => `${x}:${y}`)
+      .join(", ");
+    out.push(row(fit(t("deploy.ties", { ties }), W), { key: "ties", cls: "ia-dim" }));
+  }
+  return out;
+}
+
+/** Fill the pane so `bottom` sits on its last rows. */
+function pad(top: TuiNode[], bottom: TuiNode[]): TuiNode[] {
+  const n = Math.max(0, ROWS - top.length - bottom.length);
+  return [...top, ...Array.from({ length: n }, (_, i) => row(" ", { key: `pad${i}` })), ...bottom];
+}
+
+function footRows(): TuiNode[] {
+  return [
+    row(fit(t("deploy.free"), W), { cls: "ia-dim", key: "free" }),
+    row(fit(t("deploy.tw"), W), { cls: "ia-dim", key: "tw" }),
+  ];
+}
+
+// ------------------------------------------------------------ step 1: edge
+
+function edgeButton(e: Edge): TuiNode {
+  const d = app.deploy!;
+  return h().btn(
+    {
+      key: `edge-${e}`,
+      onClick: () => report(() => pickEdge(e)),
+      on: {
+        mouseenter: () => {
+          d.hoverEdge = e;
+          rerender();
+        },
+        mouseleave: () => {
+          if (d.hoverEdge === e) d.hoverEdge = null;
+          rerender();
+        },
+        focus: () => {
+          d.hoverEdge = e;
+          rerender();
+        },
+      },
+    },
+    fit(t(`edge.${e}`), 7, "center"),
+  );
+}
+
+function pickEdge(e: Edge): void {
+  const d = app.deploy!;
+  d.hoverEdge = null;
+  chooseEdge(e);
+}
+
+function edgeRows(): TuiNode[] {
+  const d = app.deploy!;
+  const winner = d.roll.winner;
+  // Button "[ North ]" is 11 cells; the compass is three of them wide.
+  const mid = " ".repeat((W - 11) >> 1);
+  const side = " ".repeat((W - 27) >> 1);
+  const top: TuiNode[] = [
+    ...rollRows(),
+    row(fit(t("deploy.choose", { side: winner }), W), {
+      key: "who",
+      cls: winner === 1 ? "ia-team1" : "ia-team2",
+    }),
+    row(" ", { key: "b0" }),
+    line("n", "", mid, edgeButton("north")),
+    line("we", "", side, edgeButton("west"), "     ", edgeButton("east")),
+    line("s", "", mid, edgeButton("south")),
+    row(" ", { key: "b1" }),
+    row(fit(t("deploy.opposite", { side: 3 - winner }), W), { key: "opp", cls: "ia-dim" }),
+    row(fit(t("deploy.hoverEdge"), W), { key: "hov", cls: "ia-dim" }),
+  ];
+  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow(false)]);
+}
+
+/** Bottom buttons: Discard (Esc), and Done (F10) once the edges are set. */
+function exitRow(withDone: boolean): TuiNode {
+  const H = h();
+  const len = (s: string) => kit().compensatedLength(s);
+  const discard = `${t("deploy.discard")}  Esc`;
+  const doneLabel = `${t("deploy.done")}  F10`;
+  // a kit button adds four cells: "[ " and " ]"
+  const width = len(discard) + 4 + (withDone ? 2 + len(doneLabel) + 4 : 0);
+  return line(
+    "exit",
+    "",
+    " ".repeat(Math.max(0, (W - width) >> 1)),
+    H.btn({ key: "discard", onClick: confirmDiscard }, discard),
+    withDone ? "  " : "",
+    withDone ? H.btn({ key: "done", primary: true, onClick: done }, doneLabel) : "",
+  );
+}
+
+// ------------------------------------------------------------ step 2: units
+
+function edgesRow(): TuiNode {
+  const d = app.deploy!;
+  const half = (s: 0 | 1) =>
+    h().el(
+      "span",
+      { class: s === 0 ? "ia-team1" : "ia-team2" },
+      fit(`${t(s === 0 ? "setup.side1" : "setup.side2")}  ${t(`edge.${d.edges[s]}`)}`, W >> 1),
+    );
+  return line("edges", "", half(0), half(1));
+}
+
+function unitRow(u: DeployUnit, i: number): TuiNode {
+  const H = h();
+  const d = app.deploy!;
+  const p = d.placements[u.id];
+  const sel = i === d.cursor;
+  const face = p ? p.facing.toUpperCase() : "--";
+  const facing =
+    u.persona === null && p
+      ? H.btn(
+          {
+            key: "face",
+            variant: "tight",
+            // ← → turn the unit; Tab skips this button (one stop per unit list)
+            attrs: { tabindex: "-1" },
+            onClick: (e: MouseEvent) => {
+              d.cursor = i;
+              // A click on this button while its popup is open closes it.
+              if (facingOpen === u.id) {
+                kit().closePopup();
+                return;
+              }
+              void openFacingMenu(u, e.currentTarget as HTMLElement);
+            },
+          },
+          fit(face, 2),
+        )
+      : ` ${fit(face, 2)} `;
+  const control = controlName(u);
+  const long = kit().compensatedLength(control) > 16;
+  return H.el(
+    "div",
+    {
+      key: u.id,
+      class: `ia-row ${u.side === 0 ? "ia-team1" : "ia-team2"}`,
+      ...(long ? { tip: control } : {}),
+    },
+    sel ? "▸" : " ",
+    H.btn(
+      {
+        key: "unit",
+        variant: "tight",
+        // Roving focus: only the selected unit is a Tab stop; ↑ ↓ move it.
+        attrs: { tabindex: sel ? "0" : "-1", "data-unit": u.id },
+        onClick: () => {
+          d.cursor = i;
+          centerOnCursor();
+        },
+      },
+      fit(u.id, 4),
+    ),
+    ` ${fit(p ? hexText(p.hex) : t("deploy.notPlaced"), 5)} `,
+    facing,
+    // one cell of slack: sub-pixel widths otherwise clip the last cell
+    ` ${fit(control, 16)}`,
+  );
+}
+
+function unitRows(): TuiNode[] {
+  const d = app.deploy!;
+  const H = h();
+  const units = deployUnits(app.loadout);
+  const winner = d.roll.winner;
+  const head =
+    "  " +
+    fit(t("deploy.colUnit"), 6) +
+    fit(t("deploy.colHex"), 6) +
+    fit(t("deploy.colFace"), 5) +
+    t("setup.control");
+  const top: TuiNode[] = [
+    ...rollRows(),
+    row(fit(t("deploy.chose", { side: winner }), W), { key: "who" }),
+    edgesRow(),
+  ];
+  if (playerChoosesEdge())
+    top.push(
+      line(
+        "chg",
+        "",
+        H.btn(
+          { key: "chg", onClick: () => report(changeEdge) },
+          fit(t("deploy.changeEdge"), 14, "center"),
+        ),
+      ),
+    );
+  top.push(
+    row(" ", { key: "b0" }),
+    row(fit(t("deploy.units"), W), { key: "units", cls: "ia-bright" }),
+    row(fit(head, W), { key: "head", cls: "ia-dim" }),
+    ...units.map(unitRow),
+  );
+  if (units.some((u) => u.persona === null))
+    top.push(
+      row(" ", { key: "b1" }),
+      line(
+        "auto",
+        "",
+        H.btn(
+          { key: "auto", onClick: () => report(autoPlacePlayers) },
+          fit(t("deploy.autoPlace"), 14, "center"),
+        ),
+      ),
+    );
+  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow(true)]);
+}
+
+// ------------------------------------------------------------ actions
+
+function done(): void {
+  report(beginBattle);
+}
+
+/** Discard the battle and go back to the title (the loadout stays saved). */
+function confirmDiscard(): void {
+  kitModal.open = true;
+  void kit()
+    .dialog({
+      title: t("deploy.discardTitle"),
+      text: t("deploy.discardText"),
+      buttons: [t("yes"), t("no")],
+      defaultIndex: 1,
+      tone: "warn",
+    })
+    .then((r) => {
+      kitModal.open = false;
+      if (r === t("yes")) {
+        app.screen = "title";
+        app.deploy = null;
+        app.error = null;
+        app.mapView?.reset(); // drop the deployment pan and zoom
+      }
+      rerender();
+    });
+}
+
+function centerOnCursor(): void {
+  const d = app.deploy!;
+  const u = deployUnits(app.loadout)[d.cursor];
+  const p = u ? d.placements[u.id] : undefined;
+  if (p) app.mapView?.centerOn(p.hex);
+}
+
+/** Unit whose facing popup is open: a second click on its button closes it. */
+let facingOpen: string | null = null;
+
+/** Facing popup at `anchor`; arrows follow the map's rotation. */
+function openFacingMenu(u: DeployUnit, anchor: HTMLElement): Promise<void> {
+  const d = app.deploy!;
+  const p = d.placements[u.id];
+  if (!p) return Promise.resolve();
+  const angle = app.mapView?.angle ?? 0;
+  kitModal.open = true;
+  facingOpen = u.id;
+  return kit()
+    .popupMenu(
+      anchor,
+      FACINGS.map((f, i) => {
+        const dir = (i * 60 - angle + 360) % 360;
+        return { label: `${ARROWS[Math.round(dir / 60) % 6]} ${f.toUpperCase()}` };
+      }),
+      { active: FACINGS.indexOf(p.facing) },
+    )
+    .then((r) => {
+      kitModal.open = false;
+      if (facingOpen === u.id) facingOpen = null;
+      if (r && "index" in r) {
+        const f = FACINGS[r.index];
+        if (f) p.facing = f;
+      }
+      rerender();
+    });
+}
+
+function pointAnchor(ev: MouseEvent): HTMLElement {
+  const el = document.createElement("div");
+  el.style.cssText = `position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;width:1px;height:1px`;
+  document.body.appendChild(el);
+  return el;
+}
+
+/** A click on the map: choose an edge, select a unit, turn it, or place it. */
+function pickHex(hex: HexCoord, ev: MouseEvent): void {
+  const d = app.deploy!;
+  const map = currentMap();
+  if (d.edges[0] === null) {
+    if (!playerChoosesEdge()) return;
+    const edge = EDGES.find((e) => onEdge(map, e, hex));
+    if (!edge) throw new Error(t("err.notEdge"));
+    pickEdge(edge);
+    return;
+  }
+  const units = deployUnits(app.loadout);
+  const at = units.findIndex((u) => {
+    const p = d.placements[u.id];
+    return p !== undefined && p.hex.col === hex.col && p.hex.row === hex.row;
+  });
+  if (at >= 0) {
+    const u = units[at]!;
+    if (at === d.cursor && u.persona === null) {
+      const anchor = pointAnchor(ev);
+      void openFacingMenu(u, anchor).then(() => anchor.remove());
+    } else {
+      d.cursor = at;
+      d.focusUnit = true;
+    }
+    return;
+  }
+  const u = units[d.cursor];
+  if (u) placeUnit(u.id, hex);
+}
+
+/** Map overlays: the hovered edge while choosing, else the selected unit's free edge hexes. */
 export function deployOverlays(): void {
   const v = app.mapView;
   const d = app.deploy;
   if (!v || !d) return;
   const map = currentMap();
-  const zone = new Map<string, number>();
-  d.edges.forEach((e, s) => {
-    if (e) for (const hx of edgeHexes(map, e)) zone.set(`${hx.col},${hx.row}`, s + 1);
-  });
+  const zone = new Map<string, BandHex>();
+  if (d.edges[0] === null) {
+    if (d.hoverEdge)
+      for (const hx of edgeHexes(map, d.hoverEdge))
+        zone.set(`${hx.col},${hx.row}`, { team: d.roll.winner, facings: FACINGS });
+  } else {
+    const u = deployUnits(app.loadout)[d.cursor];
+    const edge = u ? d.edges[u.side] : null;
+    if (u && edge && u.persona === null) {
+      const taken = new Set(Object.values(d.placements).map((p) => `${p.hex.col},${p.hex.row}`));
+      for (const hx of edgeHexes(map, edge)) {
+        const k = `${hx.col},${hx.row}`;
+        // Deployment allows any facing; later phases may band only some sides.
+        if (!taken.has(k)) zone.set(k, { team: u.side + 1, facings: FACINGS });
+      }
+    }
+  }
   v.overlays = { deploy: zone };
   v.banners = deployBanners();
-  v.onPick = (hex) => {
-    const unit = deployUnits(app.loadout)[d.cursor];
-    if (!unit || d.edges[0] === null) return;
-    try {
-      placeUnit(unit.id, hex);
-      app.error = null;
-    } catch (e) {
-      app.error = e instanceof Error ? e.message : String(e);
-    }
-    rerender();
-  };
+  v.onPick = (hex, ev) => report(() => pickHex(hex, ev));
+}
+
+/** After a render: move the focus to the selected unit's button when asked (one cursor). */
+export function deployAfterRender(): void {
+  const d = app.deploy;
+  if (!d?.focusUnit) return;
+  d.focusUnit = false;
+  const u = deployUnits(app.loadout)[d.cursor];
+  if (u) document.querySelector<HTMLElement>(`#app [data-unit="${CSS.escape(u.id)}"]`)?.focus();
 }
 
 export function deployKey(e: KeyboardEvent): boolean {
   const d = app.deploy!;
   if (e.key === "Escape") {
-    app.screen = "setup";
-    app.deploy = null;
+    confirmDiscard();
     return true;
   }
-  if (d.edges[0] === null) {
-    if (!sideHasPlayer(app.loadout, (d.roll.winner - 1) as 0 | 1)) return false;
-    if (e.key === "ArrowDown") d.edgeCursor = (d.edgeCursor + 1) % 4;
-    else if (e.key === "ArrowUp") d.edgeCursor = (d.edgeCursor + 3) % 4;
-    else if (e.key === "Enter") chooseEdge(EDGES[d.edgeCursor]!);
-    else if (/^Digit[1-4]$/.test(e.code)) chooseEdge(EDGES[Number(e.code.slice(5)) - 1]!);
-    else return false;
-    return true;
-  }
+  if (d.edges[0] === null) return false;
   const units = deployUnits(app.loadout);
-  const unit = units[d.cursor];
-  if (e.key === "ArrowDown") d.cursor = (d.cursor + 1) % units.length;
-  else if (e.key === "ArrowUp") d.cursor = (d.cursor + units.length - 1) % units.length;
-  else if ((e.key === "[" || e.key === "]") && unit) {
-    const p = d.placements[unit.id];
-    if (p) p.facing = rotateFacing(p.facing, e.key === "]" ? 1 : -1) as Facing;
-  } else if (e.code === "KeyA" && unit) autoPlaceAll(unit.side);
-  else if (e.key === "Enter") beginBattle();
-  else return false;
+  if (e.key === "F10") beginBattle();
+  else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    const n = units.length;
+    d.cursor = (d.cursor + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+    d.focusUnit = true;
+    centerOnCursor();
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    const u = units[d.cursor];
+    if (u) turnUnit(u.id, e.key === "ArrowRight" ? 1 : -1);
+  } else return false;
   return true;
 }

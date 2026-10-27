@@ -99,6 +99,8 @@ export interface TuiKit {
     }>,
     opts?: { cols?: number; active?: number; dx?: number },
   ): Promise<{ index: number } | { nav: number } | null>;
+  /** Close the open popup menu (it resolves to null). */
+  closePopup(): void;
   compensatedLength(s: string): number;
   fit(s: string, cols: number, align?: "left" | "right" | "center"): string;
 }
