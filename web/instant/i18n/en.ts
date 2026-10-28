@@ -195,7 +195,6 @@ export const en = {
   "orders.chooseMode": "choose a mode",
   "orders.melee": "ends with a {kind}",
   "orders.done": "Done D",
-  "orders.clear": "Clear Esc",
   "orders.aiActing": "{id} is played by the AI",
   "orders.aiStep": "Space: next AI activation",
   "orders.twist": "Twist",
@@ -341,7 +340,7 @@ export const en = {
 
   "help.title": "Help",
   "help.text":
-    "Keyboard drives every menu; hexes are picked with the mouse.\n\nTitle  ↑↓ select · Enter choose · click an item\nSetup  click a field or button · Tab / arrows move · Enter open\n       'Mech list: wheel scroll · / search · 1-4 T K E S filters · F10 launch\nDeploy 1-4 edge · ↑↓ unit · click edge hex · [ ] facing · Enter begin\nMove   W R J S mode · click a tinted hex · pick facing · D done\nAttack Tab target · T twist · Space/1-9 weapon · A all · X physical\n       D done · Esc clear\nAny    F2 menu · I sheet · L log · Ctrl+Z undo · Space next AI step\nMap    , . rotate · + - zoom · V tilt · Home reset · drag to rotate\n       middle-button drag to pan",
+    "Keyboard drives every menu; hexes are picked with the mouse.\n\nTitle  ↑↓ select · Enter choose · click an item\nSetup  click a field or button · Tab / arrows move · Enter open\n       'Mech list: wheel scroll · / search · 1-4 T K E S filters · F10 launch\nDeploy 1-4 edge · ↑↓ unit · click edge hex · [ ] facing · Enter begin\nMove   W R J S mode · click a tinted hex · pick facing · D done\nAttack Tab target · T twist · Space/1-9 weapon · A all · N none · X physical\n       D done\nAny    F2 menu · I sheet · L log · Ctrl+Z undo · Space next AI step\nMap    , . rotate · + - zoom · V tilt · Home reset · drag to rotate\n       middle-button drag to pan",
 } as const;
 
 export type MessageKey = keyof typeof en;

@@ -363,8 +363,6 @@ export function battleScreen(): TuiNode {
         "div",
         { key: "btns", class: "ia-row" },
         H.btn({ onClick: () => commit() }, t("orders.done")),
-        " ",
-        H.btn({ onClick: () => clear() }, t("orders.clear")),
       ),
     );
   }
@@ -412,12 +410,6 @@ function commit(): void {
   act(() => (b.phase === "movement" ? b.commitMove() : b.commitAttack()));
   app.orderCursor = 0;
   pumpAi();
-}
-
-function clear(): void {
-  const b = app.battle!;
-  act(() => (b.phase === "movement" ? b.clearMove() : b.clearAttack()));
-  rerender();
 }
 
 // ------------------------------------------------------------ map wiring
@@ -740,7 +732,6 @@ function moveKey(e: KeyboardEvent): boolean {
     if (c && b.move?.choice !== c) act(() => b.chooseMove(c));
     else commit();
   } else if (e.code === "KeyD") commit();
-  else if (e.key === "Escape") clear();
   else return false;
   return true;
 }
@@ -761,12 +752,11 @@ function attackKey(e: KeyboardEvent): boolean {
     const i = rows.findIndex((r) => r.kind === "weapon" && r.weaponIndex === n);
     if (i >= 0) toggleRow(i);
   } else if (e.code === "KeyA") act(() => b.checkAll(true));
-  else if (e.code === "KeyN") act(() => b.checkAll(false));
+  else if (e.code === "KeyN") act(() => b.clearAttack());
   else if (e.code === "KeyX") {
     const i = rows.findIndex((r) => r.kind !== "weapon");
     if (i >= 0) app.orderCursor = i;
   } else if (e.code === "KeyD" || e.key === "Enter") commit();
-  else if (e.key === "Escape") clear();
   else return false;
   return true;
 }

@@ -176,7 +176,6 @@ export const ko: Catalog = {
   "orders.chooseMode": "이동 방식을 고르세요",
   "orders.melee": "{kind}(으)로 끝남",
   "orders.done": "완료 D",
-  "orders.clear": "취소 Esc",
   "orders.aiActing": "{id}은(는) AI가 조종합니다",
   "orders.aiStep": "Space: 다음 AI 행동",
   "orders.twist": "상체",
@@ -305,5 +304,5 @@ export const ko: Catalog = {
   "err.nothingToUndo": "되돌릴 것이 없습니다.",
   "help.title": "도움말",
   "help.text":
-    "모든 메뉴는 키보드로, 헥스는 마우스로 고릅니다.\n\n타이틀 ↑↓ 선택 · Enter 고르기 · 항목 클릭\n설정   항목·버튼 클릭 · Tab / 방향키 이동 · Enter 열기\n       'Mech 목록: 휠 스크롤 · / 검색 · 1-4 T K E S 조건 · F10 출격\n배치   1-4 가장자리 · ↑↓ 유닛 · 가장자리 헥스 클릭 · [ ] 방향 · Enter 시작\n이동   W R J S 방식 · 색칠된 헥스 클릭 · 방향 고르기 · D 완료\n공격   Tab 목표 · T 상체 · Space/1-9 무기 · A 전체 · X 물리\n       D 완료 · Esc 취소\n공통   F2 메뉴 · I 시트 · L 기록 · Ctrl+Z 되돌리기 · Space 다음 AI\n지도   , . 회전 · + - 확대 · V 기울기 · Home 초기화 · 끌어서 회전\n       휠 버튼으로 끌어서 이동",
+    "모든 메뉴는 키보드로, 헥스는 마우스로 고릅니다.\n\n타이틀 ↑↓ 선택 · Enter 고르기 · 항목 클릭\n설정   항목·버튼 클릭 · Tab / 방향키 이동 · Enter 열기\n       'Mech 목록: 휠 스크롤 · / 검색 · 1-4 T K E S 조건 · F10 출격\n배치   1-4 가장자리 · ↑↓ 유닛 · 가장자리 헥스 클릭 · [ ] 방향 · Enter 시작\n이동   W R J S 방식 · 색칠된 헥스 클릭 · 방향 고르기 · D 완료\n공격   Tab 목표 · T 상체 · Space/1-9 무기 · A 전체 · N 해제 · X 물리\n       D 완료\n공통   F2 메뉴 · I 시트 · L 기록 · Ctrl+Z 되돌리기 · Space 다음 AI\n지도   , . 회전 · + - 확대 · V 기울기 · Home 초기화 · 끌어서 회전\n       휠 버튼으로 끌어서 이동",
 };
