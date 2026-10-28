@@ -604,7 +604,7 @@ export class MapView {
       }
       if (s.top && s.label && (this.hover === k || (this.showCoords && v.fs >= 6)))
         this.drawLabel(v, s, d, this.hover === k);
-      if (s.top) this.drawMarks(v, s, k);
+      if (s.top) this.drawMarks(v, s, k, d);
     });
     this.drawn = list;
     this.drawLos(v);
@@ -697,8 +697,12 @@ export class MapView {
     ctx.restore();
   }
 
-  /** Reachable MP, wreckage and club marks: upright text at the face centre. */
-  private drawMarks(v: ReturnType<MapView["view"]>, s: Shape, k: string): void {
+  /**
+   * Reachable MP, wreckage and club marks: text lying on the top face just
+   * below its centre, flattened by the tilt like the labels, so it stays on
+   * the face (not hanging onto the wall) at any tilt.
+   */
+  private drawMarks(v: ReturnType<MapView["view"]>, s: Shape, k: string, d: number): void {
     const marks: string[] = [];
     const mp = this.overlays.reachable?.get(k);
     if (mp) marks.push(mp);
@@ -706,13 +710,15 @@ export class MapView {
     if (this.overlays.clubs?.has(k)) marks.push("!");
     if (marks.length === 0) return;
     const ctx = this.ctx;
-    const [x, y] = v.proj([s.hex.x, s.hex.y], s.hex.drawn);
+    const [x, y] = v.proj([s.hex.x, s.hex.y + (v.fs * 0.35) / v.R], s.hex.drawn);
+    ctx.save();
+    ctx.setTransform(d, 0, 0, d * v.sq, d * x, d * y);
     ctx.font = `${Math.max(8, v.fs * 0.8)}px ${FONT}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
     ctx.fillStyle = css("--ia-map-mark", "#f0f0f0");
-    ctx.fillText(marks.join(" "), x, y + v.fs * 0.35);
-    ctx.textAlign = "left";
+    ctx.fillText(marks.join(" "), 0, 0);
+    ctx.restore();
   }
 
   private drawLos(v: ReturnType<MapView["view"]>): void {

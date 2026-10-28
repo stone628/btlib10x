@@ -45,7 +45,7 @@
   /* Scrollbar glyphs: start arrow, track, thumb, end arrow. The vertical bar
      adds upper and lower half thumbs, so its thumb moves in half cells. */
   --tui-vbar: "▲░█▼▀▄";
-  --tui-hbar: "◂▥■▸";
+  --tui-hbar: "◀▥■▶";
   /* Window shadow offset, in cells. */
   --tui-shadow-x: 1;
   --tui-shadow-y: 0.5;
