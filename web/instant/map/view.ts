@@ -40,9 +40,13 @@ export interface Overlays {
   reachable?: ReadonlyMap<string, string>;
   /**
    * "col,row" → a unit may stand there with these facings: a band inside the
-   * hex edges, one trapezoid per available facing, in the team's colour.
+   * hex edges, one trapezoid per available facing, in the team's colour. The
+   * face is cut into six triangles (centre to hexside), so a click picks the
+   * hex and the facing of its triangle; the hovered trapezoid is highlighted.
    */
-  deploy?: ReadonlyMap<string, BandHex>;
+  bands?: ReadonlyMap<string, BandHex>;
+  /** The facing already chosen on a banded hex, drawn in the select colour. */
+  chosen?: { readonly hex: string; readonly facing: Facing } | null;
   targets?: ReadonlySet<string>;
   target?: string | null;
   selected?: string | null;
@@ -128,11 +132,13 @@ export class MapView {
   banners: Banner[] = [];
   /** Draw every hex's CCRR coordinate on its face; off, only the hovered hex's. */
   showCoords = false;
-  onPick: ((hex: HexCoord, ev: MouseEvent) => void) | null = null;
+  /** `facing`: the facing triangle of the hex's top face, null on a wall or banner. */
+  onPick: ((hex: HexCoord, ev: MouseEvent, facing: Facing | null) => void) | null = null;
   private drawn: Shape[] = [];
   private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
   private world = { cx: 0, cy: 0 };
   private hover: string | null = null;
+  private hoverFacing: Facing | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -198,10 +204,12 @@ export class MapView {
       }
       const hud = onHud(e);
       canvas.style.cursor = hud ? "pointer" : "";
-      const h = hud ? null : this.hexAtEvent(e);
-      const k = h ? key(h) : null;
-      if (k !== this.hover) {
+      const p = hud ? null : this.pickAtEvent(e);
+      const k = p ? key(p.hex) : null;
+      const f = p?.facing ?? null;
+      if (k !== this.hover || f !== this.hoverFacing) {
         this.hover = k;
+        this.hoverFacing = f;
         this.render();
       }
     });
@@ -213,14 +221,15 @@ export class MapView {
       const d = drag;
       drag = null;
       if (d && !d.moved && e.type === "pointerup") {
-        const h = this.hexAtEvent(e);
-        if (h) this.onPick?.(h, e);
+        const p = this.pickAtEvent(e);
+        if (p) this.onPick?.(p.hex, e, p.facing);
       }
     };
     canvas.addEventListener("pointerup", end);
     canvas.addEventListener("pointercancel", end);
     canvas.addEventListener("pointerleave", () => {
       this.hover = null;
+      this.hoverFacing = null;
       this.render();
     });
     canvas.addEventListener(
@@ -253,6 +262,7 @@ export class MapView {
   /** Forget the hovered hex (the canvas moved to another screen without a pointerleave). */
   clearHover(): void {
     this.hover = null;
+    this.hoverFacing = null;
   }
 
   rotate(dir: number): void {
@@ -586,8 +596,12 @@ export class MapView {
           ctx.lineTo(g.b[0], g.b[1]);
         }
       ctx.stroke();
-      const dz = s.top ? this.overlays.deploy?.get(k) : undefined;
-      if (dz !== undefined) this.drawBand(s.polys[0]!, team(dz.team), dz.facings);
+      const dz = s.top ? this.overlays.bands?.get(k) : undefined;
+      if (dz !== undefined) {
+        const chosen = this.overlays.chosen?.hex === k ? this.overlays.chosen.facing : null;
+        const hot = this.hover === k ? this.hoverFacing : null;
+        this.drawBand(s.polys[0]!, team(dz.team), dz.facings, chosen, hot);
+      }
       if (s.top && s.label && (this.hover === k || (this.showCoords && v.fs >= 6)))
         this.drawLabel(v, s, d, this.hover === k);
       if (s.top) this.drawMarks(v, s, k);
@@ -605,21 +619,23 @@ export class MapView {
       `color-mix(in srgb, ${c} ${Math.round(a * 100)}%, transparent)`;
     if (o.target === k) return alpha(css("--ia-target", "#ffd24a"), 0.55);
     if (o.selected === k) return alpha(css("--ia-select", "#ffffff"), 0.35);
-    if (o.reachable?.has(k)) return alpha(css("--ia-reach", "#7ee787"), 0.35);
     if (this.hover === k) return alpha(css("--ia-select", "#ffffff"), 0.15);
     return null;
   }
 
   /**
-   * Deploy band: a ring 1/8 of the hex's corner-to-corner width inside its
+   * Facing band: a ring 1/8 of the hex's corner-to-corner width inside its
    * edges, cut into one trapezoid per hexside. A trapezoid is drawn for each
    * available facing (the hexside the unit would face), filled with the team
-   * colour and outlined in a brighter tint of it.
+   * colour and outlined in a brighter tint of it; the chosen facing is filled
+   * in the select colour and the hovered one lightened with a thick outline.
    */
   private drawBand(
     poly: readonly (readonly [number, number])[],
     color: string,
     facings: readonly Facing[],
+    chosen: Facing | null = null,
+    hot: Facing | null = null,
   ): void {
     const ctx = this.ctx;
     const cx = poly.reduce((a, p) => a + p[0], 0) / poly.length;
@@ -627,11 +643,15 @@ export class MapView {
     // 1/8 of the width (2 circumradii) is 1/4 of the radius
     const inner = poly.map(([x, y]) => [cx + (x - cx) * 0.75, cy + (y - cy) * 0.75] as const);
     ctx.save();
-    ctx.fillStyle = color;
-    ctx.strokeStyle = `color-mix(in srgb, ${color} 55%, white)`;
-    ctx.lineWidth = Math.max(1, ctx.lineWidth);
     ctx.lineJoin = "miter";
-    for (const f of facings) {
+    const base = Math.max(1, ctx.lineWidth);
+    const select = css("--ia-select", "#ffffff");
+    // the chosen and hovered trapezoids last, so their outline is on top
+    const order = [...facings].sort((p, q) => rank(p) - rank(q));
+    function rank(f: Facing) {
+      return f === hot ? 2 : f === chosen ? 1 : 0;
+    }
+    for (const f of order) {
       // Corner j sits at j·60° (y down), so facing i's hexside runs from corner i+4 to i+5.
       const i = FACINGS.indexOf(f);
       const a = (i + 4) % 6;
@@ -639,7 +659,15 @@ export class MapView {
       ctx.beginPath();
       for (const [x, y] of [poly[a]!, poly[b]!, inner[b]!, inner[a]!]) ctx.lineTo(x, y);
       ctx.closePath();
+      ctx.fillStyle = f === chosen ? select : color;
       ctx.fill();
+      if (f === hot) {
+        ctx.fillStyle = "color-mix(in srgb, white 45%, transparent)";
+        ctx.fill();
+      }
+      ctx.strokeStyle =
+        f === hot || f === chosen ? select : `color-mix(in srgb, ${color} 55%, white)`;
+      ctx.lineWidth = f === hot ? base * 2.5 : base;
       ctx.stroke();
     }
     ctx.restore();
@@ -815,7 +843,7 @@ export class MapView {
       ctx.fillStyle = color;
       ctx.fillText(l2, x0, y0 + chh * 1.55);
       ctx.restore();
-      this.bannerBoxes.push({ hex: b.hex, x0, y0, x1: x0 + bw, y1: y0 + bh + pole });
+      this.bannerBoxes.push({ hex: b.hex, x0, y0, x1: x0 + bw, y1: y0 + bh });
     }
   }
 
@@ -872,22 +900,43 @@ export class MapView {
     ctx.restore();
   }
 
-  private hexAtEvent(e: MouseEvent): HexCoord | null {
+  private pickAtEvent(e: MouseEvent): { hex: HexCoord; facing: Facing | null } | null {
     const r = this.canvas.getBoundingClientRect();
-    return this.hexAt(e.clientX - r.left, e.clientY - r.top);
+    return this.pickAt(e.clientX - r.left, e.clientY - r.top);
   }
 
   hexAt(px: number, py: number): HexCoord | null {
+    return this.pickAt(px, py)?.hex ?? null;
+  }
+
+  /**
+   * The hex under a canvas point and, on its top face, the facing of the
+   * triangle (centre to hexside) the point is in; null facing on a banner or
+   * a wall.
+   */
+  pickAt(px: number, py: number): { hex: HexCoord; facing: Facing | null } | null {
     for (let i = this.bannerBoxes.length - 1; i >= 0; i--) {
       const b = this.bannerBoxes[i]!;
-      if (px >= b.x0 && px <= b.x1 && py >= b.y0 && py <= b.y1) return b.hex;
+      if (px >= b.x0 && px <= b.x1 && py >= b.y0 && py <= b.y1) return { hex: b.hex, facing: null };
     }
     for (let i = this.drawn.length - 1; i >= 0; i--) {
       const s = this.drawn[i]!;
-      if (s.polys.some((p) => inside(px, py, p))) return { col: s.hex.col, row: s.hex.row };
+      if (!s.polys.some((p) => inside(px, py, p))) continue;
+      const hex = { col: s.hex.col, row: s.hex.row };
+      return { hex, facing: s.top ? facingAt(px, py, s.polys[0]!) : null };
     }
     return null;
   }
+}
+
+/** Facing whose triangle (centre, corners i+4 and i+5, as in `drawBand`) holds a point. */
+function facingAt(px: number, py: number, poly: readonly (readonly [number, number])[]): Facing {
+  const cx = poly.reduce((a, p) => a + p[0], 0) / poly.length;
+  const cy = poly.reduce((a, p) => a + p[1], 0) / poly.length;
+  const i = FACINGS.findIndex((_, i) =>
+    inside(px, py, [[cx, cy], poly[(i + 4) % 6]!, poly[(i + 5) % 6]!]),
+  );
+  return FACINGS[Math.max(0, i)]!;
 }
 
 function inside(px: number, py: number, poly: readonly (readonly [number, number])[]): boolean {

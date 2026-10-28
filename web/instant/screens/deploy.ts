@@ -386,7 +386,7 @@ function pointAnchor(ev: MouseEvent): HTMLElement {
 }
 
 /** A click on the map: choose an edge, select a unit, turn it, or place it. */
-function pickHex(hex: HexCoord, ev: MouseEvent): void {
+function pickHex(hex: HexCoord, ev: MouseEvent, facing: Facing | null): void {
   const d = app.deploy!;
   const map = currentMap();
   if (d.edges[0] === null) {
@@ -404,6 +404,11 @@ function pickHex(hex: HexCoord, ev: MouseEvent): void {
   if (at >= 0) {
     const u = units[at]!;
     if (at === d.cursor && u.persona === null) {
+      // a facing triangle turns it; its banner opens the facing menu
+      if (facing !== null) {
+        d.placements[u.id]!.facing = facing;
+        return;
+      }
       const anchor = pointAnchor(ev);
       void openFacingMenu(u, anchor).then(() => anchor.remove());
     } else {
@@ -413,7 +418,7 @@ function pickHex(hex: HexCoord, ev: MouseEvent): void {
     return;
   }
   const u = units[d.cursor];
-  if (u) placeUnit(u.id, hex);
+  if (u) placeUnit(u.id, hex, facing);
 }
 
 /** Map overlays: the hovered edge while choosing, else the selected unit's free edge hexes. */
@@ -423,6 +428,7 @@ export function deployOverlays(): void {
   if (!v || !d) return;
   const map = currentMap();
   const zone = new Map<string, BandHex>();
+  let chosen: { hex: string; facing: Facing } | null = null;
   if (d.edges[0] === null) {
     if (d.hoverEdge)
       for (const hx of edgeHexes(map, d.hoverEdge))
@@ -431,17 +437,24 @@ export function deployOverlays(): void {
     const u = deployUnits(app.loadout)[d.cursor];
     const edge = u ? d.edges[u.side] : null;
     if (u && edge && u.persona === null) {
-      const taken = new Set(Object.values(d.placements).map((p) => `${p.hex.col},${p.hex.row}`));
+      // others' hexes are taken; the unit's own hex stays banded to re-face it
+      const taken = new Set(
+        Object.entries(d.placements)
+          .filter(([id]) => id !== u.id)
+          .map(([, p]) => `${p.hex.col},${p.hex.row}`),
+      );
       for (const hx of edgeHexes(map, edge)) {
         const k = `${hx.col},${hx.row}`;
         // Deployment allows any facing; later phases may band only some sides.
         if (!taken.has(k)) zone.set(k, { team: u.side + 1, facings: FACINGS });
       }
+      const p = d.placements[u.id];
+      if (p) chosen = { hex: `${p.hex.col},${p.hex.row}`, facing: p.facing };
     }
   }
-  v.overlays = { deploy: zone };
+  v.overlays = { bands: zone, chosen };
   v.banners = deployBanners();
-  v.onPick = (hex, ev) => report(() => pickHex(hex, ev));
+  v.onPick = (hex, ev, facing) => report(() => pickHex(hex, ev, facing));
 }
 
 /** After a render: move the focus to the selected unit's button when asked (one cursor). */

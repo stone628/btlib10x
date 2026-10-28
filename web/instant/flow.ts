@@ -163,7 +163,8 @@ export function autoPlaceAll(): void {
   }
 }
 
-export function placeUnit(id: string, hex: HexCoord): void {
+/** Place a Player unit on its home edge, facing `facing` (else as before, else inward). */
+export function placeUnit(id: string, hex: HexCoord, facing: Facing | null = null): void {
   const d = app.deploy!;
   const u = deployUnits(app.loadout).find((x) => x.id === id);
   if (!u) return;
@@ -175,7 +176,7 @@ export function placeUnit(id: string, hex: HexCoord): void {
     ([oid, p]) => oid !== id && p.hex.col === hex.col && p.hex.row === hex.row,
   );
   if (other) throw new Error(t("err.hexTaken", { id: other[0] }));
-  d.placements[id] = { hex, facing: d.placements[id]?.facing ?? inwardFacing(edge) };
+  d.placements[id] = { hex, facing: facing ?? d.placements[id]?.facing ?? inwardFacing(edge) };
 }
 
 export function onEdge(map: MapDef, edge: Edge, hex: HexCoord): boolean {

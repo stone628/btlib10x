@@ -1,5 +1,6 @@
 /** Screen 3: the battle HUD (map, unit card, orders, log) and its windows. */
 import {
+  type Facing,
   type FireTarget,
   heatDissipation,
   hitProbability,
@@ -436,14 +437,21 @@ export function battleOverlays(): void {
   const actor = b.actor;
   if (b.move && actor && b.actorPersona === null) {
     const reach = new Map<string, string>();
+    const facings = new Map<string, Facing[]>();
     for (const l of b.move.landings) {
       const k = `${l.hex.col},${l.hex.row}`;
       const mp = landingMp(l);
       const prev = reach.get(k);
       if (prev === undefined || mp < Number(prev)) reach.set(k, String(mp));
+      const fs = facings.get(k) ?? [];
+      if (!fs.includes(l.facing)) fs.push(l.facing);
+      facings.set(k, fs);
     }
     o.reachable = reach;
-    o.selected = b.move.landing ? `${b.move.landing.hex.col},${b.move.landing.hex.row}` : null;
+    o.bands = new Map([...facings].map(([k, fs]) => [k, { team: actor.team, facings: fs }]));
+    const chosen = b.move.landing;
+    o.selected = chosen ? keyOf(chosen.hex) : null;
+    o.chosen = chosen ? { hex: keyOf(chosen.hex), facing: chosen.facing } : null;
   } else if (b.attack && actor) {
     const targets = b.fireSuggestion()?.targets ?? [];
     o.targets = new Set(targets.map((x) => keyOf(b.state.units[x.targetId]!.position)));
@@ -455,17 +463,26 @@ export function battleOverlays(): void {
   }
   v.overlays = o;
   v.banners = battleBanners();
-  v.onPick = (hex, ev) => onMapPick(hex, ev);
+  v.onPick = (hex, ev, facing) => onMapPick(hex, ev, facing);
 }
 
 const keyOf = (h: { col: number; row: number }) => `${h.col},${h.row}`;
 
-function onMapPick(hex: { col: number; row: number }, ev: MouseEvent): void {
+function onMapPick(hex: { col: number; row: number }, ev: MouseEvent, facing: Facing | null): void {
   const b = app.battle;
   if (!b || b.actorPersona !== null) return;
   if (b.move) {
     const here = b.landingsAt(hex);
     if (here.length === 0) return;
+    // a facing triangle picks that landing; an unavailable one does nothing
+    if (facing !== null) {
+      const l = here.find((x) => x.facing === facing);
+      if (l) {
+        act(() => b.chooseLanding(l));
+        rerender();
+      }
+      return;
+    }
     if (here.length === 1) {
       act(() => b.chooseLanding(here[0]!));
       rerender();
