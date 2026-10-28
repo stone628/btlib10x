@@ -79,7 +79,6 @@ export function titleScreen(): TuiNode {
       [
         ["↑↓", "key.select"],
         ["Enter", "key.ok"],
-        ["F1", "key.help", () => (app.modal = { kind: "help" })],
       ],
       `v${app.version}`,
     ),

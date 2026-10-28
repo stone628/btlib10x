@@ -11,6 +11,9 @@ export interface TuiNode {
 
 export type TuiChild = TuiNode | string | number | null | false | undefined | readonly TuiChild[];
 
+/** Compass point of a box: corners `nw ne sw se`, edge midpoints `n e s w`. */
+export type TipPoint = "nw" | "n" | "ne" | "w" | "e" | "sw" | "s" | "se";
+
 /** Props every node accepts, plus the component's own ones. */
 export interface TuiProps {
   key?: string | number;
@@ -20,6 +23,15 @@ export interface TuiProps {
   style?: Record<string, string>;
   attrs?: Record<string, string>;
   tip?: string;
+  /** Point of this element the tooltip attaches to (`data-tip-at`, default `sw`). */
+  tipAt?: TipPoint;
+  /** Point of the tooltip put on `tipAt` (`data-tip-anchor`, default `nw`). */
+  tipAnchor?: TipPoint;
+  /** Designated tip point `"x,y"` in cells (`data-tip-xy`), replacing `tipAt`:
+   *  from the top-left of `tipFrom`'s element, else of the viewport. */
+  tipXY?: string;
+  /** CSS selector of the element `tipXY` is measured from (`data-tip-from`). */
+  tipFrom?: string;
   hidden?: boolean;
   size?: number | string;
   grow?: number;

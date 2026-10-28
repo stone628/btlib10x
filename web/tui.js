@@ -432,14 +432,28 @@
         at += len(text) + 1;
       });
     } else if (st.title) {
-      const text = ` ${st.title} `;
+      // A narrow box keeps the title whole as long as it can: it drops the
+      // "─" after the corner ("┌ Turn ┐"), then the leading space
+      // ("┌Turn ┐"), then the trailing one ("┌Turn┐"), and only then cuts
+      // the title with an ellipsis ("┌Tu…┐").
+      const room = c - 2;
+      const tl = len(st.title);
+      let text = ` ${st.title} `;
+      let edge = 2;
+      if (tl + 3 > room) {
+        edge = 1;
+        if (tl + 2 <= room) text = ` ${st.title} `;
+        else if (tl + 1 <= room) text = `${st.title} `;
+        else if (tl <= room) text = st.title;
+        else text = fit(st.title, room);
+      }
       const w = len(text);
       const at =
         st.titleAlign === "center"
-          ? Math.max(2, (c - w) >> 1)
+          ? Math.max(edge, (c - w) >> 1)
           : st.titleAlign === "right"
-            ? Math.max(2, c - 2 - w)
-            : 2;
+            ? Math.max(edge, c - 2 - w)
+            : edge;
       top.push({ at, text, cls: "tui-title" });
     }
     if (st.extraTop) top.push(...st.extraTop);
@@ -1476,8 +1490,77 @@
       rows: lines.length + 2,
       border: target.dataset.tipBorder || "rounded",
     });
-    const r = target.getBoundingClientRect();
-    placeAt(tipEl, r.left, r.bottom, r);
+    placeTip(tipEl, target);
+  }
+
+  /* Compass points of a rectangle as fractions of its width and height:
+     corners nw ne sw se, edge midpoints n e s w. */
+  const TIP_POINTS = {
+    nw: [0, 0],
+    n: [0.5, 0],
+    ne: [1, 0],
+    w: [0, 0.5],
+    e: [1, 0.5],
+    sw: [0, 1],
+    s: [0.5, 1],
+    se: [1, 1],
+  };
+  const tipPoint = (v, fallback) => TIP_POINTS[String(v || "").trim()] || TIP_POINTS[fallback];
+
+  /* A designated tip point: data-tip-xy="x,y" in cells (fractions and
+     negatives allowed) from the top-left of the element data-tip-from names
+     (a CSS selector), or of the viewport without it. Returned as a zero-size
+     rect, so the at point is the coordinate itself. Null when unset or the
+     origin element is missing. */
+  function tipXY(target) {
+    const xy = String(target.dataset.tipXy || "")
+      .split(",")
+      .map((t) => Number.parseFloat(t));
+    if (xy.length !== 2 || xy.some((n) => !Number.isFinite(n))) return null;
+    let ox = 0;
+    let oy = 0;
+    const from = target.dataset.tipFrom;
+    if (from) {
+      const o = doc.querySelector(from);
+      if (!o) return null;
+      const r = o.getBoundingClientRect();
+      ox = r.left;
+      oy = r.top;
+    }
+    const x = ox + xy[0] * metrics.cw;
+    const y = oy + xy[1] * metrics.ch;
+    return { left: x, top: y, width: 0, height: 0 };
+  }
+
+  /* Put the tip's data-tip-anchor point (default nw) on the target's
+     data-tip-at point (default sw: under the target, left edges aligned),
+     or on the data-tip-xy coordinate when one is set. An axis that would
+     leave the viewport is mirrored on both points (e.g. at e / anchor w
+     becomes at w / anchor e), then the tip is kept inside the viewport. */
+  function placeTip(el, target) {
+    const r = tipXY(target) || target.getBoundingClientRect();
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    const vw = doc.documentElement.clientWidth;
+    const vh = global.innerHeight;
+    let [ax, ay] = tipPoint(target.dataset.tipAt, "sw");
+    let [bx, by] = tipPoint(target.dataset.tipAnchor, "nw");
+    const at = () => [r.left + ax * r.width - bx * w, r.top + ay * r.height - by * h];
+    let [left, top] = at();
+    if (left < 0 || left + w > vw) {
+      [ax, bx] = [1 - ax, 1 - bx];
+      const [l2] = at();
+      if (l2 >= 0 && l2 + w <= vw) left = l2;
+    }
+    if (top < 0 || top + h > vh) {
+      [ay, by] = [1 - ay, 1 - by];
+      const [, t2] = at();
+      if (t2 >= 0 && t2 + h <= vh) top = t2;
+    }
+    left = Math.max(4, Math.min(left, vw - w - 4));
+    top = Math.max(0, Math.min(top, vh - h));
+    el.style.left = `${left + global.scrollX}px`;
+    el.style.top = `${top + global.scrollY}px`;
   }
   function hideTip() {
     if (tipEl) {
@@ -2053,7 +2136,20 @@
     onKeydown: "keydown",
   };
   const SLOT_PROPS = ["size", "grow", "span"];
-  const COMMON = new Set(["id", "class", "style", "attrs", "tip", "hidden", "on", ...SLOT_PROPS]);
+  const COMMON = new Set([
+    "id",
+    "class",
+    "style",
+    "attrs",
+    "tip",
+    "tipAt",
+    "tipAnchor",
+    "tipXY",
+    "tipFrom",
+    "hidden",
+    "on",
+    ...SLOT_PROPS,
+  ]);
   const BOXP = [
     "cols",
     "rows",
@@ -2175,6 +2271,10 @@
       for (const k in p.attrs || {}) el.setAttribute(k, p.attrs[k]);
     }
     if (p.tip !== o.tip) setData(el, "tip", p.tip);
+    if (p.tipAt !== o.tipAt) setData(el, "tipAt", p.tipAt);
+    if (p.tipAnchor !== o.tipAnchor) setData(el, "tipAnchor", p.tipAnchor);
+    if (p.tipXY !== o.tipXY) setData(el, "tipXy", p.tipXY);
+    if (p.tipFrom !== o.tipFrom) setData(el, "tipFrom", p.tipFrom);
     if (!!p.hidden !== !!o.hidden) el.hidden = !!p.hidden;
   }
   function bindEvents(el, p, sc) {
@@ -2461,11 +2561,13 @@
     },
     option: { create: () => make("option"), children: "replace" },
     button: {
-      create: (p) => {
+      create: (p, v) => {
         const el = make("button", "", "button");
         el.type = "button";
         setData(el, "border", p.border);
         setData(el, "cols", p.cols);
+        // The label is read from the text at upgrade, so it goes in now.
+        el.textContent = v.children.map((x) => str(x.props.text)).join("");
         return el;
       },
       children: "replace",

@@ -78,6 +78,7 @@
   --ia-team2: #e07a6a; /* --tui-red */
   --ia-reach: #8fd08f; /* --tui-accent */
   --ia-target: #d8c26a; /* --tui-yellow */
+  --ia-orange: #e09a4f;
   --ia-select: #d7e4d7; /* --tui-bright */
   --ia-banner-bg: #0c0f0c; /* --tui-page */
   --ia-banner-ink: #0c0f0c; /* --tui-accent-ink */
@@ -212,6 +213,22 @@
 .ia-err {
   color: var(--tui-red);
 }
+/* Record sheet levels: green, white, yellow, orange, red (then dim at 0). */
+.ia-lv-green {
+  color: var(--tui-accent);
+}
+.ia-lv-white {
+  color: var(--tui-bright);
+}
+.ia-lv-yellow {
+  color: var(--tui-yellow);
+}
+.ia-lv-orange {
+  color: var(--ia-orange);
+}
+.ia-lv-red {
+  color: var(--tui-red);
+}
 
 .ia-center {
   text-align: center;
@@ -304,4 +321,128 @@
 /* inline fields keep their cell width inside boxes (the kit stretches them) */
 .tui-box .ia-row > .tui-input {
   width: calc(var(--cols, 20) * var(--cw));
+}
+
+/* Battle screen (docs/INSTANT_ACTION.html): a full-body map with the frame,
+   header strip, drawers and orders placed on the cell grid over it. */
+.ia-at {
+  position: absolute;
+  white-space: pre;
+}
+.ia-frame {
+  color: var(--tui-bright);
+}
+.ia-battle span[data-click],
+.ia-tab-edge,
+.ia-done {
+  cursor: pointer;
+}
+.ia-battle span[data-click]:hover,
+.ia-tab-edge:hover,
+.ia-done:hover {
+  color: var(--tui-accent);
+}
+.ia-warn {
+  color: var(--tui-yellow);
+}
+
+/* Action Order: done units grayed out, removed units last in rust, struck */
+.ia-row .ia-q-current {
+  color: var(--tui-bright);
+  font-weight: bold;
+}
+.ia-row .ia-q-acted,
+.ia-row .ia-q-idle {
+  color: var(--tui-dim);
+}
+.ia-row .ia-q-out {
+  color: #b5803f;
+  text-decoration: line-through;
+}
+
+/* SHEET drawers and tabs cover the map they sit on */
+.ia-tab-edge,
+.ia-drawer,
+.ia-done {
+  color: var(--tui-bright);
+}
+.ia-done .tui-body-inner {
+  white-space: pre;
+}
+.ia-drawer {
+  width: calc(23 * var(--cw));
+}
+.ia-drawer-line {
+  display: flex;
+  height: var(--ch);
+  line-height: var(--ch);
+}
+.ia-drawer-line > * {
+  flex: none;
+}
+.ia-sheet-head {
+  background: #335533;
+  cursor: pointer;
+}
+
+/* LOGS drawer: drops from under the header strip over the whole body */
+.ia-logdrawer {
+  width: calc(100 * var(--cw));
+  color: var(--tui-bright);
+  z-index: 5;
+  isolation: isolate;
+}
+/* Drawers and tabs: 75% black over the map, inset half a cell like a kit box. */
+.ia-fill {
+  position: absolute;
+  background: rgba(0, 0, 0, 0.75);
+}
+.ia-logdrawer > .ia-fill {
+  z-index: -1;
+}
+.ia-inset {
+  isolation: isolate;
+}
+.ia-inset::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--ch) * var(--tui-inset-y)) calc(var(--cw) * var(--tui-inset-x));
+  background: rgba(0, 0, 0, 0.75);
+  z-index: -1;
+}
+.ia-logbody {
+  display: flex;
+  height: calc(24 * var(--ch));
+}
+.ia-logside {
+  flex: none;
+  width: var(--cw);
+  line-height: var(--ch);
+  white-space: pre;
+  overflow: hidden;
+}
+.ia-logpane {
+  flex: none;
+  width: calc(98 * var(--cw));
+  padding-left: var(--cw);
+  box-sizing: border-box;
+  color: var(--tui-fg);
+}
+
+/* Orders: centred at the top of the map, opaque letters on 50% black */
+.ia-topmenu {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  pointer-events: none;
+}
+.ia-menu {
+  pointer-events: auto;
+}
+.ia-menu > .tui-bg {
+  background: rgba(0, 0, 0, 0.75);
+}
+.ia-menu .sel {
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
 }

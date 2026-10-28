@@ -12,6 +12,9 @@ import {
   type Facing,
   type HexCoord,
   type MapDef,
+  mechDefFor,
+  setSlotDestroyed,
+  type UnitState,
 } from "btlib10x";
 import { describe, expect, it } from "vitest";
 import type { PersonaKey } from "../web/instant/ai/persona.data";
@@ -26,6 +29,14 @@ import {
 } from "../web/instant/battle/deploy";
 import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
 import { createRng } from "../web/instant/rng";
+import {
+  engineTip,
+  gyroTip,
+  heatTip,
+  lifeSupportTip,
+  pilotTip,
+  sensorTip,
+} from "../web/instant/screens/battle.hints";
 import { defaultFilter, filterMechs, generateSide } from "../web/instant/setup/loadout";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
@@ -150,10 +161,6 @@ describe("Instant Action battle controller", () => {
     b.chooseLanding(landing);
     b.commitMove();
     expect(b.state.units.A1!.position).toEqual(landing.hex);
-    expect(b.canUndo).toBe(true);
-    b.undo();
-    expect(b.actorId).toBe("A1");
-    expect(b.state.units.A1!.position).toEqual({ col: 4, row: 16 });
   });
 
   it("rolls a rejected commit back: state, dice and actor unchanged", () => {
@@ -182,7 +189,6 @@ describe("Instant Action battle controller", () => {
     expect(b.state).toEqual(before);
     expect(b.rng.snapshot()).toBe(rng);
     expect(b.actorId).toBe(actor);
-    expect(b.canUndo).toBe(false);
   });
 
   it("checks weapons on a fireable target and passes an empty declaration", () => {
@@ -272,5 +278,79 @@ describe("Instant Action import boundary", () => {
       const text = readFileSync(join(root, f), "utf8");
       expect(text, f).not.toMatch(/from\s+"[^"]*terminal\//);
     }
+  });
+});
+
+describe("Instant Action record sheet hints (TW pp. 42, 125, 159-160)", () => {
+  const unit = (): UnitState => {
+    const b = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null });
+    const u = b.state.units.A1;
+    if (!u) throw new Error("A1 missing");
+    return u;
+  };
+  /** Destroy the first `n` slots of a component type. */
+  const crit = (u: UnitState, type: string, n: number) => {
+    const def = mechDefFor(u);
+    let left = n;
+    for (const [loc, slots] of Object.entries(def.critSlots)) {
+      slots.forEach((slot, i) => {
+        if (left > 0 && "type" in slot && slot.type === type) {
+          setSlotDestroyed(u.critSlotsDestroyed, loc as "head", i);
+          left--;
+        }
+      });
+    }
+    expect(left).toBe(0);
+  };
+
+  it("pilot: next consciousness roll by hits, the kill and the out states", () => {
+    const u = unit();
+    expect(pilotTip(u)).toContain(
+      "Pilot unhurt (0/6 hits).\nNext hit: stay conscious on 2D6 3+ (97%).",
+    );
+    u.pilotHits = 3;
+    expect(pilotTip(u)).toContain("Pilot 3/6 hits.\nNext hit: stay conscious on 2D6 10+ (17%).");
+    u.pilotHits = 5;
+    expect(pilotTip(u)).toContain("Next hit kills the pilot.");
+    u.pilotHits = 3;
+    u.unconsciousSinceTurn = 1;
+    expect(pilotTip(u)).toContain("Wakes on 2D6 7+ (58%) in the End Phase.");
+  });
+
+  it("components: penalty now and the next hit, at every hit count", () => {
+    const u = unit();
+    expect(engineTip(u)).toBe("Engine intact (0/3 hits).\nHit 1: +5 heat per turn.");
+    expect(gyroTip(u)).toContain("Hit 1: +3 to piloting rolls.");
+    expect(sensorTip(u)).toContain("Hit 1: +2 to weapon attacks.");
+    expect(lifeSupportTip(u)).toBe("Life support intact.\nOne hit knocks it out.");
+    crit(u, "engine", 2);
+    expect(engineTip(u)).toContain("Engine 2/3 hits: +10 heat per turn.\nNext hit destroys");
+    crit(u, "gyro", 1);
+    expect(gyroTip(u)).toContain("Running or jumping forces a piloting roll.");
+    crit(u, "sensors", 2);
+    expect(sensorTip(u)).toBe(
+      "Sensors destroyed. No weapon fire.\nPhysical attacks are still allowed.",
+    );
+    crit(u, "lifeSupport", 1);
+    expect(lifeSupportTip(u)).toContain("Heat 15-25 at end of Heat Phase: 1 pilot hit.");
+  });
+
+  it("heat: the scale value, its penalties and checks, and the next step", () => {
+    const u = unit();
+    u.heat = 12;
+    u.heatPending = 9;
+    const tip = heatTip(u);
+    expect(tip).toContain("Heat 12 on the scale.");
+    expect(tip).toContain("Now: -2 walking MP, +1 to-hit");
+    expect(tip).not.toContain("This turn");
+    u.heat = 18;
+    expect(heatTip(u)).toContain(
+      "Now: -3 walking MP, +3 to-hit\n  shutdown: avoid on 2D6 6+ (72%)",
+    );
+    u.shutdown = "heat";
+    u.heat = 16;
+    expect(heatTip(u)).toContain("Restart on 2D6 4+ (92%) in the Heat Phase; automatic below 14.");
+    u.heat = 31;
+    expect(heatTip(u)).toContain("No restart until heat drops below 30.");
   });
 });

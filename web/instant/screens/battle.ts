@@ -1,15 +1,15 @@
-/** Screen 3: the battle HUD (map, unit card, orders, log) and its windows. */
+/** Screen 3: the battle HUD (full map, frame, drawers, orders) and its windows. */
 import {
   type Facing,
   type FireTarget,
   heatDissipation,
   hitProbability,
+  isHull,
   isUnitOnBoard,
   mechDefFor,
   type PhysicalAttackDecl,
   type RevealedLanding,
   type Twist,
-  type UnitState,
   weaponDefFor,
 } from "btlib10x";
 import type { MoveChoice } from "../battle/controller";
@@ -17,22 +17,36 @@ import { tallies } from "../battle/victory";
 import { battleBanners, pumpAi, stopAi } from "../flow";
 import { locName, t } from "../i18n";
 import { type AttackRow, app, kitModal, rerender } from "../state";
-import type { TuiNode } from "../tui";
-import { blank, fit, h, kit, logView, mapSlot, modal, row, statusbar } from "./common";
-import { helpWindow } from "./setup";
+import type { TuiChild, TuiNode } from "../tui";
+import {
+  BODY,
+  battleFrame,
+  doneButton,
+  focusMover,
+  openSheetFor,
+  setLogs,
+  sheetSideOf,
+  toggleLogs,
+  toggleSheet,
+} from "./battle.hud";
+import { SHEET_W } from "./battle.sheet";
+import { at, blank, cells, fit, h, kit, mapSlot, modal, row, span, statusbar } from "./common";
+import { policyWindow } from "./setup";
 
-const SIDE_W = { movement: 29, attack: 45 } as const;
+const ATTACK_W = 45;
 const TWISTS: Twist[] = ["front", "leftSide", "rightSide"];
-const CHOICE_KEY: Partial<Record<MoveChoice, string>> = {
-  standStill: "S",
-  walk: "W",
-  run: "R",
-  jump: "J",
-  standupStill: "U",
-  proneTurn: "P",
-  shutdown: "X",
-  eject: "E",
-};
+/** Modes with no hex or facing to pick: they live under the Hold dropdown. */
+const STATIONARY = new Set<MoveChoice>([
+  "standStill",
+  "standupStill",
+  "proneStill",
+  "pronestill",
+  "shutdown",
+  "startup",
+  "eject",
+  "abandon",
+]);
+type StatusKey = readonly [string, string, (() => void)?];
 const FACING_ORDER = ["n", "ne", "se", "s", "sw", "nw"] as const;
 
 function setError(e: unknown): void {
@@ -48,57 +62,97 @@ function act(fn: () => void): void {
   }
 }
 
-// ------------------------------------------------------------ unit card
-
-function bar(value: number, max: number, cells: number): string {
-  const n = Math.max(0, Math.min(cells, Math.round((value / Math.max(1, max)) * cells)));
-  return "█".repeat(n) + "░".repeat(cells - n);
-}
-
-function unitCard(u: UnitState, width: number, compact = false): TuiNode[] {
-  const def = mechDefFor(u);
-  const a = u.damage.armor;
-  const r = u.damage.armorRear;
-  const heat = u.heat + u.heatPending;
-  const pilot = "■".repeat(u.pilotHits) + "□".repeat(Math.max(0, u.pilotHitMax - u.pilotHits));
-  const status = [u.prone ? t("card.prone") : "", u.shutdown !== "not" ? t("card.off") : ""]
-    .filter(Boolean)
-    .join(" ");
-  const lines = [
-    `${t("card.heat")} ${bar(heat, 30, 10)} ${fit(heat, 2, "right")} ${t("card.sinks", { n: heatDissipation(def, u.damage, u.critSlotsDestroyed) })}`,
-    `MP W${def.walking} R${def.running} J${def.jumping}  G${u.gunnery} P${u.piloting}`,
-    `${t("card.pilot")} ${pilot} ${status}`,
-    `HD${fit(a.head, 3, "right")} LA${fit(a.leftArm, 3, "right")} LT${fit(a.leftTorso, 3, "right")} CT${fit(a.centerTorso, 3, "right")}`,
-    `RT${fit(a.rightTorso, 3, "right")} RA${fit(a.rightArm, 3, "right")} LL${fit(a.leftLeg, 3, "right")} RL${fit(a.rightLeg, 3, "right")}`,
-    `${t("card.rear")} ${r.leftTorso}/${r.centerTorso}/${r.rightTorso}`,
-  ];
-  const shown = compact ? [lines[0]!, `${lines[1]!}  ${lines[2]!}`] : lines;
-  return shown.map((l, i) => row(fit(l, width), { key: `card${i}` }));
-}
-
 // ------------------------------------------------------------ movement orders
 
 function landingMp(l: RevealedLanding): number {
   return l.path.reduce((n, s) => n + s.baseMp, 0);
 }
 
-function moveOrders(width: number): TuiNode[] {
+/** A stationary mode, or a mode with its hex and facing: DONE can commit it. */
+function moveReady(): boolean {
+  const d = app.battle?.move;
+  if (!d?.choice) return false;
+  return STATIONARY.has(d.choice) || d.landing !== null;
+}
+
+function pickMove(c: MoveChoice): void {
+  const b = app.battle!;
+  app.orderCursor = Math.max(0, b.moveChoices().indexOf(c));
+  act(() => b.chooseMove(c));
+  rerender();
+}
+
+function openHoldMenu(hold: MoveChoice[], e: MouseEvent): void {
+  const el = e.currentTarget instanceof HTMLElement ? e.currentTarget : null;
+  if (!el) return;
+  const current = app.battle?.move?.choice ?? null;
+  kitModal.open = true;
+  void kit()
+    .popupMenu(
+      el,
+      hold.map((c) => ({
+        label: `${c === current ? "•" : " "} ${fit(t(`choice.${c}`), 16)}`,
+      })),
+      { active: Math.max(0, hold.indexOf(current as MoveChoice)) },
+    )
+    .then((r) => {
+      kitModal.open = false;
+      const c = r && "index" in r ? hold[r.index] : undefined;
+      if (c) pickMove(c);
+      else rerender();
+    });
+}
+
+/** Mode bar: the Hold dropdown, then the modes that pick a hex. */
+function moveMenu(): { rows: TuiNode[]; width: number } {
   const b = app.battle!;
   const choices = b.moveChoices();
   const draft = b.move!;
-  const rows = choices.map((c, i) => {
+  const hold = choices.filter((c) => STATIONARY.has(c));
+  const modes = choices.filter((c) => !STATIONARY.has(c));
+  const cursor = choices[app.orderCursor];
+  const held = draft.choice && STATIONARY.has(draft.choice) ? draft.choice : null;
+  const kids: TuiChild[] = [" "];
+  let width = 2;
+  const add = (text: string, node: TuiChild = text) => {
+    kids.push(node);
+    width += cells(text);
+  };
+  if (hold.length > 0) {
+    const label = held ? `•${t(`choice.${held}`)}` : t("orders.hold");
+    const text = `[${label} ▾]`;
+    add(
+      text,
+      span(text, {
+        key: "hold",
+        cls: cursor && STATIONARY.has(cursor) ? "sel" : held ? "ia-bright" : "",
+        onClick: (e) => openHoldMenu(hold, e),
+      }),
+    );
+  }
+  for (const c of modes) {
     const on = draft.choice === c;
     const mp = b.budgetFor(c);
-    const label = `${on ? "(•)" : "( )"} ${fit(t(`choice.${c}`), width - 14)} ${fit(CHOICE_KEY[c] ?? "", 2)}${fit(mp > 0 ? `${mp} MP` : "", 6, "right")}`;
-    return row(label, {
-      sel: i === app.orderCursor,
-      key: c,
-      onClick: () => {
-        app.orderCursor = i;
-        act(() => b.chooseMove(c));
-      },
-    });
-  });
+    if (kids.length > 1) add("  ");
+    const text = `[${on ? "•" : ""}${t(`choice.${c}`)}${mp > 0 ? `:${mp}MP` : ""}]`;
+    add(
+      text,
+      span(text, {
+        key: c,
+        cls: c === cursor ? "sel" : on ? "ia-bright" : "",
+        onClick: () => pickMove(c),
+      }),
+    );
+  }
+  kids.push(" ");
+  return { rows: [h().el("div", { class: "ia-row", key: "modes" }, ...kids)], width };
+}
+
+/** The movement hint (and a melee warning) for the right of the status line. */
+function moveHint(): TuiChild[] {
+  const b = app.battle!;
+  const draft = b.move;
+  if (!draft || b.actorPersona !== null) return [];
   const l = draft.landing;
   const info = l
     ? t("orders.landing", {
@@ -112,26 +166,18 @@ function moveOrders(width: number): TuiNode[] {
       : draft.choice
         ? t("orders.noMoveNeeded")
         : t("orders.chooseMode");
-  return [
-    ...rows,
-    ...blank(1),
-    row(fit(info, width), { cls: "ia-accent", key: "info" }),
-    ...(l?.melee
-      ? [
-          row(fit(t("orders.melee", { kind: l.melee.kind }), width), {
-            cls: "ia-err",
-            key: "melee",
-          }),
-        ]
-      : []),
-  ];
+  const out: TuiChild[] = [span(info, { cls: "ia-accent", key: "info" })];
+  if (l?.melee)
+    out.push(
+      span(` ${t("orders.melee", { kind: l.melee.kind })}`, { cls: "ia-err", key: "melee" }),
+    );
+  return out;
 }
 
 // ------------------------------------------------------------ attack orders
 
 export function attackRows(): AttackRow[] {
   const b = app.battle!;
-  const draft = b.attack!;
   const target = currentTarget();
   const rows: AttackRow[] = [];
   if (target) {
@@ -143,7 +189,6 @@ export function attackRows(): AttackRow[] {
   for (const o of b.physicalOptions()) rows.push({ kind: "physical", decl: o.decl });
   for (const s of b.pickupOptions()) rows.push({ kind: "pickup", source: s });
   if (b.actor?.club) rows.push({ kind: "drop" });
-  void draft;
   return rows;
 }
 
@@ -188,7 +233,7 @@ function attackOrders(width: number): TuiNode[] {
       onClick: () => cycleTarget(1),
     }),
     row(
-      ` ${fit("", 3)} # ${fit(t("mech.weapon"), 13)}${fit(t("mech.loc"), 3)}${fit("TN", 3, "right")}${fit(t("orders.hit"), 5, "right")}${fit(t("mech.dmg"), 5, "right")}${fit(t("mech.heat"), 4, "right")}`,
+      ` ${fit("", 3)} ${fit(t("mech.weapon"), 13)}${fit(t("mech.loc"), 4)}${fit("TN", 3, "right")}${fit(t("orders.hit"), 5, "right")}${fit(t("mech.dmg"), 5, "right")}${fit(t("mech.heat"), 4, "right")}`,
       { cls: "ia-dim", key: "th" },
     ),
   ];
@@ -209,7 +254,7 @@ function attackOrders(width: number): TuiNode[] {
           : String(Math.round(fw.expectedDamage * 10) / 10);
         list.push(
           row(
-            ` ${checked ? "[x]" : "[ ]"} ${fit(r.weaponIndex, 1)} ${fit(mount.weapon, 13)}${fit(locName(mount.location), 3)}${fit(fw.tn, 3, "right")}${fit(`${Math.round(hitProbability(fw.tn) * 100)}%`, 5, "right")}${fit(dmg, 5, "right")}${fit(fw.heat, 4, "right")}`,
+            ` ${checked ? "[x]" : "[ ]"} ${fit(mount.weapon, 13)}${fit(locName(mount.location), 4)}${fit(fw.tn, 3, "right")}${fit(`${Math.round(hitProbability(fw.tn) * 100)}%`, 5, "right")}${fit(dmg, 5, "right")}${fit(fw.heat, 4, "right")}`,
             {
               sel,
               key: `w${r.weaponIndex}`,
@@ -223,7 +268,7 @@ function attackOrders(width: number): TuiNode[] {
         list.push(
           row(
             fit(
-              `  -  ${r.weaponIndex} ${fit(mount.weapon, 13)}${fit(locName(mount.location), 3)} ${t(`block.${why}`)}`,
+              `  -  ${fit(mount.weapon, 13)}${fit(locName(mount.location), 4)} ${t(`block.${why}`)}`,
               width,
             ),
             { sel, cls: "dim", key: `b${r.weaponIndex}` },
@@ -281,7 +326,6 @@ function attackOrders(width: number): TuiNode[] {
   const now = unit.heat + unit.heatPending;
   const sinks = heatDissipation(def, unit.damage, unit.critSlotsDestroyed);
   out.push(
-    ...blank(1),
     row(
       fit(
         t("orders.heatAfter", { now, fire: heat, sinks, after: Math.max(0, now + heat - sinks) }),
@@ -314,21 +358,70 @@ function cycleTarget(dir: number): void {
   if (list.length === 0) return;
   const i = list.findIndex((x) => x.targetId === b.attack?.targetId);
   const next = list[(i + dir + list.length) % list.length]!;
-  act(() => b.setTarget(next.targetId));
+  pickTarget(next.targetId);
+}
+
+/** Aim at a unit and show its record sheet in the right drawer. */
+function pickTarget(id: string): void {
+  const b = app.battle!;
+  act(() => b.setTarget(id));
   app.orderCursor = 0;
+  showTargetSheet();
   rerender();
+}
+
+/** The attack target's sheet in the right drawer, once per new target. */
+function showTargetSheet(): void {
+  const b = app.battle;
+  const id = b?.attack?.targetId ?? null;
+  const ui = app.battleUi;
+  const key = `${b?.actorId}>${id}`;
+  if (id === null || key === ui.sheetTarget) return;
+  ui.sheetTarget = key;
+  ui.framePending = true;
+  const side = sheetSideOf(id);
+  const d = ui.sheets[side];
+  d.unitId = id;
+  d.openedAt = ++ui.seq;
+  if (ui.logSheets) ui.logSheets[side] = true;
+  else d.open = true;
+}
+
+/**
+ * The biggest clear part of the map, in canvas px: inside the open drawers'
+ * tabs (or the closed edge tabs), and below or beside the orders box.
+ */
+function clearArea(canvas: HTMLCanvasElement): { x0: number; y0: number; x1: number; y1: number } {
+  const ui = app.battleUi;
+  const cw = canvas.clientWidth / BODY.cols;
+  const ch = canvas.clientHeight / BODY.rows;
+  const left = ui.sheets[0].open ? SHEET_W + 3 : 3;
+  const right = ui.sheets[1].open ? 99 - SHEET_W - 2 : 97;
+  const bottom = BODY.row + BODY.rows;
+  const m = ui.menuBox;
+  const m0 = m ? BODY.col + Math.floor((BODY.cols - m.cols) / 2) : 0;
+  const m1 = m ? m0 + m.cols : 0;
+  const mb = m ? BODY.row + m.rows : BODY.row;
+  const areas = [
+    [left, mb, right, bottom],
+    [left, BODY.row, Math.min(right, m0), bottom],
+    [Math.max(left, m1), BODY.row, right, bottom],
+  ].map(([x0, y0, x1, y1]) => ({
+    x0: (x0! - BODY.col) * cw,
+    y0: (y0! - BODY.row) * ch,
+    x1: (x1! - BODY.col) * cw,
+    y1: (y1! - BODY.row) * ch,
+  }));
+  const area = (r: (typeof areas)[number]) =>
+    Math.max(0, r.x1 - r.x0) *
+    Math.max(0, r.y1 - r.y0) *
+    (r.x1 - r.x0 > 8 * cw && r.y1 - r.y0 > 4 * ch ? 1 : 0.01);
+  return areas.reduce((a, r) => (area(r) > area(a) ? r : a));
 }
 
 // ------------------------------------------------------------ screen
 
-function header(): string {
-  const b = app.battle!;
-  const u = b.actor;
-  const who = u ? `${u.id} ${u.model} (${b.actorPersona ? t("ctl.ai") : t("ctl.player")})` : "";
-  return t("battle.title", { turn: b.state.turn, phase: t(`phase.${b.phase}`), who });
-}
-
-function modeLine(): string {
+function title(): string {
   const b = app.battle!;
   const s = tallies(b.state, b.totals);
   if (b.mode.kind === "damageRace") {
@@ -342,64 +435,128 @@ function modeLine(): string {
   return t("battle.destroyAll", { a: s[0]!.units - s[0]!.lost, b: s[1]!.units - s[1]!.lost });
 }
 
+/**
+ * Orders over the map: centred at the top in a rounded kit box, opaque text
+ * on 75% black inset like the drawers.
+ */
+function topMenu(rows: TuiNode[], width: number, top: number, title: string | null): TuiNode {
+  return at(
+    BODY.col,
+    top,
+    { class: "ia-topmenu", key: "topmenu", style: { width: `calc(${BODY.cols} * var(--cw))` } },
+    h().box(
+      {
+        cols: Math.min(BODY.cols, width + 2),
+        border: "rounded",
+        pad: 0,
+        class: "ia-menu",
+        key: "menu",
+        ...(title ? { title } : {}),
+      },
+      ...rows,
+    ),
+  );
+}
+
+interface Orders {
+  menu: TuiNode[];
+  /** Widest menu row, in cells. */
+  width: number;
+  done: boolean;
+  /** Group name on the box border, or null (the AI acting). */
+  title: string | null;
+}
+
+/** One plain text row of the orders menu, and its width. */
+function textRow(text: string, cls: string, key: string): [TuiNode, number] {
+  return [row(` ${text} `, { cls, key }), cells(` ${text} `)];
+}
+
+function orders(): Orders {
+  const b = app.battle!;
+  const u = b.actor;
+  const extra: [TuiNode, number][] = app.error ? [textRow(`! ${app.error}`, "ia-err", "err")] : [];
+  const out = (
+    menu: TuiNode[],
+    width: number,
+    done: boolean,
+    title: string | null = null,
+  ): Orders => ({
+    menu: [...menu, ...extra.map((x) => x[0])],
+    width: Math.max(width, ...extra.map((x) => x[1])),
+    done,
+    title,
+  });
+  if (!u) return out([], 0, false);
+  if (b.actorPersona !== null) {
+    const ai = [textRow(t("orders.aiActing", { id: u.id }), "ia-accent", "ai")];
+    if (app.aiPace === "step") ai.push(textRow(t("orders.aiStep"), "ia-dim", "ais"));
+    return out(
+      ai.map((x) => x[0]),
+      Math.max(...ai.map((x) => x[1])),
+      false,
+    );
+  }
+  if (b.phase === "movement") {
+    const m = moveMenu();
+    const title = t("orders.moveTitle");
+    return out(m.rows, Math.max(m.width, cells(title) + 4), moveReady(), title);
+  }
+  showTargetSheet();
+  return out(attackOrders(ATTACK_W), ATTACK_W, true, t("orders.attackTitle"));
+}
+
+const MOVE_KEYS: StatusKey[] = [["Mouse", "key.clickHex"]];
+const ATTACK_KEYS: StatusKey[] = [
+  ["Tab", "key.target"],
+  ["T", "key.twist"],
+  ["Spc", "key.weapon"],
+  ["A/N", "key.allNone"],
+];
+
 export function battleScreen(): TuiNode {
   const H = h();
   const b = app.battle!;
   const phase = b.phase === "attack" ? "attack" : "movement";
-  const w = SIDE_W[phase];
-  const u = b.actor;
-  const side: TuiNode[] = [];
-  if (u) side.push(...unitCard(u, w - 2, phase === "attack"));
-  side.push(row("─".repeat(w - 2), { cls: "ia-dim", key: "sep" }));
-  if (u && b.actorPersona !== null) {
-    side.push(row(fit(t("orders.aiActing", { id: u.id }), w - 2), { cls: "ia-accent", key: "ai" }));
-    if (app.aiPace === "step")
-      side.push(row(fit(t("orders.aiStep"), w - 2), { cls: "ia-dim", key: "ais" }));
-  } else if (u) {
-    side.push(...(phase === "movement" ? moveOrders(w - 2) : attackOrders(w - 2)));
-    side.push(
-      ...blank(1),
-      H.el(
-        "div",
-        { key: "btns", class: "ia-row" },
-        H.btn({ onClick: () => commit() }, t("orders.done")),
-      ),
-    );
-  }
-  if (app.error) side.push(row(fit(`! ${app.error}`, w - 2), { cls: "ia-err", key: "err" }));
+  focusMover();
+  const o = orders();
+  app.battleUi.menuBox =
+    o.menu.length > 0 ? { cols: Math.min(BODY.cols, o.width + 2), rows: o.menu.length + 2 } : null;
+  const map = at(
+    BODY.col,
+    BODY.row,
+    {
+      class: "ia-mapwrap",
+      key: "map",
+      style: { width: `calc(${BODY.cols} * var(--cw))`, height: `calc(${BODY.rows} * var(--ch))` },
+    },
+    mapSlot(),
+  );
   return H.el(
     "div",
-    { class: "ia-root" },
-    H.split(
-      { cols: 100, rows: 31, border: "double", dir: "v", sizes: "24 1fr" },
-      H.pane(
-        { title: `${header()} · ${modeLine()}` },
-        H.split(
-          { sizes: `1fr ${w}` },
-          H.pane({ pad: 0 }, mapSlot()),
-          H.pane(u ? `${u.id} ${u.model}` : "", ...side),
-        ),
-      ),
-      H.pane(t("battle.log"), logView(b.log, 4, 96)),
+    { class: "ia-root ia-battle" },
+    ...battleFrame(
+      title(),
+      [map, o.done ? doneButton(() => commit()) : null],
+      o.menu.length > 0 ? [topMenu(o.menu, o.width, BODY.row, o.title)] : [],
     ),
     statusbar(
-      phase === "movement"
-        ? [
-            ["WRJS", "key.mode"],
-            ["Mouse", "key.clickHex"],
-            ["D", "key.done"],
-            ["^Z", "key.undo"],
-            ["F2", "key.menu"],
-          ]
-        : [
-            ["Tab", "key.target"],
-            ["T", "key.twist"],
-            ["Spc/1-9", "key.weapon"],
-            ["A/N", "key.allNone"],
-            ["D", "key.done"],
-            ["F2", "key.menu"],
-          ],
-      t("key.view"),
+      [
+        ...(phase === "movement" ? MOVE_KEYS : ATTACK_KEYS),
+        ...(o.done ? [["F10", "key.done", () => commit()] as const] : []),
+        ["[", "key.sheetLeft", () => toggleSheet(0)],
+        ["]", "key.sheetRight", () => toggleSheet(1)],
+        ["L", "key.logs", () => toggleLogs()],
+        [
+          "Esc",
+          "key.menu",
+          () => {
+            app.modal = { kind: "battleMenu", cursor: 0 };
+            rerender();
+          },
+        ],
+      ],
+      phase === "movement" ? moveHint() : [],
     ),
     app.modal ? battleModal() : null,
   );
@@ -455,17 +612,47 @@ export function battleOverlays(): void {
   }
   v.overlays = o;
   v.banners = battleBanners();
+  const ui = app.battleUi;
+  if (ui.centerPending && actor) {
+    ui.centerPending = false;
+    const foes = Object.values(b.state.units).filter(
+      (u) => u.team !== actor.team && isUnitOnBoard(u) && !isHull(u),
+    );
+    v.fitHexes([actor.position, ...foes.map((u) => u.position)], clearArea(v.canvas));
+  }
+  const target = b.attack?.targetId ? b.state.units[b.attack.targetId] : null;
+  if (ui.framePending && actor && target && b.phase === "attack") {
+    ui.framePending = false;
+    v.frame(actor.position, target.position, clearArea(v.canvas));
+  }
   v.onPick = (hex, ev, facing) => onMapPick(hex, ev, facing);
 }
 
 const keyOf = (h: { col: number; row: number }) => `${h.col},${h.row}`;
 
+/**
+ * A map click: a movement landing first, then an attack target; any other
+ * hex holding a unit opens that unit's record sheet.
+ */
 function onMapPick(hex: { col: number; row: number }, ev: MouseEvent, facing: Facing | null): void {
   const b = app.battle;
-  if (!b || b.actorPersona !== null) return;
+  if (!b) return;
+  const unit = Object.values(b.state.units).find(
+    (u) => isUnitOnBoard(u) && u.position.col === hex.col && u.position.row === hex.row,
+  );
+  const showSheet = () => {
+    if (unit) openSheetFor(unit.id);
+  };
+  if (b.actorPersona !== null) {
+    showSheet();
+    return;
+  }
   if (b.move) {
     const here = b.landingsAt(hex);
-    if (here.length === 0) return;
+    if (here.length === 0) {
+      showSheet();
+      return;
+    }
     // a facing triangle picks that landing; an unavailable one does nothing
     if (facing !== null) {
       const l = here.find((x) => x.facing === facing);
@@ -483,16 +670,11 @@ function onMapPick(hex: { col: number; row: number }, ev: MouseEvent, facing: Fa
     openFacingMenu(here, ev);
     return;
   }
-  if (b.attack) {
-    const unit = Object.values(b.state.units).find(
-      (u) => isUnitOnBoard(u) && u.position.col === hex.col && u.position.row === hex.row,
-    );
-    if (unit && b.fireSuggestion()?.targets.some((x) => x.targetId === unit.id)) {
-      act(() => b.setTarget(unit.id));
-      app.orderCursor = 0;
-      rerender();
-    }
+  if (b.attack && unit && b.fireSuggestion()?.targets.some((x) => x.targetId === unit.id)) {
+    pickTarget(unit.id);
+    return;
   }
+  showSheet();
 }
 
 function openFacingMenu(here: RevealedLanding[], ev: MouseEvent): void {
@@ -529,19 +711,10 @@ function openFacingMenu(here: RevealedLanding[], ev: MouseEvent): void {
 
 // ------------------------------------------------------------ battle windows
 
-const MENU = [
-  "menu.resume",
-  "menu.sheet",
-  "menu.log",
-  "menu.undo",
-  "menu.pace",
-  "menu.help",
-  "menu.withdraw",
-];
+const MENU = ["menu.resume", "menu.pace", "menu.withdraw"];
 
 function battleModal(): TuiNode | null {
   const m = app.modal!;
-  const b = app.battle!;
   if (m.kind === "battleMenu") {
     return modal(
       { cols: 40, title: t("menu.title"), footer: t("dialog.footer") },
@@ -553,58 +726,7 @@ function battleModal(): TuiNode | null {
       ),
     );
   }
-  if (m.kind === "sheet") {
-    const u = b.state.units[m.unitId];
-    if (!u) return null;
-    const def = mechDefFor(u);
-    const lines: string[] = [];
-    lines.push(
-      `${u.id}  ${def.model} ${def.name}  ${def.tonnage} t  ${t(`ctl.${b.control[u.id] ? "ai" : "player"}`)}`,
-    );
-    lines.push(
-      `${t("card.heat")} ${u.heat}  ${t("card.pilot")} ${u.pilotHits}/${u.pilotHitMax}  G${u.gunnery} P${u.piloting}  ${u.prone ? t("card.prone") : ""} ${u.shutdown !== "not" ? t("card.off") : ""}`,
-    );
-    lines.push("");
-    lines.push(
-      `${fit(t("sheet.loc"), 6)}${fit(t("sheet.armor"), 8, "right")}${fit(t("sheet.rear"), 6, "right")}${fit(t("sheet.structure"), 10, "right")}`,
-    );
-    for (const loc of [
-      "head",
-      "centerTorso",
-      "leftTorso",
-      "rightTorso",
-      "leftArm",
-      "rightArm",
-      "leftLeg",
-      "rightLeg",
-    ] as const) {
-      const rear =
-        loc === "centerTorso" || loc === "leftTorso" || loc === "rightTorso"
-          ? String(u.damage.armorRear[loc])
-          : "";
-      lines.push(
-        `${fit(locName(loc), 6)}${fit(u.damage.armor[loc], 8, "right")}${fit(rear, 6, "right")}${fit(u.damage.internalStructure[loc], 10, "right")}`,
-      );
-    }
-    lines.push("");
-    Object.entries(def.weapons).forEach(([n, w]) => {
-      const jam = u.jammedWeapons.includes(Number(n)) ? " [J]" : "";
-      lines.push(
-        `${fit(n, 2, "right")} ${fit(w.weapon + (w.rearFacing ? " (R)" : ""), 22)}${fit(locName(w.location), 4)}${jam}`,
-      );
-    });
-    return modal(
-      { cols: 64, title: t("sheet.title"), footer: t("key.anyKey") },
-      ...lines.slice(0, 26).map((l, i) => row(fit(l, 60), { key: `s${i}` })),
-    );
-  }
-  if (m.kind === "log") {
-    return modal(
-      { cols: 98, rows: 29, title: t("battle.log"), footer: t("key.anyKey") },
-      logView(b.log, 26, 94),
-    );
-  }
-  if (m.kind === "help") return helpWindow();
+  if (m.kind === "policy") return policyWindow(m);
   if (m.kind === "message")
     return modal(
       { cols: 60, title: m.title },
@@ -616,20 +738,13 @@ function battleModal(): TuiNode | null {
 }
 
 function runMenu(i: number): void {
-  const b = app.battle!;
   const k = MENU[i];
   app.modal = null;
-  if (k === "menu.sheet") {
-    const id = b.actor?.id ?? Object.keys(b.state.units)[0];
-    if (id) app.modal = { kind: "sheet", unitId: id };
-  } else if (k === "menu.log") app.modal = { kind: "log" };
-  else if (k === "menu.undo") undo();
-  else if (k === "menu.pace") {
+  if (k === "menu.pace") {
     const paces = ["instant", "step", "timed"] as const;
     app.aiPace = paces[(paces.indexOf(app.aiPace) + 1) % 3]!;
     app.modal = { kind: "battleMenu", cursor: i };
-  } else if (k === "menu.help") app.modal = { kind: "help" };
-  else if (k === "menu.withdraw") {
+  } else if (k === "menu.withdraw") {
     kitModal.open = true;
     void kit()
       .dialog({
@@ -652,60 +767,35 @@ function runMenu(i: number): void {
   rerender();
 }
 
-function undo(): void {
-  const b = app.battle!;
-  stopAi();
-  act(() => b.undo());
-  app.orderCursor = 0;
-  rerender();
-}
-
 // ------------------------------------------------------------ keys
 
 export function battleKey(e: KeyboardEvent): boolean {
   const b = app.battle!;
-  const v = app.mapView;
   const m = app.modal;
   if (m) {
     if (m.kind === "battleMenu") {
       if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % MENU.length;
       else if (e.key === "ArrowUp") m.cursor = (m.cursor + MENU.length - 1) % MENU.length;
       else if (e.key === "Enter") runMenu(m.cursor);
-      else if (e.key === "Escape" || e.key === "F2") app.modal = null;
+      else if (e.key === "Escape") app.modal = null;
       else return false;
       return true;
     }
-    if (m.kind === "sheet" && (e.key === "ArrowRight" || e.key === "ArrowLeft")) {
-      const ids = Object.keys(b.state.units);
-      const i = ids.indexOf(m.unitId);
-      m.unitId = ids[(i + (e.key === "ArrowRight" ? 1 : ids.length - 1)) % ids.length]!;
+    // The policy dialog's kit controls keep their keys; Escape cancels it.
+    if (m.kind === "policy") {
+      if (e.key !== "Escape") return false;
+      app.modal = null;
       return true;
     }
     app.modal = null;
     return true;
   }
-  // map view (never hexes)
-  if (v) {
-    const view: Record<string, () => void> = {
-      ",": () => v.rotate(-1),
-      ".": () => v.rotate(1),
-      "+": () => v.zoom(2),
-      "=": () => v.zoom(2),
-      "-": () => v.zoom(-2),
-      Home: () => v.reset(),
-    };
-    const fn = view[e.key] ?? (e.code === "KeyV" ? () => v.cycleTilt() : undefined);
-    if (fn) {
-      fn();
-      return true;
-    }
-  }
-  if (e.key === "F2") app.modal = { kind: "battleMenu", cursor: 0 };
-  else if (e.key === "F1") app.modal = { kind: "help" };
-  else if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ") undo();
-  else if (e.code === "KeyI")
-    app.modal = { kind: "sheet", unitId: b.actor?.id ?? Object.keys(b.state.units)[0]! };
-  else if (e.code === "KeyL") app.modal = { kind: "log" };
+  if (e.key === "Escape") app.modal = { kind: "battleMenu", cursor: 0 };
+  // [ and ] open and close the left and right record sheets; on a gamepad
+  // these will be the left and right shoulder buttons.
+  else if (e.key === "[") toggleSheet(0);
+  else if (e.key === "]") toggleSheet(1);
+  else if (e.code === "KeyL") setLogs(!app.battleUi.logs);
   else if (e.key === " " && b.actorPersona !== null) pumpAi(true);
   else if (b.actorPersona !== null) return false;
   else if (b.phase === "movement") return moveKey(e);
@@ -717,21 +807,14 @@ export function battleKey(e: KeyboardEvent): boolean {
 function moveKey(e: KeyboardEvent): boolean {
   const b = app.battle!;
   const choices = b.moveChoices();
-  const byLetter = Object.entries(CHOICE_KEY).find(
-    ([c, k]) => `Key${k}` === e.code && choices.includes(c as MoveChoice),
-  );
-  if (byLetter) {
-    const c = byLetter[0] as MoveChoice;
-    app.orderCursor = choices.indexOf(c);
-    act(() => b.chooseMove(c));
-  } else if (e.key === "ArrowDown") app.orderCursor = (app.orderCursor + 1) % choices.length;
+  if (e.key === "ArrowDown") app.orderCursor = (app.orderCursor + 1) % choices.length;
   else if (e.key === "ArrowUp")
     app.orderCursor = (app.orderCursor + choices.length - 1) % choices.length;
   else if (e.key === "Enter" || e.key === " ") {
     const c = choices[app.orderCursor];
     if (c && b.move?.choice !== c) act(() => b.chooseMove(c));
-    else commit();
-  } else if (e.code === "KeyD") commit();
+    else if (moveReady()) commit();
+  } else if ((e.key === "F10" || e.code === "KeyD") && moveReady()) commit();
   else return false;
   return true;
 }
@@ -747,16 +830,12 @@ function attackKey(e: KeyboardEvent): boolean {
   else if (e.key === "ArrowUp")
     app.orderCursor = rows.length ? (app.orderCursor + rows.length - 1) % rows.length : 0;
   else if (e.key === " ") toggleRow(app.orderCursor);
-  else if (/^Digit[1-9]$/.test(e.code)) {
-    const n = Number(e.code.slice(5));
-    const i = rows.findIndex((r) => r.kind === "weapon" && r.weaponIndex === n);
-    if (i >= 0) toggleRow(i);
-  } else if (e.code === "KeyA") act(() => b.checkAll(true));
+  else if (e.code === "KeyA") act(() => b.checkAll(true));
   else if (e.code === "KeyN") act(() => b.clearAttack());
   else if (e.code === "KeyX") {
     const i = rows.findIndex((r) => r.kind !== "weapon");
     if (i >= 0) app.orderCursor = i;
-  } else if (e.code === "KeyD" || e.key === "Enter") commit();
+  } else if (e.key === "F10" || e.code === "KeyD" || e.key === "Enter") commit();
   else return false;
   return true;
 }

@@ -74,9 +74,10 @@ export function deployScreen(): TuiNode {
     statusbar(
       choosing
         ? [
-            ["Tab", "key.next"],
+            ["↑→↓←", "key.edge"],
             ["Enter", "key.select"],
             ["Esc", "key.discard", confirmDiscard],
+            ["F10", "key.proceed", proceed],
           ]
         : [
             ["↑↓", "key.unit"],
@@ -126,7 +127,12 @@ function edgeButton(e: Edge): TuiNode {
   return h().btn(
     {
       key: `edge-${e}`,
-      onClick: () => report(() => pickEdge(e)),
+      attrs: { "data-edge": e },
+      primary: d.pickedEdge === e,
+      onClick: () => {
+        d.pickedEdge = e;
+        rerender();
+      },
       on: {
         mouseenter: () => {
           d.hoverEdge = e;
@@ -149,7 +155,14 @@ function edgeButton(e: Edge): TuiNode {
 function pickEdge(e: Edge): void {
   const d = app.deploy!;
   d.hoverEdge = null;
+  d.pickedEdge = null;
   chooseEdge(e);
+}
+
+/** Proceed (F10): take the selected edge. */
+function proceed(): void {
+  const e = app.deploy!.pickedEdge;
+  if (e) report(() => pickEdge(e));
 }
 
 function edgeRows(): TuiNode[] {
@@ -172,24 +185,31 @@ function edgeRows(): TuiNode[] {
     row(fit(t("deploy.opposite", { side: 3 - winner }), W), { key: "opp", cls: "ia-dim" }),
     row(fit(t("deploy.hoverEdge"), W), { key: "hov", cls: "ia-dim" }),
   ];
-  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow(false)]);
+  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow("proceed")]);
 }
 
-/** Bottom buttons: Discard (Esc), and Done (F10) once the edges are set. */
-function exitRow(withDone: boolean): TuiNode {
+/**
+ * Bottom buttons: Discard (Esc), then the F10 button: Proceed with the
+ * selected edge while choosing, Done once the edges are set.
+ */
+function exitRow(next: "proceed" | "done"): TuiNode {
   const H = h();
   const len = (s: string) => kit().compensatedLength(s);
   const discard = `${t("deploy.discard")}  Esc`;
-  const doneLabel = `${t("deploy.done")}  F10`;
+  const nextLabel = `${t(next === "done" ? "deploy.done" : "deploy.proceed")}  F10`;
   // a kit button adds four cells: "[ " and " ]"
-  const width = len(discard) + 4 + (withDone ? 2 + len(doneLabel) + 4 : 0);
+  const width = len(discard) + 4 + 2 + len(nextLabel) + 4;
+  const ready = next === "done" || app.deploy!.pickedEdge !== null;
   return line(
     "exit",
     "",
     " ".repeat(Math.max(0, (W - width) >> 1)),
     H.btn({ key: "discard", onClick: confirmDiscard }, discard),
-    withDone ? "  " : "",
-    withDone ? H.btn({ key: "done", primary: true, onClick: done }, doneLabel) : "",
+    "  ",
+    H.btn(
+      { key: next, primary: ready, disabled: !ready, onClick: next === "done" ? done : proceed },
+      nextLabel,
+    ),
   );
 }
 
@@ -308,7 +328,7 @@ function unitRows(): TuiNode[] {
         ),
       ),
     );
-  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow(true)]);
+  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow("done")]);
 }
 
 // ------------------------------------------------------------ actions
@@ -393,7 +413,7 @@ function pickHex(hex: HexCoord, ev: MouseEvent, facing: Facing | null): void {
     if (!playerChoosesEdge()) return;
     const edge = EDGES.find((e) => onEdge(map, e, hex));
     if (!edge) throw new Error(t("err.notEdge"));
-    pickEdge(edge);
+    d.pickedEdge = edge;
     return;
   }
   const units = deployUnits(app.loadout);
@@ -430,8 +450,9 @@ export function deployOverlays(): void {
   const zone = new Map<string, BandHex>();
   let chosen: { hex: string; facing: Facing } | null = null;
   if (d.edges[0] === null) {
-    if (d.hoverEdge)
-      for (const hx of edgeHexes(map, d.hoverEdge))
+    const shown = d.hoverEdge ?? d.pickedEdge;
+    if (shown)
+      for (const hx of edgeHexes(map, shown))
         zone.set(`${hx.col},${hx.row}`, { team: d.roll.winner, facings: FACINGS });
   } else {
     const u = deployUnits(app.loadout)[d.cursor];
@@ -466,13 +487,32 @@ export function deployAfterRender(): void {
   if (u) document.querySelector<HTMLElement>(`#app [data-unit="${CSS.escape(u.id)}"]`)?.focus();
 }
 
+const ARROW_EDGE: Partial<Record<string, Edge>> = {
+  ArrowUp: "north",
+  ArrowRight: "east",
+  ArrowDown: "south",
+  ArrowLeft: "west",
+};
+
 export function deployKey(e: KeyboardEvent): boolean {
   const d = app.deploy!;
   if (e.key === "Escape") {
     confirmDiscard();
     return true;
   }
-  if (d.edges[0] === null) return false;
+  if (d.edges[0] === null) {
+    // Arrows select an edge outright (↑ north, → east, ↓ south, ← west);
+    // Proceed (F10) takes it.
+    if (e.key === "F10") {
+      proceed();
+      return true;
+    }
+    const edge = ARROW_EDGE[e.key];
+    if (!edge) return false;
+    d.pickedEdge = edge;
+    document.querySelector<HTMLElement>(`#app [data-edge="${edge}"]`)?.focus();
+    return true;
+  }
   const units = deployUnits(app.loadout);
   if (e.key === "F10") beginBattle();
   else if (e.key === "ArrowDown" || e.key === "ArrowUp") {

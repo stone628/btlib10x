@@ -142,7 +142,6 @@ export function setupScreen(): TuiNode {
         ["Enter", "key.open"],
         ["Esc", "key.title", () => (app.screen = "title")],
         ["F10", "key.launch", () => doLaunch()],
-        ["F1", "key.help", () => (app.modal = { kind: "help" })],
       ],
       app.error && !problem ? `! ${app.error}` : "",
     ),
@@ -228,7 +227,14 @@ function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
     select("ctl", 18, CONTROLS, s.persona, controlName, (v) => (s.persona = v)),
     "  ",
     tight("pol", "…", () => {
-      app.modal = { kind: "policy", side, index: i, draft: { ...s.policy } };
+      app.modal = {
+        kind: "policy",
+        id: s.id,
+        draft: { ...s.policy },
+        apply: (p) => {
+          s.policy = p;
+        },
+      };
     }),
   );
 }
@@ -447,7 +453,8 @@ function okCancel(width: number, ok: () => void, lead?: TuiNode, leadCols = 0): 
 
 // ------------------------------------------------------------ policy dialog
 
-function policyWindow(m: Extract<Modal, { kind: "policy" }>): TuiNode {
+/** Policy dialog of a setup slot or, in battle, of the acting unit. */
+export function policyWindow(m: Extract<Modal, { kind: "policy" }>): TuiNode {
   const d = m.draft;
   const onOff = [true, false] as const;
   const toOnOff = (v: boolean) => t(v ? "on" : "off");
@@ -483,18 +490,17 @@ function policyWindow(m: Extract<Modal, { kind: "policy" }>): TuiNode {
       ),
     ],
   ];
-  const slot = app.loadout.sides[m.side][m.index]!;
   const cols = 46;
   const defaults = t("btn.defaults");
   return modal(
-    { cols, title: t("policy.title", { id: slot.id }), pad: 1 },
+    { cols, title: t("policy.title", { id: m.id }), pad: 1 },
     ...items.map(([k, c]) => line(k, fit(t(k), 24), c)),
     row(" ", { key: "b0" }),
     okCancel(
       cols - 4,
       () => {
-        slot.policy = { ...d };
         app.modal = null;
+        m.apply({ ...d });
       },
       button("defaults", defaults, () => {
         m.draft = { ...DEFAULT_UNIT_POLICY };
@@ -897,8 +903,6 @@ function modalNode(m: Modal): TuiNode | null {
       return inputWindow(m);
     case "policy":
       return policyWindow(m);
-    case "help":
-      return helpWindow();
     case "message":
       return modal(
         { cols: 60, title: m.title },
@@ -909,14 +913,6 @@ function modalNode(m: Modal): TuiNode | null {
     default:
       return null;
   }
-}
-
-export function helpWindow(): TuiNode {
-  const lines = t("help.text").split("\n");
-  return modal(
-    { cols: 80, title: t("help.title"), footer: t("key.anyKey") },
-    ...lines.map((l, i) => row(l, { key: `h${i}` })),
-  );
 }
 
 /** Focusable controls of the open modal, in screen order. */
@@ -931,7 +927,7 @@ function modalFocusables(): HTMLElement[] {
 export function setupKey(e: KeyboardEvent): boolean {
   const m = app.modal;
   if (m) {
-    if (m.kind === "help" || m.kind === "message") {
+    if (m.kind === "message") {
       app.modal = null;
       return true;
     }

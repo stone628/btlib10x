@@ -8,16 +8,11 @@ import { ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
 import { fitScreen } from "./screen";
 import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
+import { queueAfterRender } from "./screens/battle.hud";
 import { h, kit, row } from "./screens/common";
 import { debriefKey, debriefScreen } from "./screens/debrief";
 import { deployAfterRender, deployKey, deployOverlays, deployScreen } from "./screens/deploy";
-import {
-  helpWindow,
-  setupAfterRender,
-  setupKey,
-  setupMapPreview,
-  setupScreen,
-} from "./screens/setup";
+import { setupAfterRender, setupKey, setupMapPreview, setupScreen } from "./screens/setup";
 import { titleAfterRender, titleScreen } from "./screens/title";
 import { defaultLoadout, loadLoadout } from "./setup/loadout";
 import { app, kitModal, setRerender } from "./state";
@@ -38,12 +33,7 @@ function rootView(): TuiNode {
         ),
       );
     case "title":
-      return h().el(
-        "div",
-        { class: "ia-root" },
-        titleScreen(),
-        app.modal?.kind === "help" ? helpWindow() : null,
-      );
+      return h().el("div", { class: "ia-root" }, titleScreen());
     case "setup":
       return setupScreen();
     case "deploy":
@@ -74,8 +64,10 @@ function afterRender(): void {
     slot.replaceChildren(view.canvas);
     view.clearHover();
   }
-  if (app.screen === "battle") battleOverlays();
-  else if (app.screen === "deploy") deployOverlays();
+  if (app.screen === "battle") {
+    battleOverlays();
+    queueAfterRender();
+  } else if (app.screen === "deploy") deployOverlays();
   else if (app.screen === "setup") setupMapPreview();
   view.render();
 }
@@ -102,15 +94,9 @@ function onKey(e: KeyboardEvent): void {
     if (app.modal) {
       app.modal = null;
       handled = true;
-    } else if (e.key === "F1") {
-      app.modal = { kind: "help" };
-      handled = true;
     }
   } else if (app.screen === "setup") {
-    if (e.key === "F1" && !app.modal) {
-      app.modal = { kind: "help" };
-      handled = true;
-    } else handled = setupKey(e);
+    handled = setupKey(e);
   } else if (app.screen === "deploy") {
     try {
       handled = deployKey(e);

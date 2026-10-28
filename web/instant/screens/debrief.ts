@@ -97,23 +97,18 @@ export function debriefScreen(): TuiNode {
       ["Tab", "key.tab"],
       ["R", "key.rematch"],
       ["Enter", "key.setup"],
-      ["^Z", "key.backToBattle"],
       ["Esc", "key.title"],
     ]),
   );
 }
 
 export function debriefKey(e: KeyboardEvent): boolean {
-  const b = app.battle!;
   if (e.key === "Tab") app.tab = (app.tab + (e.shiftKey ? 3 : 1)) % 4;
   else if (e.code === "KeyR") rematch();
   else if (e.key === "Enter") {
     app.screen = "setup";
     app.tab = 0;
   } else if (e.key === "Escape") app.screen = "title";
-  else if ((e.ctrlKey || e.metaKey) && e.code === "KeyZ" && b.canUndo) {
-    b.undo();
-    app.screen = "battle";
-  } else return false;
+  else return false;
   return true;
 }

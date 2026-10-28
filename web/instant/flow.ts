@@ -28,7 +28,7 @@ import { t } from "./i18n";
 import type { Banner, MapSource } from "./map/view";
 import { MapView } from "./map/view";
 import { type Loadout, loadoutProblem, mechDef, randomLoadout, saveLoadout } from "./setup/loadout";
-import { app, type Placement, rerender } from "./state";
+import { app, newBattleUi, type Placement, rerender } from "./state";
 
 export interface DeployUnit {
   id: string;
@@ -106,6 +106,7 @@ export function launch(): void {
     placements: {},
     cursor: Math.max(0, cursor),
     hoverEdge: null,
+    pickedEdge: null,
     focusUnit: false,
   };
   app.screen = "deploy";
@@ -247,6 +248,7 @@ export function beginBattle(): void {
   app.battle = new BattleController(currentMap(), inits, control, l.seed, l.mode);
   app.screen = "battle";
   app.orderCursor = 0;
+  app.battleUi = newBattleUi();
   app.modal = null;
   const view = ensureMapView();
   const battle = app.battle;

@@ -922,7 +922,8 @@ select.tui-native {
   color: var(--tui-bright);
   pointer-events: none;
 }
-.tui-tip .tui-body {
+.tui-tip .tui-body,
+.tui-tip .tui-body-inner {
   white-space: pre;
 }
 

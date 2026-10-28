@@ -175,6 +175,7 @@ export class MapView {
       }
       if (e.button === 1) {
         e.preventDefault();
+        this.unfit();
         pan = { x: e.clientX, y: e.clientY, px: this.panX, py: this.panY };
         canvas.setPointerCapture(e.pointerId);
         return;
@@ -308,9 +309,22 @@ export class MapView {
     this.panY += py - qy;
   }
 
+  /**
+   * Leave fit-to-view for a fixed size, keeping the view as it is: a view
+   * placed by hand (pan, zoom, focus on a unit) must not re-fit on a turn.
+   */
+  private unfit(): void {
+    if (this.fs !== null) return;
+    const fs = this.fitFs();
+    this.anchored(null, () => {
+      this.fs = fs;
+    });
+  }
+
   /** Pan so a hex's centre sits in the middle of the canvas. */
   centerOn(hex: HexCoord): void {
     if (!this.src) return;
+    this.unfit();
     const v = this.view();
     const w = worldCenter(hex.col, hex.row);
     const [x, y] = v.proj(
@@ -319,6 +333,145 @@ export class MapView {
     );
     this.panX += v.W / 2 - x;
     this.panY += v.H / 2 - y;
+    this.render();
+  }
+
+  /**
+   * Turn, zoom and pan so all `hexes` fit a canvas rectangle (CSS px) as large
+   * as they can, with room for their banners. Turns only in 30° steps, and
+   * only when that gains more than a tenth in size over the current angle.
+   */
+  fitHexes(
+    hexes: readonly HexCoord[],
+    rect: { x0: number; y0: number; x1: number; y1: number },
+  ): void {
+    if (!this.src || hexes.length === 0) return;
+    const sq = Math.max(Math.sin((this.tilt * Math.PI) / 180), 1e-3);
+    const pts = hexes.map((hex) => {
+      const w = worldCenter(hex.col, hex.row);
+      return [w[0] - this.world.cx, w[1] - this.world.cy] as const;
+    });
+    const inner = (fs: number) => {
+      const R = HEX_R * fs;
+      const m = bannerMetrics(fs);
+      return {
+        x0: rect.x0 + R,
+        x1: rect.x1 - R,
+        y0: rect.y0 + m.pole + m.bh,
+        y1: rect.y1 - R * sq,
+      };
+    };
+    /** Largest size (font px) at which the hexes fit, at a map angle. */
+    const sizeAt = (deg: number) => {
+      const t = (deg * Math.PI) / 180;
+      const c = Math.cos(t);
+      const s = Math.sin(t);
+      const xs = pts.map(([x, y]) => x * c + y * s);
+      const ys = pts.map(([x, y]) => (-x * s + y * c) * sq);
+      const spanX = Math.max(...xs) - Math.min(...xs);
+      const spanY = Math.max(...ys) - Math.min(...ys);
+      let fs = this.fs ?? this.fitFs();
+      for (let i = 0; i < 4; i++) {
+        const box = inner(fs);
+        const w = Math.max(1, box.x1 - box.x0);
+        const h = Math.max(1, box.y1 - box.y0);
+        fs = Math.min(spanX > 0 ? w / (spanX * HEX_R) : 48, spanY > 0 ? h / (spanY * HEX_R) : 48);
+        fs = Math.max(4, Math.min(48, fs));
+      }
+      return fs;
+    };
+    let angle = this.angle;
+    let fs = sizeAt(angle);
+    for (let deg = 0; deg < 360; deg += 30) {
+      const f = sizeAt(deg);
+      if (f > fs * 1.1) {
+        fs = f;
+        angle = deg;
+      }
+    }
+    this.angle = angle;
+    this.fs = fs;
+    const box = inner(fs);
+    const v = this.view();
+    const on = hexes.map((hex) => {
+      const c = worldCenter(hex.col, hex.row);
+      return v.proj(v.rot([c[0] - this.world.cx, c[1] - this.world.cy]), this.src!.levelAt(hex));
+    });
+    const mx = (Math.min(...on.map((p) => p[0])) + Math.max(...on.map((p) => p[0]))) / 2;
+    const my = (Math.min(...on.map((p) => p[1])) + Math.max(...on.map((p) => p[1]))) / 2;
+    this.panX += (box.x0 + box.x1) / 2 - mx;
+    this.panY += (box.y0 + box.y1) / 2 - my;
+    this.render();
+  }
+
+  /**
+   * Turn, zoom and pan so hexes `a` and `b` lie on a diagonal of a canvas
+   * rectangle (CSS px), with room for their banners: the diagonal (of the four
+   * corner pairings) that needs the least turn wins.
+   */
+  frame(a: HexCoord, b: HexCoord, rect: { x0: number; y0: number; x1: number; y1: number }): void {
+    if (!this.src) return;
+    const wa = worldCenter(a.col, a.row);
+    const wb = worldCenter(b.col, b.row);
+    const dx = wb[0] - wa[0];
+    const dy = wb[1] - wa[1];
+    const len = Math.hypot(dx, dy);
+    if (len < 1e-6) {
+      this.centerOn(a);
+      return;
+    }
+    const sq = Math.max(Math.sin((this.tilt * Math.PI) / 180), 1e-3);
+    const inner = (fs: number) => {
+      const R = HEX_R * fs;
+      const m = bannerMetrics(fs);
+      return {
+        x0: rect.x0 + R,
+        x1: rect.x1 - R,
+        y0: rect.y0 + m.pole + m.bh,
+        y1: rect.y1 - R * sq,
+      };
+    };
+    let fs = this.fs ?? this.fitFs();
+    let box = inner(fs);
+    // banner room depends on the size: settle it in a few rounds
+    for (let i = 0; i < 4; i++) {
+      box = inner(fs);
+      const w = Math.max(1, box.x1 - box.x0);
+      const h = Math.max(1, box.y1 - box.y0);
+      // on screen, |dx'| : |dy'| = w : h, with dy' squashed by the tilt
+      const phi = Math.atan2(h / sq, w);
+      fs = Math.max(4, Math.min(48, w / (len * Math.cos(phi)) / HEX_R));
+    }
+    const w = box.x1 - box.x0;
+    const h = box.y1 - box.y0;
+    const along = (Math.atan2(dy, dx) * 180) / Math.PI;
+    let best = this.angle;
+    let turn = Infinity;
+    for (const [sx, sy] of [
+      [1, 1],
+      [1, -1],
+      [-1, 1],
+      [-1, -1],
+    ] as const) {
+      const phi = (Math.atan2((sy * h) / sq, sx * w) * 180) / Math.PI;
+      const t = (((along - phi) % 360) + 360) % 360;
+      const d = Math.abs(((t - this.angle + 540) % 360) - 180);
+      if (d < turn) {
+        turn = d;
+        best = t;
+      }
+    }
+    this.angle = best;
+    this.fs = fs;
+    const v = this.view();
+    const at = (hex: HexCoord) => {
+      const c = worldCenter(hex.col, hex.row);
+      return v.proj(v.rot([c[0] - this.world.cx, c[1] - this.world.cy]), this.src!.levelAt(hex));
+    };
+    const pa = at(a);
+    const pb = at(b);
+    this.panX += (box.x0 + box.x1) / 2 - (pa[0] + pb[0]) / 2;
+    this.panY += (box.y0 + box.y1) / 2 - (pa[1] + pb[1]) / 2;
     this.render();
   }
 

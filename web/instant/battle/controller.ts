@@ -129,16 +129,6 @@ export interface PhysicalOption {
   readonly damage: number;
 }
 
-interface Snapshot {
-  battle: BattleState;
-  rng: string;
-  persona: PersonaContext;
-  actorId: string | null;
-  logLength: number;
-}
-
-const UNDO_DEPTH = 10;
-
 type WeaponAttackDecl = Parameters<typeof validateAttacks>[2][number];
 
 export class BattleController {
@@ -155,7 +145,6 @@ export class BattleController {
   result: BattleResult | null = null;
   /** Log a one-line summary of each persona decision. */
   reasoning = false;
-  private undoStack: Snapshot[] = [];
 
   constructor(
     map: MapDef,
@@ -240,7 +229,6 @@ export class BattleController {
     const logLength = this.log.length;
     const move = structuredClone(this.move);
     const attack = structuredClone(this.attack);
-    if (this.actorPersona === null) this.pushUndo();
     try {
       const sink: GameEvent[] = [];
       fn(sink);
@@ -252,52 +240,8 @@ export class BattleController {
       this.log.length = logLength;
       this.move = move;
       this.attack = attack;
-      if (this.actorPersona === null) this.undoStack.pop();
       throw e;
     }
-  }
-
-  // ------------------------------------------------------------ undo
-
-  private pushUndo(): void {
-    this.undoStack.push({
-      battle: structuredClone(this.state),
-      rng: this.rng.snapshot(),
-      persona: structuredClone(this.persona),
-      actorId: this.actorId,
-      logLength: this.log.length,
-    });
-    if (this.undoStack.length > UNDO_DEPTH) this.undoStack.shift();
-  }
-
-  get canUndo(): boolean {
-    return this.undoStack.length > 0;
-  }
-
-  /** Back to the last player prompt before its commit (state, dice, AI memory and log). */
-  undo(): void {
-    const snap = this.undoStack.pop();
-    if (!snap) throw new Error(t("err.nothingToUndo"));
-    this.state = snap.battle;
-    this.rng.load(snap.rng);
-    this.persona = snap.persona;
-    this.log.length = snap.logLength;
-    this.result = null;
-    this.log.push({ text: t("log.undone"), cls: "dim" });
-    // Re-enter the prompt with a fresh draft.
-    this.actorId = snap.actorId;
-    this.move = null;
-    this.attack = null;
-    if (this.state.phase === "movement") this.move = { choice: null, landings: [], landing: null };
-    else
-      this.attack = {
-        twist: "front",
-        targetId: this.fireSuggestion()?.targets[0]?.targetId ?? null,
-        weapons: [],
-        physical: [],
-        pickup: null,
-        dropClub: false,
-      };
   }
 
   // ------------------------------------------------------------ movement

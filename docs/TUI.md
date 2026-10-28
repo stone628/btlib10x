@@ -215,7 +215,7 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 | Spinner | `<span data-tui="spinner" data-frames="◐◓◑◒">` | Any frame string. Static under reduced motion. |
 | Scrollbox | `<div data-tui="scroll" data-rows="10">` | Native scrolling with the browser scrollbars hidden. When content is taller than the box the right border becomes `▲ ░▄█▀░ ▼`, with a thumb that moves in half cells; when it is wider (e.g. `.tui-line` rows), the bottom border becomes a half-height bar `◂ ■■■ ▸` (thumb in accent, track dim). Glyphs come from the CSS vars `--tui-vbar` (default `"▲░█▼▀▄"`; the last two are the upper and lower half thumbs) and `--tui-hbar` (default `"◂▥■▸"`): start arrow, track, thumb, end arrow. Wheel, shift+wheel, thumb drag, arrow and track clicks. |
 | Fixed column | `<span class="tui-col" style="--col:8">Walk</span>` | A label column that cuts with `…`. CSS only. |
-| Tooltip | `data-tip="text"` on any element (`&#10;` for a line break) | Rounded box sized to the text, on hover and focus. `data-tip-border` picks the set. |
+| Tooltip | `data-tip="text"` on any element (`&#10;` for a line break) | Rounded box sized to the text, on hover and focus. `data-tip-border` picks the set. Placement: `data-tip-at` is the point of the element the tip attaches to, `data-tip-anchor` the point of the tip put there; both take a compass point, `nw` `n` `ne` `w` `e` `sw` `s` `se` (corners and edge midpoints). Defaults `sw` / `nw`: below, left edges aligned. E.g. `e` / `w` puts the tip to the right, centred; `se` / `sw` to the right, bottom edges aligned. An axis that would leave the viewport is mirrored on both points, then the tip is kept inside it. A designated point replaces `data-tip-at`: `data-tip-xy="x,y"` in cells (fractions and negatives allowed) from the top-left of the element `data-tip-from` names (a CSS selector), or of the viewport without it; `data-tip-anchor` still picks the tip point put there. Scene props `tipAt`, `tipAnchor`, `tipXY`, `tipFrom`. |
 | Status bar | `<div class="tui-statusbar"><span class="tui-kbd">F1</span><span>Help</span>…</div>` | `.tui-seg` (reverse), `.tui-seg-alt`, `.tui-grow` spacer. CSS only. |
 
 ### JS API
@@ -337,7 +337,7 @@ scene.refs.weapons.el.focus();
 **Nodes.** `TUI.h.<type>(props?, ...children)`, or `TUI.h(type, props, ...children)`.
 Children are nodes, strings, numbers, arrays or `null`/`false` (skipped). Props common to
 every type: `key` (identity in a list), `ref` (name in `scene.refs`), `id`, `class`,
-`style` (object), `attrs` (object), `tip`, `hidden`, event handlers, and the slot props
+`style` (object), `attrs` (object), `tip`, `tipAt`, `tipAnchor`, `tipXY`, `tipFrom`, `hidden`, event handlers, and the slot props
 `size`, `grow`, `span` when the parent is a stack or grid. Shorthands: `tab(label, …)`,
 `pane(title, …)`, `col(cells, …)`, `el(tag, props?, …)`.
 

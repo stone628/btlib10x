@@ -1,6 +1,6 @@
 /** Small node builders shared by the screen prefabs. */
 import { t } from "../i18n";
-import type { TuiChild, TuiNode, TuiProps } from "../tui";
+import type { TipPoint, TuiChild, TuiNode, TuiProps } from "../tui";
 
 export const kit = () => window.TUI;
 export const h = () => window.TUI.h;
@@ -47,7 +47,7 @@ export function blank(n = 1): TuiNode[] {
  */
 export function statusbar(
   pairs: ReadonlyArray<readonly [string, string, (() => void)?]>,
-  right = "",
+  right: string | TuiChild[] = "",
 ): TuiNode {
   const H = h();
   const kids: TuiChild[] = [];
@@ -69,7 +69,9 @@ export function statusbar(
       );
   }
   kids.push(H.el("span", { class: "tui-grow" }));
-  if (right) kids.push(H.text(right));
+  if (typeof right === "string") {
+    if (right) kids.push(H.text(right));
+  } else kids.push(...right);
   return H.statusbar(...kids);
 }
 
@@ -122,6 +124,58 @@ export function logView(
     },
     ...entries.map((e, i) => row(fit(e.text, cols), { cls: e.cls ?? "", key: `log${i}` })),
   );
+}
+
+/** A node placed at a cell of the 100×32 screen (absolutely positioned). */
+export function at(col: number, rowN: number, props: TuiProps, ...children: TuiChild[]): TuiNode {
+  const style = {
+    left: `calc(${col} * var(--cw))`,
+    top: `calc(${rowN} * var(--ch))`,
+    ...(props.style ?? {}),
+  };
+  return h().el(
+    "div",
+    { ...props, class: `ia-at ${props.class ?? ""}`.trim(), style },
+    ...children,
+  );
+}
+
+export interface SpanOpts {
+  cls?: string;
+  tip?: string;
+  /** Where the tooltip attaches: this span's point, then the tip's point on it. */
+  tipAt?: TipPoint;
+  tipAnchor?: TipPoint;
+  /** A designated tip point in cells from `tipFrom`'s element (see TuiProps). */
+  tipXY?: string;
+  tipFrom?: string;
+  id?: string;
+  key?: string | number;
+  onClick?: (e: MouseEvent) => void;
+}
+
+/** An inline run of text with its own class, tooltip or click. */
+export function span(text: string, o: SpanOpts = {}): TuiNode {
+  const props: TuiProps = {};
+  if (o.cls) props.class = o.cls;
+  if (o.tip) props.tip = o.tip;
+  if (o.tipAt) props.tipAt = o.tipAt;
+  if (o.tipAnchor) props.tipAnchor = o.tipAnchor;
+  if (o.tipXY) props.tipXY = o.tipXY;
+  if (o.tipFrom) props.tipFrom = o.tipFrom;
+  if (o.id) props.id = o.id;
+  if (o.key !== undefined) props.key = o.key;
+  if (o.onClick) {
+    const fn = o.onClick;
+    props.onClick = (e) => fn(e);
+    props.attrs = { "data-click": "" };
+  }
+  return h().el("span", props, text);
+}
+
+/** Display width of `s` in cells (wide characters count two). */
+export function cells(s: string): number {
+  return kit().compensatedLength(s);
 }
 
 /** The persistent map canvas is moved into this slot after each render. */
