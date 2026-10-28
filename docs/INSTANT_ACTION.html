@@ -110,7 +110,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><th>Allowed import</th><th>How</th></tr>
 <tr><td><code>btlib10x</code> engine</td><td><code>import … from "btlib10x"</code>; bundled as external, resolved by the page's import map to <code>./btlib10x.js</code> (as <code>terminal.html</code> does). Types from <code>dist/index.d.ts</code>.</td></tr>
 <tr><td>TUI kit</td><td><code>&lt;script src="tui.js"&gt;</code> and <code>tui.css</code>; typed through a local <code>web/instant/tui.d.ts</code> declaring the subset used.</td></tr>
-<tr><td>Fonts, palette</td><td>Bt10x Mono from <code>web/fonts/</code>. Terrain colours are restated in <code>instant.css</code> (copied values, not a link to <code>terminal.css</code>).</td></tr>
+<tr><td>Fonts, palette</td><td>Bt10x Mono from <code>web/fonts/</code>. Terrain colours are restated in <code>instant.css</code> (copied values, not a link to <code>terminal.css</code>). The page has one fixed theme, <code>bt10x</code> (<code>&lt;html data-theme="bt10x"&gt;</code>; no theme switch): a <code>[data-theme="bt10x"]</code> block in <code>instant.css</code> holding the TUI tokens copied from <code>tui.css</code>&rsquo;s <code>green</code>, plus the header and map tokens (<code>--c-*</code>, <code>--ia-map-*</code>, team, reach, target, select, banner) mapped onto them.</td></tr>
 </table></div>
 
 <h3>Code copied from elsewhere (then owned by Instant Action)</h3>
@@ -209,7 +209,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <h3>What is added</h3>
 <div class="wrap"><table>
 <tr><th>Layer (paint order)</th><th>Content</th></tr>
-<tr><td>Terrain fill</td><td>Face colour per terrain type (woods, water by depth, rough, rubble, pavement, buildings by class); wreckage <code>%</code> and club tokens <code>!</code> as small glyphs on the face. Colours as CSS tokens in <code>instant.css</code>, light and dark.</td></tr>
+<tr><td>Terrain fill</td><td>Face colour per terrain type (woods, water by depth, rough, rubble, pavement, buildings by class); wreckage <code>%</code> and club tokens <code>!</code> as small glyphs on the face. Colours as CSS tokens in <code>instant.css</code>.</td></tr>
 <tr><td>Facing bands</td><td>During deployment, the hexes the selected Player unit may take (or the edge being chosen), and in the movement phase, the hexes the actor can end on, carry a band 1/8 of the hex's corner-to-corner width inside the hex edges, cut into six trapezoids, one per hexside (<code>Overlays.bands</code>). A trapezoid stands for one facing the unit may take on that hex (deployment allows all six; movement bands only the facings of its landings there). Each is filled in the team colour and outlined in a brighter tint of it. The hex face is cut into six triangles, centre to hexside: one click picks the hex and the facing of the triangle under the pointer (<code>onPick(hex, ev, facing)</code>; facing is null on a wall or a banner's sign). The hovered trapezoid is lightened with a thick select-colour outline; the chosen facing (<code>Overlays.chosen</code>: the placed unit's or the chosen landing's) is filled in the select colour. Reachable hexes keep their lowest MP cost as a label, without the old green tint.</td></tr>
 <tr><td>Reachable</td><td>Reachable landing hexes for the chosen movement mode, tinted with the actor's team; MP cost of the cheapest path as a small number on the face.</td></tr>
 <tr><td>Target</td><td>Hexes of fireable targets outlined; the selected target filled; an LOS line from attacker to target with blocking hexes marked.</td></tr>
@@ -607,7 +607,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 ├─ Reference tables…       cluster hits, hit location, critical hits, heat scale
 ├─ AI reasoning…           last decision trace of a persona unit (pp why)
 ├─ Undo               Ctrl+Z   back to the previous Player prompt (10 deep)
-├─ Settings…               AI pace, reasoning level, language, theme
+├─ Settings…               AI pace, reasoning level, language
 └─ Withdraw           F9   end the battle and return to Setup (confirm)</code></pre>
 
 <h3>8.8 Debrief (screen 4)</h3>
@@ -743,7 +743,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <div class="wrap"><table>
 <tr><th>File</th><th>Change</th></tr>
 <tr><td><code>web/instant.html</code></td><td>New page: <code>tui.css</code>, <code>instant.css</code>, font preload, <code>tui.js</code>, import map <code>btlib10x &rarr; ./btlib10x.js</code>, <code>instant.js</code>; the same legal footer as the terminal.</td></tr>
-<tr><td><code>web/instant.css</code></td><td>New: layout, terrain and team colour tokens (light and dark), banner styles for the canvas.</td></tr>
+<tr><td><code>web/instant.css</code></td><td>New: layout, terrain and team colour tokens, the <code>bt10x</code> theme (copied from TUI <code>green</code>), banner styles for the canvas.</td></tr>
 <tr><td><code>web/instant/**</code></td><td>New sources (§4).</td></tr>
 <tr><td><code>web/instant/maps/*.json</code></td><td>Instant-Action-only maps (canonical sources, validated by <code>validateMapDef</code>).</td></tr>
 <tr><td><code>package.json</code></td><td><code>pack:ia</code>: <code>pack-catalog.mjs --mechs none --maps web/instant/maps --out web/instant/instant.jsonl</code> (the script needs a <code>--mechs none</code> option like its existing <code>--maps none</code>).</td></tr>

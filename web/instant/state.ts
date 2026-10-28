@@ -76,7 +76,6 @@ export interface App {
   orderCursor: number;
   aiPace: AiPace;
   aiReasoning: boolean;
-  theme: "green" | "amber" | "paper";
   /** Persistent map views: battle board and setup / deploy preview. */
   mapView: MapView | null;
   error: string | null;
@@ -94,7 +93,6 @@ export const app: App = {
   orderCursor: 0,
   aiPace: "instant",
   aiReasoning: false,
-  theme: "green",
   mapView: null,
   error: null,
   version: "",

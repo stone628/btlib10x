@@ -35,29 +35,52 @@
   --ia-banner-ink: #0b0d0b;
 }
 
-:root[data-theme="paper"] {
-  --ia-map-bg: #e9e6dc;
-  --ia-map-edge: #6b6b5a;
-  --ia-map-wall: #b9b4a2;
-  --ia-map-label: #7a776a;
-  --ia-map-mark: #1a1a1a;
-  --ia-t-clear: #f3f0e6;
-  --ia-t-pavement: #d8d6cf;
-  --ia-t-lightWoods: #b8d8a8;
-  --ia-t-heavyWoods: #93c07f;
-  --ia-t-rough: #d9c9a0;
-  --ia-t-rubble: #c9b48f;
-  --ia-t-water1: #a9cbea;
-  --ia-t-water2: #8cb7e0;
-  --ia-t-water3: #6fa1d4;
-  --ia-t-lightBuilding: #e0c48a;
-  --ia-t-mediumBuilding: #d2b070;
-  --ia-t-heavyBuilding: #c09a5a;
-  --ia-t-hardenedBuilding: #a8824a;
-  --ia-team1: #1f63c8;
-  --ia-team2: #c8412a;
-  --ia-banner-bg: #fbfaf5;
-  --ia-banner-ink: #fbfaf5;
+/* bt10x: Instant Action's only theme (<html data-theme="bt10x">; the app has
+   no theme switch). The TUI tokens are copied from tui.css's "green" theme, so
+   the app keeps that look but owns its values; the map and site tokens are
+   mapped onto them. */
+[data-theme="bt10x"] {
+  color-scheme: dark;
+  /* TUI tokens (tui.css "green") */
+  --tui-page: #0c0f0c;
+  --tui-fg: #b8c9b8;
+  --tui-bright: #d7e4d7;
+  --tui-dim: #5a6a5a;
+  --tui-accent: #8fd08f;
+  --tui-accent-ink: #0c0f0c;
+  --tui-line: #6f8a6f;
+  --tui-surface: #141a14;
+  --tui-surface-2: #1b241b;
+  --tui-field: #16301b;
+  --tui-sel-bg: #8fd08f;
+  --tui-sel-fg: #0c0f0c;
+  --tui-shadow: rgba(0, 0, 0, 0.55);
+  --tui-overlay: rgba(4, 8, 4, 0.6);
+  --tui-red: #e07a6a;
+  --tui-yellow: #d8c26a;
+  --tui-blue: #7aa7d8;
+  --tui-cyan: #6ac9c0;
+  --tui-red-bg: #3a1712;
+  --tui-yellow-bg: #383012;
+  --tui-blue-bg: #152838;
+  /* header and footer (bt10x.css tokens) */
+  --c-bg: #0c0f0c; /* --tui-page */
+  --c-text: #b8c9b8; /* --tui-fg */
+  --c-white: #d7e4d7; /* --tui-bright */
+  --c-dim: #5a6a5a; /* --tui-dim */
+  --c-green: #8fd08f; /* --tui-accent */
+  /* map frame, labels and overlays; terrain faces, walls and hulls stay on :root */
+  --ia-map-bg: #0c0f0c; /* --tui-page */
+  --ia-map-edge: #6f8a6f; /* --tui-line */
+  --ia-map-label: #5a6a5a; /* --tui-dim */
+  --ia-map-mark: #d7e4d7; /* --tui-bright */
+  --ia-team1: #7aa7d8; /* --tui-blue */
+  --ia-team2: #e07a6a; /* --tui-red */
+  --ia-reach: #8fd08f; /* --tui-accent */
+  --ia-target: #d8c26a; /* --tui-yellow */
+  --ia-select: #d7e4d7; /* --tui-bright */
+  --ia-banner-bg: #0c0f0c; /* --tui-page */
+  --ia-banner-ink: #0c0f0c; /* --tui-accent-ink */
 }
 
 /* Header and footer match the terminal page (web/terminal.css). */
