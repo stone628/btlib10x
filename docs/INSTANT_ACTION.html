@@ -202,7 +202,8 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <li>Regular flat-top hexagons on the btlib10x odd-q offset grid (even columns half a hex south), drawn on a canvas, opaque faces painted back to front, every edge stroked once.</li>
 <li>Free rotation by dragging the map, snapping in 60° steps from the keyboard; view tilt (default about 40°, 90° = straight down); elevation to scale (a level is 6 m on a 30 m hex), with walls drawn only where they face the viewer.</li>
 <li>Coordinate labels <code>CCRR</code>, lying flat on the face along the edge nearest the screen top: off by default, shown only on the hovered hex (<code>MapView.showCoords</code> turns them on for every hex).</li>
-<li>HUD: a north indicator at the top right; at its top left the view state (<code>⟲</code> rotation, <code>×</code> zoom against fit, <code>⦟</code> tilt) in the N's colour, double size, outlined in black.</li>
+<li>HUD: a north indicator at the top right; at its top left the view state (<code>⟲</code> rotation, <code>×</code> zoom against fit, <code>⦟</code> tilt) in the N's colour, double size, outlined in black. The indicator has its own mouse controls (nothing under it is hovered or picked): left click turns back to north-up, middle click fits the map to the canvas at the current angle and tilt, right click turns +60° (Shift+right click −60°, exact, no snapping), the wheel steps the tilt by 5° between 5° and 90° (<code>TILT_MIN</code> / <code>TILT_MAX</code> / <code>TILT_STEP</code> in <code>view.ts</code>). The browser menu is suppressed over the indicator only.</li>
+<li>Fit to canvas (the default zoom, <kbd>Home</kbd>, and the indicator's middle click) uses the projected extent of every hex corner on the ground and at its level, so the map is centred exactly at any angle and tilt; headroom is added above only for banners that stick out of the top of the map.</li>
 <li>Polygon hit testing (<code>hexAt(px, py)</code>, last-drawn first), reused for clicks.</li>
 </ul>
 <h3>What is added</h3>
@@ -233,7 +234,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <li>Clicking a banner selects its hex. Hover shows a tooltip with model, pilot, heat and armor by location.</li>
 </ul>
 <h3>View controls</h3>
-<p>Mouse: drag to rotate (about the view centre), wheel to zoom (about the cursor), middle-drag to pan, click to select. Keyboard (only the view, never hexes): <kbd>,</kbd> / <kbd>.</kbd> rotate 60°, <kbd>+</kbd> / <kbd>-</kbd> zoom, <kbd>V</kbd> cycle tilt presets (40°, 65°, 90°), <kbd>Home</kbd> reset to north-up, <kbd>F</kbd> centre on the acting unit. The viewer's <kbd>Q</kbd> / <kbd>E</kbd> are not used, to keep letters free for orders.</p>
+<p>Mouse: drag to rotate (about the view centre), wheel to zoom (about the cursor), middle-drag to pan, click to select; over the north indicator, left / middle / right click and the wheel set north-up, fit, ±60° and tilt instead. Keyboard (only the view, never hexes): <kbd>,</kbd> / <kbd>.</kbd> rotate 60°, <kbd>+</kbd> / <kbd>-</kbd> zoom, <kbd>V</kbd> cycle tilt presets (40°, 65°, 90°), <kbd>Home</kbd> reset to north-up, <kbd>F</kbd> centre on the acting unit. The viewer's <kbd>Q</kbd> / <kbd>E</kbd> are not used, to keep letters free for orders.</p>
 
 <h2 id="flow">7. Screen flow</h2>
 <pre><code>                         ┌──────────────┐

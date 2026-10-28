@@ -67,6 +67,21 @@ const NORMALS = Array.from(
   (_, j) => [Math.cos(((j + 0.5) * Math.PI) / 3), Math.sin(((j + 0.5) * Math.PI) / 3)] as const,
 );
 export const TILTS = [40, 65, 90];
+/** Tilt range and step of the wheel over the north indicator. */
+const TILT_INIT = 25;
+const TILT_MIN = 5;
+const TILT_MAX = 90;
+const TILT_STEP = 5;
+/** North indicator: radius and gap to the canvas's top-right corner, CSS px. */
+const HUD_R = 16;
+const HUD_PAD = 6;
+
+/** Banner metrics (CSS px) at a map font size: font, line height, box height, pole. */
+const bannerMetrics = (fs: number) => {
+  const bfs = Math.max(9, fs * 0.85);
+  const chh = bfs * 1.175;
+  return { fs: bfs, chh, bh: chh * 2.1, pole: Math.max(chh * 0.9, HEX_R * fs * 0.45) };
+};
 
 const key = (h: HexCoord) => `${h.col},${h.row}`;
 const worldCenter = (col: number, row: number): [number, number] => [
@@ -103,7 +118,7 @@ export class MapView {
   private ctx: CanvasRenderingContext2D;
   private src: MapSource | null = null;
   angle = 0;
-  tilt = TILTS[0]!;
+  tilt = TILT_INIT;
   /** Font size driving the hex size; null = fit to the canvas. */
   fs: number | null = null;
   /** Pan offset in CSS px (middle-button drag). */
@@ -116,7 +131,7 @@ export class MapView {
   onPick: ((hex: HexCoord, ev: MouseEvent) => void) | null = null;
   private drawn: Shape[] = [];
   private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
-  private world = { cx: 0, cy: 0, radius: 1, maxLevel: 0 };
+  private world = { cx: 0, cy: 0 };
   private hover: string | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
@@ -136,7 +151,22 @@ export class MapView {
     canvas.addEventListener("mousedown", (e) => {
       if (e.button === 1) e.preventDefault(); // no browser autoscroll
     });
+    // The north indicator has its own controls; nothing under it is picked.
+    const onHud = (e: MouseEvent) => {
+      const r = canvas.getBoundingClientRect();
+      return this.onIndicator(e.clientX - r.left, e.clientY - r.top);
+    };
+    canvas.addEventListener("contextmenu", (e) => {
+      if (onHud(e)) e.preventDefault();
+    });
     canvas.addEventListener("pointerdown", (e) => {
+      if (onHud(e)) {
+        e.preventDefault();
+        if (e.button === 0) this.north();
+        else if (e.button === 1) this.fit();
+        else if (e.button === 2) this.turn(e.shiftKey ? -60 : 60);
+        return;
+      }
       if (e.button === 1) {
         e.preventDefault();
         pan = { x: e.clientX, y: e.clientY, px: this.panX, py: this.panY };
@@ -166,7 +196,9 @@ export class MapView {
         }
         return;
       }
-      const h = this.hexAtEvent(e);
+      const hud = onHud(e);
+      canvas.style.cursor = hud ? "pointer" : "";
+      const h = hud ? null : this.hexAtEvent(e);
       const k = h ? key(h) : null;
       if (k !== this.hover) {
         this.hover = k;
@@ -195,6 +227,10 @@ export class MapView {
       "wheel",
       (e) => {
         e.preventDefault();
+        if (onHud(e)) {
+          this.tiltBy(e.deltaY < 0 ? TILT_STEP : -TILT_STEP);
+          return;
+        }
         const r = canvas.getBoundingClientRect();
         this.zoom(e.deltaY < 0 ? 2 : -2, [e.clientX - r.left, e.clientY - r.top]);
       },
@@ -205,18 +241,13 @@ export class MapView {
   setMap(src: MapSource): void {
     this.src = src;
     const cs: [number, number][] = [];
-    let maxLevel = 0;
     for (let col = 1; col <= src.width; col++)
-      for (let row = 1; row <= src.height; row++) {
-        cs.push(worldCenter(col, row));
-        maxLevel = Math.max(maxLevel, src.levelAt({ col, row }));
-      }
+      for (let row = 1; row <= src.height; row++) cs.push(worldCenter(col, row));
     const xs = cs.map((c) => c[0]);
     const ys = cs.map((c) => c[1]);
     const cx = (Math.min(...xs) + Math.max(...xs)) / 2;
     const cy = (Math.min(...ys) + Math.max(...ys)) / 2;
-    const radius = Math.max(...cs.map(([x, y]) => Math.hypot(x - cx, y - cy))) + 1;
-    this.world = { cx, cy, radius, maxLevel };
+    this.world = { cx, cy };
   }
 
   /** Forget the hovered hex (the canvas moved to another screen without a pointerleave). */
@@ -282,7 +313,7 @@ export class MapView {
   }
 
   cycleTilt(): void {
-    const i = TILTS.indexOf(this.tilt);
+    const i = TILTS.indexOf(this.tilt) ?? 0;
     this.tilt = TILTS[(i + 1) % TILTS.length]!;
     this.render();
   }
@@ -292,51 +323,116 @@ export class MapView {
     this.panY = 0;
     this.angle = 0;
     this.fs = null;
-    this.tilt = TILTS[0]!;
+    this.tilt = TILT_INIT;
     this.render();
   }
 
-  /** Extent of the rotated hex centres, in circumradii, around the map centre. */
-  private bounds(angle: number) {
-    const t = (angle * Math.PI) / 180;
+  /** Turn back to north-up about the view centre. */
+  north(): void {
+    this.anchored(null, () => {
+      this.angle = 0;
+    });
+    this.render();
+  }
+
+  /** Turn by a number of degrees about the view centre. */
+  turn(deg: number): void {
+    this.anchored(null, () => {
+      this.angle = (((this.angle + deg) % 360) + 360) % 360;
+    });
+    this.render();
+  }
+
+  /** Change the tilt within TILT_MIN..TILT_MAX about the view centre. */
+  tiltBy(deg: number): void {
+    const tilt = Math.max(TILT_MIN, Math.min(TILT_MAX, this.tilt + deg));
+    if (tilt === this.tilt) return;
+    this.anchored(null, () => {
+      this.tilt = tilt;
+    });
+    this.render();
+  }
+
+  /**
+   * Fit the whole map to the canvas at the current angle and tilt. Zero pan
+   * with no fixed font size is exactly the fitted, centred placement.
+   */
+  fit(): void {
+    this.panX = 0;
+    this.panY = 0;
+    this.fs = null;
+    this.render();
+  }
+
+  /** Is a canvas point (CSS px) on the north indicator? */
+  private onIndicator(px: number, py: number): boolean {
+    const W = this.canvas.clientWidth || 300;
+    return Math.hypot(px - (W - HUD_R - HUD_PAD), py - (HUD_R + HUD_PAD)) <= HUD_R;
+  }
+
+  /**
+   * Projected extent of the map at the current angle and tilt, in circumradii
+   * from the projection origin: every hex corner on the ground and at its
+   * level, so elevation counts only where it stands. `banner` is the highest
+   * banner base (Infinity with none), for headroom.
+   */
+  private extent() {
+    const rad = (d: number) => (d * Math.PI) / 180;
+    const sq = Math.max(Math.sin(rad(this.tilt)), 1e-3);
+    const el = LEVEL_H * Math.cos(rad(this.tilt));
+    const t = rad(this.angle);
     const c = Math.cos(t);
     const s = Math.sin(t);
+    const rot = (x: number, y: number): [number, number] => [x * c + y * s, -x * s + y * c];
+    const corners = CORNERS.map(([x, y]) => rot(x, y));
     let x0 = Infinity;
     let x1 = -Infinity;
     let y0 = Infinity;
     let y1 = -Infinity;
+    let banner = Infinity;
     const src = this.src;
-    if (src) {
-      for (let col = 1; col <= src.width; col++)
-        for (let row = 1; row <= src.height; row++) {
-          const [wx, wy] = worldCenter(col, row);
-          const x = (wx - this.world.cx) * c + (wy - this.world.cy) * s;
-          const y = -(wx - this.world.cx) * s + (wy - this.world.cy) * c;
-          x0 = Math.min(x0, x);
-          x1 = Math.max(x1, x);
-          y0 = Math.min(y0, y);
-          y1 = Math.max(y1, y);
+    if (!src) return { x0: -1, x1: 1, y0: -1, y1: 1, banner };
+    for (let col = 1; col <= src.width; col++)
+      for (let row = 1; row <= src.height; row++) {
+        const w = worldCenter(col, row);
+        const [x, y] = rot(w[0] - this.world.cx, w[1] - this.world.cy);
+        const up = src.levelAt({ col, row }) * el;
+        for (const [dx, dy] of corners) {
+          const py = (y + dy) * sq;
+          x0 = Math.min(x0, x + dx);
+          x1 = Math.max(x1, x + dx);
+          y0 = Math.min(y0, py, py - up);
+          y1 = Math.max(y1, py, py - up);
         }
+      }
+    for (const b of this.banners) {
+      const w = worldCenter(b.hex.col, b.hex.row);
+      const y = rot(w[0] - this.world.cx, w[1] - this.world.cy)[1];
+      banner = Math.min(banner, y * sq - src.levelAt(b.hex) * el);
     }
-    return { x0: x0 - 1, x1: x1 + 1, y0: y0 - 1, y1: y1 + 1 };
+    return { x0, x1, y0, y1, banner };
   }
 
-  /** Font size at which the whole map fits the canvas at the current rotation. */
-  private fitFs(): number {
+  /** Top of the fitted box (circumradii) at a font size: the map or a banner's top. */
+  private fitTop(e: ReturnType<MapView["extent"]>, fs: number): number {
+    const m = bannerMetrics(fs);
+    return Math.min(e.y0, e.banner - (m.pole + m.bh) / (HEX_R * fs));
+  }
+
+  /** Font size at which the whole map and its banners fit the canvas. */
+  private fitFs(e = this.extent()): number {
     const W = this.canvas.clientWidth || 300;
     const H = this.canvas.clientHeight || 200;
-    const rad = (d: number) => (d * Math.PI) / 180;
-    const sq = Math.max(Math.sin(rad(this.tilt)), 1e-3);
-    const el = LEVEL_H * Math.cos(rad(this.tilt));
-    const b = this.bounds(this.angle);
-    // room above for the banners on the top row
-    const byW = W / ((b.x1 - b.x0) * HEX_R);
-    const byH = H / (HEX_R * ((b.y1 - b.y0) * sq + this.world.maxLevel * el + 1.6));
-    return Math.max(3, Math.min(byW, byH));
+    const at = (top: number) => Math.min(W / (HEX_R * (e.x1 - e.x0)), H / (HEX_R * (e.y1 - top)));
+    // banners keep a minimum size, so their headroom is not linear in fs: iterate
+    let fs = at(e.y0);
+    for (let i = 0; i < 3; i++) fs = at(this.fitTop(e, fs));
+    return Math.max(3, fs);
   }
 
   private view() {
-    const fs = this.fs ?? this.fitFs();
+    const e = this.extent();
+    const fs = this.fs ?? this.fitFs(e);
     const R = HEX_R * fs;
     const rad = (d: number) => (d * Math.PI) / 180;
     const sq = Math.max(Math.sin(rad(this.tilt)), 1e-3);
@@ -350,14 +446,10 @@ export class MapView {
     ];
     const W = this.canvas.clientWidth || 300;
     const H = this.canvas.clientHeight || 200;
-    const b = this.bounds(this.angle);
-    const ox = W / 2 - ((b.x0 + b.x1) / 2) * R + this.panX;
-    const oy =
-      H / 2 -
-      ((b.y0 + b.y1) / 2) * R * sq +
-      (this.world.maxLevel * EL) / 2 +
-      R * 0.8 * sq +
-      this.panY;
+    // centre the box; a fitted view also takes in the banners' headroom
+    const top = this.fs === null ? this.fitTop(e, fs) : e.y0;
+    const ox = W / 2 - ((e.x0 + e.x1) / 2) * R + this.panX;
+    const oy = H / 2 - ((top + e.y1) / 2) * R + this.panY;
     const proj = ([x, y]: readonly [number, number], h: number): [number, number] => [
       ox + x * R,
       oy + y * R * sq - h * EL,
@@ -682,10 +774,9 @@ export class MapView {
   private drawBanners(v: ReturnType<MapView["view"]>): void {
     if (!this.src) return;
     const ctx = this.ctx;
-    const fs = Math.max(9, v.fs * 0.85);
+    const { fs, chh, bh, pole } = bannerMetrics(v.fs);
     ctx.font = `${fs}px ${FONT}`;
     const cw = fs * 0.6;
-    const chh = fs * 1.175;
     const items = this.banners.map((b) => {
       const w = worldCenter(b.hex.col, b.hex.row);
       const p = v.rot([w[0] - this.world.cx, w[1] - this.world.cy]);
@@ -698,8 +789,6 @@ export class MapView {
       const l2 = ` ${b.sub} `;
       const cols = Math.max(l1.length, l2.length);
       const bw = cols * cw;
-      const bh = chh * 2.1;
-      const pole = Math.max(chh * 0.9, v.R * 0.45);
       const x0 = base[0] - bw / 2;
       const y0 = base[1] - pole - bh;
       const color =
@@ -734,9 +823,9 @@ export class MapView {
   private drawHud(v: ReturnType<MapView["view"]>): void {
     const ctx = this.ctx;
     const fs = 12;
-    const r = 16;
-    const cx = v.W - r - 6;
-    const cy = r + 6;
+    const r = HUD_R;
+    const cx = v.W - r - HUD_PAD;
+    const cy = r + HUD_PAD;
     const t = (this.angle * Math.PI) / 180;
     // world north (0, -1) after the view rotation, squashed by the tilt
     let nx = -Math.sin(t);
