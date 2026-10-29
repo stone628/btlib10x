@@ -2,6 +2,11 @@
 export const en = {
   "doc.title": "bt10x Instant Action",
   loading: "Loading catalogs…",
+  "font.size": "Font size",
+  "font.smaller": "Smaller text",
+  "font.larger": "Larger text",
+  "font.fit": "Fit",
+  "font.fit.tip": "Largest size that fits the window",
   yes: "Yes",
   no: "No",
   on: "on",

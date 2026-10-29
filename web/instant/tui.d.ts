@@ -89,6 +89,14 @@ export interface TuiDialogOptions {
   defaultIndex?: number;
 }
 
+export interface TuiFitOptions {
+  container?: HTMLElement | undefined;
+  cols?: number;
+  rows?: number;
+  min?: number;
+  max?: number;
+}
+
 export interface TuiKit {
   readonly h: TuiH;
   readonly metrics: { readonly cw: number; readonly ch: number };
@@ -99,6 +107,18 @@ export interface TuiKit {
   ): void;
   mount(target: HTMLElement, node: TuiNode): TuiScene;
   refresh(): void;
+  /** Current `--tui-fs` in px. */
+  fontSize(): number;
+  /** Set `--tui-fs` (px) and refresh. */
+  setFontSize(px: number): void;
+  /** Largest whole-px font at which `cols × rows` cells fit `container` (else the viewport). */
+  fitFontSize(opts?: TuiFitOptions): number;
+  /** Re-fit the font on every resize and font load; `false` switches auto-fit off. */
+  autoFit(
+    opts: (TuiFitOptions & { onFit?: (r: { size: number; fits: boolean }) => void }) | false,
+  ): void;
+  /** Hide the open tooltip, if any. */
+  hideTip(): void;
   dialog(opts: TuiDialogOptions): Promise<string | null>;
   popupMenu(
     anchor: HTMLElement,

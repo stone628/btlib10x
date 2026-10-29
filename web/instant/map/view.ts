@@ -289,6 +289,18 @@ export class MapView {
   }
 
   /**
+   * The canvas grew or shrank by `k` with the page font: scale a fixed zoom
+   * and the pan alike so the same part of the map stays framed. A fitted view
+   * re-fits on its own.
+   */
+  rescale(k: number): void {
+    if (!Number.isFinite(k) || k <= 0 || k === 1) return;
+    if (this.fs !== null) this.fs *= k;
+    this.panX *= k;
+    this.panY *= k;
+  }
+
+  /**
    * Apply a view change (zoom, rotation) keeping the ground point under a
    * canvas point (the view centre by default) fixed on screen, by re-panning.
    */

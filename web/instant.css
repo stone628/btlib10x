@@ -1,6 +1,7 @@
 /* Instant Action (docs/INSTANT_ACTION.html). Loaded after bt10x.css (site fonts,
    palette, #legal, .link-button, #lang) and tui.css. The app is a fixed 100×32
-   cell screen, centred between the header and the footer (plan §8.0). */
+   cell screen at the player's font size (header A− / A+ / Fit), centred
+   between the header and the footer (plan §8.0). */
 
 :root {
   /* header height, as on the terminal page; taller on touch screens */
@@ -108,8 +109,49 @@
   font-size: 11px;
   font-weight: normal;
 }
-#topbar #lang {
+/* font size: A− 16 A+ Fit, styled like the language toggle */
+#fontsize {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+#fontsize button {
+  display: inline-flex;
+  align-items: center;
+  height: 20px;
+  padding: 0 8px;
+  font-size: 11px;
+  line-height: 1;
+  cursor: pointer;
+}
+/* A (smaller) and A (larger): the letter size shows the meaning. The boxes
+   are pinned (height above, fixed width) so the letter size can't change
+   them; both letters stand on the same baseline near the bottom edge. */
+#fontsize button[data-fs="-1"],
+#fontsize button[data-fs="1"] {
+  display: inline-flex;
+  align-items: flex-end;
+  justify-content: center;
+  width: 24px;
+  /* less room under the larger letter: its descent is larger */
+  padding: 0 0 calc(3.5px - 0.15em);
+}
+#fontsize button[data-fs="-1"] {
+  font-size: 9px;
+}
+#fontsize button[data-fs="1"] {
+  font-size: 14px;
+}
+#fontsize button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+#fontsize-value {
+  min-width: 2ch;
+  color: var(--c-dim);
+  font-size: 11px;
+  text-align: center;
 }
 #home-link {
   display: flex;
@@ -130,18 +172,38 @@
     --topbar-h: 44px;
   }
 }
+/* narrow headers: the title gives way to the controls */
+@media (max-width: 560px) {
+  #topbar-title {
+    display: none;
+  }
+}
 
-/* the 100×32 screen, centred in the space between header and footer */
+/* The 100×32 screen between header and footer: centred horizontally, its
+   overflow clipped equally on both sides; middle-aligned vertically, scrolling
+   down when the window is too short. #stage scrolls only vertically;
+   #stage-inner clips (not a scroll container, so focus and scrollIntoView
+   can't shift the screen sideways). */
 #stage {
   flex: 1;
   min-height: 0;
-  display: grid;
-  place-items: center;
-  overflow: auto;
+  overflow-x: hidden;
+  overflow-y: auto;
   background: var(--tui-page);
+}
+#stage-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+  overflow-x: clip;
 }
 
 #screen {
+  flex: none;
+  /* auto margins take only free space: overflow goes down, never up */
+  margin-block: auto;
+  /* centred, overflowing both sides alike */
+  align-self: center;
   position: relative;
   /* bounding line drawn outside the box: takes no layout space */
   outline: 1px solid var(--c-text);
@@ -149,18 +211,6 @@
   height: calc(32 * var(--ch));
   overflow: hidden;
   color: var(--tui-fg);
-}
-
-#small-notice {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin: 0;
-  padding: 2px 8px;
-  font: 12px var(--tui-font);
-  color: var(--tui-dim);
-  background: var(--tui-surface-2);
 }
 
 .ia-root {

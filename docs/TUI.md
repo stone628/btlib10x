@@ -40,6 +40,26 @@ glyphs touch. Call `TUI.refresh()` after changing `--tui-fs`, `--tui-font` or a 
 set; it re-measures and redraws every box (it also runs on `document.fonts.ready` and
 window resize). One font size per page is assumed.
 
+### Font size and auto-fit
+
+The page picks `--tui-fs`; the kit can help, but never changes it on its own:
+
+```js
+TUI.fontSize()                       // current --tui-fs in px
+TUI.setFontSize(16)                  // set --tui-fs on :root and refresh()
+TUI.fitFontSize({ container, cols, rows, min, max })
+                                     // largest whole px where cols × rows cells fit
+                                     // container (the viewport without one)
+TUI.autoFit({ container, cols, rows, min, max, onFit })
+                                     // switch auto-fit on: re-fit on every resize and font load;
+                                     // onFit({ size, fits }), fits = false when even min is too big
+TUI.autoFit(false)                   // switch it off (the default); the size stays as it is
+```
+
+Auto-fit keeps glyphs as large as the space allows and cancels browser zoom (a zoom
+resizes the viewport, so the fit follows). A page with a fixed size (Instant Action:
+header A− / A+ / Fit) leaves it off, and browser zoom then scales the page as usual.
+
 ## The background inset
 
 A box is four stacked layers:
@@ -224,6 +244,8 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 TUI.init()                 // runs automatically; measure + upgrade + tooltips
 TUI.upgrade(root)          // upgrade [data-tui] added later
 TUI.refresh()              // re-measure font, redraw all boxes
+TUI.fontSize() / setFontSize(px) / fitFontSize(opts) / autoFit(opts | false)  // see Cells
+TUI.hideTip()              // hide the open tooltip
 TUI.metrics                // { cw, ch } in px
 TUI.box(el?, opts)         // make/upgrade a box; returns the element
 TUI.update(el, opts)       // change cols/rows/title/border/... and redraw

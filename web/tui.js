@@ -3129,6 +3129,55 @@
     }
   }
 
+  // ---------------------------------------------------------------- font size
+
+  /* Current --tui-fs in px (computed on :root). */
+  function fontSize() {
+    return parseFloat(getComputedStyle(doc.documentElement).getPropertyValue("--tui-fs")) || 14;
+  }
+
+  /* Set --tui-fs on :root to px and refresh. */
+  function setFontSize(px) {
+    doc.documentElement.style.setProperty("--tui-fs", `${px}px`);
+    refresh();
+  }
+
+  /* Largest whole-px --tui-fs at which cols x rows cells fit the container
+     (an element, or the viewport without one), from the measured cell shape;
+     clamped to opts.min / opts.max. */
+  function fitFontSize(opts) {
+    opts = opts || {};
+    const el = opts.container;
+    const w = el ? el.clientWidth : doc.documentElement.clientWidth;
+    const h = el ? el.clientHeight : global.innerHeight;
+    const fs = fontSize();
+    const ideal = Math.floor(
+      Math.min(
+        w / ((opts.cols || 80) * (metrics.cw / fs)),
+        h / ((opts.rows || 25) * (metrics.ch / fs)),
+      ),
+    );
+    return Math.min(opts.max || Infinity, Math.max(opts.min || 1, ideal));
+  }
+
+  /* Auto-fit: keep --tui-fs at fitFontSize(opts) on every window resize and
+     font load. opts.onFit({ size, fits }) runs after each fit; fits is false
+     when even opts.min is too large. autoFit(false) switches it off and
+     leaves the current size. */
+  let autoFitOpts = null;
+  function applyAutoFit() {
+    if (!autoFitOpts) return;
+    const o = autoFitOpts;
+    const size = fitFontSize(o);
+    const free = fitFontSize({ ...o, min: 1, max: Infinity });
+    if (size !== fontSize()) setFontSize(size);
+    o.onFit?.({ size, fits: free >= size });
+  }
+  function autoFit(opts) {
+    autoFitOpts = opts ? { ...opts } : null;
+    applyAutoFit();
+  }
+
   let started = false;
   function init() {
     started = true;
@@ -3144,11 +3193,18 @@
       }
     }).observe(doc.body, { childList: true, subtree: true, characterData: true });
     initTooltips();
-    if (doc.fonts?.ready) doc.fonts.ready.then(refresh);
+    if (doc.fonts?.ready)
+      doc.fonts.ready.then(() => {
+        refresh();
+        applyAutoFit();
+      });
     let t = 0;
     global.addEventListener("resize", () => {
       clearTimeout(t);
-      t = setTimeout(refresh, 80);
+      t = setTimeout(() => {
+        refresh();
+        applyAutoFit();
+      }, 80);
     });
   }
 
@@ -3158,6 +3214,11 @@
     upgrade,
     measure,
     metrics,
+    fontSize,
+    setFontSize,
+    fitFontSize,
+    autoFit,
+    hideTip,
     box,
     update: (el, opts) => box(el, opts),
     redraw: (el) => {

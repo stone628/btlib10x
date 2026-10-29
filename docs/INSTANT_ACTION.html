@@ -269,16 +269,16 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 
 <section class="bt10x">
 <h2 id="screens">8. Screens, layouts and menus</h2>
-<h3 id="screen-size">8.0 Screen size: 100&times;32, centred</h3>
+<h3 id="screen-size">8.0 Screen size: 100&times;32, centred, fixed font</h3>
 <p>Like a DOS text mode, the application lives in a fixed grid of <strong>100 columns &times; 32 rows</strong>: 31 rows of window and 1 status-bar row. Every screen and every mockup below uses exactly that grid; modal windows are smaller and sit centred on it.</p>
 <ul>
-<li><strong>Scaling.</strong> The grid never reflows. The page picks one font size that makes the grid as large as the browser window allows: <code>fs = floor(min(vw / (100 &times; 0.6), vh / (32 &times; 1.175)))</code> px, using Bt10x Mono's cell of 0.6 &times; 1.175 font sizes (the TUI kit's <code>--cw</code> / <code>--ch</code>). It sets <code>--tui-fs</code> and calls <code>TUI.refresh()</code> on load, on resize and on <code>document.fonts.ready</code>.</li>
-<li><strong>Centring.</strong> The 100&times;32 screen is centred horizontally and vertically in the viewport (<code>body</code> is a full-height grid with <code>place-items: center</code>, using <code>100dvh</code> so mobile browser bars do not push it). The space around it is page background, as the black border around a DOS screen.</li>
-<li><strong>Map pane.</strong> The canvas fills its pane's cell rectangle exactly; map zoom is separate from the font size, and the map's own fit-to-pane zoom is the default.</li>
-<li><strong>Small screens.</strong> If <code>fs</code> would be under 12 px (phones), the page shows the same grid at 12 px with scrolling, and a one-line notice that a larger window is recommended. A reflowing phone layout is out of scope for v1.</li>
+<li><strong>Font size.</strong> The grid never reflows, and the font size is the player's: whole px from 10 to 40, set with the header's <strong>A&minus;</strong> / <strong>A+</strong> buttons (readout between them) and <strong>Fit</strong>, kept in <code>localStorage</code> (<code>bt10x.ia.fontSize</code>, every access guarded). Resizing the window never changes it, so glyphs keep their size; browser zoom scales the page as on any web page. <strong>Fit</strong> picks, once, the largest size where the whole grid fits the space between header and footer (<code>TUI.fitFontSize</code>: <code>floor(min(w / (100 &times; cw/fs), h / (32 &times; ch/fs)))</code> from the measured cell). A first visit starts at the Fit size, fitted again after <code>document.fonts.ready</code>, and keeps it. The kit's auto-fit (<code>TUI.autoFit</code>, re-fit on every resize) stays off here.</li>
+<li><strong>Centring.</strong> The screen is centred horizontally; a window narrower than the screen clips both sides equally and never scrolls sideways (<code>#stage-inner</code>, <code>overflow-x: clip</code>). Vertically it is middle-aligned while it fits and otherwise starts at the top with the stage scrolling down (<code>margin-block: auto</code>, so nothing is lost above). The space around it is page background, as the black border around a DOS screen. Open popups and tooltips close when the stage scrolls.</li>
+<li><strong>Map pane.</strong> The canvas fills its pane's cell rectangle exactly; map zoom is separate from the font size, and the map's own fit-to-pane zoom is the default. A font change scales a hand-set map zoom and pan by the same factor, so the framing stays.</li>
+<li><strong>Small screens.</strong> No notice: the player lowers the size or uses Fit; what still doesn't fit is clipped at the sides or scrolls. A reflowing phone layout is out of scope for v1.</li>
 </ul>
 <div class="wrap"><table>
-<tr><th>Browser window (usable area, approx.)</th><th>Font</th><th>Screen size</th></tr>
+<tr><th>Browser window (usable area, approx.)</th><th>Fit font</th><th>Screen size</th></tr>
 <tr><td>1366&times;768 laptop (~1366&times;650)</td><td>17 px</td><td>1020&times;640</td></tr>
 <tr><td>1440&times;900 (~1440&times;790)</td><td>21 px</td><td>1260&times;790</td></tr>
 <tr><td>1920&times;1080 (~1920&times;970)</td><td>25 px</td><td>1500&times;940</td></tr>

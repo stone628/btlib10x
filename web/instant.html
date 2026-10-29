@@ -13,6 +13,12 @@
   <body>
     <header id="topbar" data-tui-raw>
       <span id="topbar-title">bt10x instant action <span id="topbar-version"></span></span>
+      <nav id="fontsize" aria-label="font size">
+        <button class="link-button" type="button" data-fs="-1">A</button>
+        <output id="fontsize-value" aria-live="polite"></output>
+        <button class="link-button" type="button" data-fs="1">A</button>
+        <button class="link-button" type="button" data-fs="fit">Fit</button>
+      </nav>
       <nav id="lang" aria-label="language">
         <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
         <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
@@ -20,14 +26,15 @@
       <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
     </header>
     <div id="stage" class="tui">
-      <main id="screen" aria-live="polite"><div id="app"></div></main>
+      <div id="stage-inner">
+        <main id="screen" aria-live="polite"><div id="app"></div></main>
+      </div>
     </div>
     <footer id="legal" data-tui-raw>
       Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps
       Company, Inc. or Microsoft.<br/>BattleTech, BattleMech, 'Mech and MechWarrior are trademarks
       of their respective owners.
     </footer>
-    <p id="small-notice" hidden>A larger window is recommended (100×32 cells).</p>
     <script src="tui.js"></script>
     <script type="importmap">{ "imports": { "btlib10x": "./btlib10x.js" } }</script>
     <script type="module" src="./instant.js"></script>

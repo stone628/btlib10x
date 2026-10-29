@@ -6,7 +6,15 @@
 import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
 import { ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
-import { fitScreen } from "./screen";
+import {
+  fitFontSize,
+  fontSize,
+  initFontSize,
+  MAX_FS,
+  MIN_FS,
+  onFontSize,
+  setFontSize,
+} from "./screen";
 import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
 import { queueAfterRender } from "./screens/battle.hud";
 import { h, kit, row } from "./screens/common";
@@ -129,6 +137,27 @@ function syncLangButtons(): void {
     b.setAttribute("aria-pressed", String(b.dataset.lang === locale()));
   });
   document.title = t("doc.title");
+  const label: Record<string, string> = {
+    "-1": t("font.smaller"),
+    "1": t("font.larger"),
+    fit: t("font.fit.tip"),
+  };
+  document.querySelectorAll<HTMLButtonElement>("#fontsize button").forEach((b) => {
+    b.title = label[b.dataset.fs ?? ""] ?? "";
+    if (b.dataset.fs === "fit") b.textContent = t("font.fit");
+  });
+  document.getElementById("fontsize")?.setAttribute("aria-label", t("font.size"));
+}
+
+/** Header font size: A− / readout / A+ / Fit. */
+function syncFontButtons(): void {
+  const size = fontSize();
+  const out = document.getElementById("fontsize-value");
+  if (out) out.textContent = String(size);
+  document.querySelectorAll<HTMLButtonElement>("#fontsize button").forEach((b) => {
+    if (b.dataset.fs === "-1") b.disabled = size <= MIN_FS;
+    else if (b.dataset.fs === "1") b.disabled = size >= MAX_FS;
+  });
 }
 
 function initHeader(): void {
@@ -142,24 +171,38 @@ function initHeader(): void {
     });
   });
   syncLangButtons();
+  document.querySelectorAll<HTMLButtonElement>("#fontsize button").forEach((b) => {
+    b.addEventListener("click", () => {
+      const step = b.dataset.fs;
+      setFontSize(step === "fit" ? fitFontSize() : fontSize() + Number(step));
+    });
+  });
+  onFontSize((size, old) => {
+    // a zoomed map keeps its framing: hexes scale with the cells
+    app.mapView?.rescale(size / old);
+    syncFontButtons();
+    rerender();
+  });
 }
 
 async function boot(): Promise<void> {
   initLocale();
   app.version = VERSION;
   initHeader();
-  fitScreen();
+  initFontSize();
+  syncFontButtons();
   const TUI = kit();
   TUI.prefab("ia-app", { tick: 0 }, () => rootView());
   scene = TUI.mount(document.getElementById("app")!, TUI.h.use("ia-app", { tick: 0 }));
   setRerender(rerender);
-  window.addEventListener("resize", () => {
-    fitScreen();
-    rerender();
-  });
-  void document.fonts?.ready.then(() => {
-    fitScreen();
-    rerender();
+  // The font size stays put on resize; the map repaints (browser zoom changes
+  // devicePixelRatio). The kit re-measures on its own.
+  window.addEventListener("resize", () => rerender());
+  void document.fonts?.ready.then(() => rerender());
+  // Popups and tips are placed in the viewport once: a scrolled stage drops them.
+  document.getElementById("stage")?.addEventListener("scroll", () => {
+    TUI.closePopup();
+    TUI.hideTip();
   });
   document.addEventListener("keydown", onKey);
   document.addEventListener("click", () => setTimeout(rerender, 0));
