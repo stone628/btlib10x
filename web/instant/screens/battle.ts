@@ -17,6 +17,7 @@ import { tallies } from "../battle/victory";
 import { battleBanners, pumpAi, stopAi } from "../flow";
 import { locName, t } from "../i18n";
 import { type AttackRow, app, kitModal, rerender } from "../state";
+import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
 import {
   BODY,
@@ -32,6 +33,8 @@ import {
 import { SHEET_W } from "./battle.sheet";
 import { at, blank, cells, fit, h, kit, mapSlot, modal, row, span, statusbar } from "./common";
 import { policyWindow } from "./setup";
+
+const { MARK: M, ARROW: A } = UI_THEME;
 
 const ATTACK_W = 45;
 const TWISTS: Twist[] = ["front", "leftSide", "rightSide"];
@@ -91,7 +94,7 @@ function openHoldMenu(hold: MoveChoice[], e: MouseEvent): void {
     .popupMenu(
       el,
       hold.map((c) => ({
-        label: `${c === current ? "•" : " "} ${fit(t(`choice.${c}`), 16)}`,
+        label: `${c === current ? M.on : " "} ${fit(t(`choice.${c}`), 16)}`,
       })),
       { active: Math.max(0, hold.indexOf(current as MoveChoice)) },
     )
@@ -119,8 +122,8 @@ function moveMenu(): { rows: TuiNode[]; width: number } {
     width += cells(text);
   };
   if (hold.length > 0) {
-    const label = held ? `•${t(`choice.${held}`)}` : t("orders.hold");
-    const text = `[${label} ▾]`;
+    const label = held ? `${M.on}${t(`choice.${held}`)}` : t("orders.hold");
+    const text = `[${label} ${A.drop}]`;
     add(
       text,
       span(text, {
@@ -134,7 +137,7 @@ function moveMenu(): { rows: TuiNode[]; width: number } {
     const on = draft.choice === c;
     const mp = b.budgetFor(c);
     if (kids.length > 1) add("  ");
-    const text = `[${on ? "•" : ""}${t(`choice.${c}`)}${mp > 0 ? `:${mp}MP` : ""}]`;
+    const text = `[${on ? M.on : ""}${t(`choice.${c}`)}${mp > 0 ? `:${mp}MP` : ""}]`;
     add(
       text,
       span(text, {
@@ -213,12 +216,12 @@ function attackOrders(width: number): TuiNode[] {
   const def = mechDefFor(unit);
   const sugg = b.fireSuggestion();
   const target = currentTarget();
-  const twist = TWISTS.map((x) => `${draft.twist === x ? "(•)" : "( )"} ${t(`twist.${x}`)}`).join(
-    " ",
-  );
+  const twist = TWISTS.map(
+    (x) => `${draft.twist === x ? `(${M.on})` : "( )"} ${t(`twist.${x}`)}`,
+  ).join(" ");
   const tu = target ? b.state.units[target.targetId] : null;
   const targetLine = tu
-    ? `◂ ${tu.id} ${tu.model} · ${t("orders.hexes", { n: target!.distance })} ▸`
+    ? `${A.prev} ${tu.id} ${tu.model} ${M.sep} ${t("orders.hexes", { n: target!.distance })} ${A.next}`
     : sugg && sugg.targets.length === 0
       ? t("orders.noTargets")
       : t("orders.pickTarget");
@@ -250,7 +253,7 @@ function attackOrders(width: number): TuiNode[] {
       if (r.enabled) {
         const fw = target!.weapons.find((w) => w.weaponIndex === r.weaponIndex)!;
         const dmg = fw.cluster
-          ? `${fw.cluster.shots}×${fw.cluster.perMissile}`
+          ? `${fw.cluster.shots}${M.times}${fw.cluster.perMissile}`
           : String(Math.round(fw.expectedDamage * 10) / 10);
         list.push(
           row(
@@ -426,8 +429,6 @@ function title(): string {
   const s = tallies(b.state, b.totals);
   if (b.mode.kind === "damageRace") {
     return t("battle.race", {
-      turn: Math.min(b.state.turn, b.mode.turns),
-      n: b.mode.turns,
       a: s[0]!.dealt,
       b: s[1]!.dealt,
     });
@@ -686,7 +687,7 @@ function openFacingMenu(here: RevealedLanding[], ev: MouseEvent): void {
   anchor.style.cssText = `position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;width:1px;height:1px`;
   document.body.appendChild(anchor);
   kitModal.open = true;
-  const arrows = ["↑", "↗", "↘", "↓", "↙", "↖"];
+  const arrows = A.facing;
   const angle = app.mapView?.angle ?? 0;
   void kit()
     .popupMenu(
@@ -720,7 +721,7 @@ function battleModal(): TuiNode | null {
       { cols: 40, title: t("menu.title"), footer: t("dialog.footer") },
       ...MENU.map((k, i) =>
         row(
-          `${i === m.cursor ? "▸" : " "} ${t(k)}${k === "menu.pace" ? `: ${t(`pace.${app.aiPace}`)}` : ""}`,
+          `${i === m.cursor ? A.cursor : " "} ${t(k)}${k === "menu.pace" ? `: ${t(`pace.${app.aiPace}`)}` : ""}`,
           { sel: i === m.cursor, key: k, onClick: () => runMenu(i) },
         ),
       ),

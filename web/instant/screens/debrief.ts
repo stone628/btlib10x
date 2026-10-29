@@ -4,8 +4,11 @@ import { unitLoss } from "../battle/victory";
 import { rematch } from "../flow";
 import { t } from "../i18n";
 import { app } from "../state";
+import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { blank, fit, h, logView, row, statusbar, tabBar } from "./common";
+
+const { GRID: G, MARK: M } = UI_THEME;
 
 const TABS = ["debrief.result", "debrief.units", "debrief.salvage", "battle.log"];
 
@@ -28,7 +31,7 @@ export function debriefScreen(): TuiNode {
         `${fit(t("debrief.side"), 8)}${fit(t("debrief.dealt"), 16, "right")}${fit(t("debrief.taken"), 16, "right")}${fit(t("debrief.lost"), 14, "right")}${fit(t("debrief.score"), 22, "right")}`,
         { cls: "ia-dim", key: "h" },
       ),
-      row("─".repeat(76), { cls: "ia-dim", key: "hs" }),
+      row(G.th.repeat(76), { cls: "ia-dim", key: "hs" }),
       ...r.sides.map((s) =>
         row(
           `${fit(s.team, 8)}${fit(s.dealt, 16, "right")}${fit(s.taken, 16, "right")}${fit(`${s.lost} / ${s.units}`, 14, "right")}${fit(s.score, 22, "right")}`,
@@ -78,7 +81,7 @@ export function debriefScreen(): TuiNode {
     "div",
     { class: "ia-root" },
     H.box(
-      { cols: 100, rows: 31, border: "double", title: `${head} · ${mode}` },
+      { cols: 100, rows: 31, border: "double", title: `${head} ${M.sep} ${mode}` },
       tabBar(
         TABS.map((k) => t(k)),
         app.tab,
@@ -86,7 +89,7 @@ export function debriefScreen(): TuiNode {
           app.tab = i;
         },
       ),
-      row("─".repeat(96), { cls: "ia-dim", key: "tsep" }),
+      row(G.th.repeat(96), { cls: "ia-dim", key: "tsep" }),
       H.el(
         "div",
         { class: "ia-log", style: { height: "calc(26 * var(--ch))", overflow: "hidden" } },

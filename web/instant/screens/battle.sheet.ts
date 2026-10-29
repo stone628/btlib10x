@@ -24,9 +24,12 @@ import {
   usableShots,
 } from "btlib10x";
 import { locName, t } from "../i18n";
+import { UI_THEME } from "../theme";
 import type { TipPoint, TuiNode } from "../tui";
 import { engineTip, gyroTip, heatTip, lifeSupportTip, pilotTip, sensorTip } from "./battle.hints";
 import { fit, h, row, span } from "./common";
+
+const { GRID: G, ROUND: R, MARK: M, ARROW: A, BAR: B } = UI_THEME;
 
 export const SHEET_W = 22;
 
@@ -114,7 +117,7 @@ export function policyCode(u: UnitState): { code: string; tip: string } {
 /** Hits taken as □, what is left as ■. */
 function pips(taken: number, total: number): string {
   const n = Math.max(0, Math.min(total, taken));
-  return "□".repeat(n) + "■".repeat(total - n);
+  return B.pipTaken.repeat(n) + B.pipLeft.repeat(total - n);
 }
 
 function slotLabel(slot: ReturnType<typeof mechDefFor>["critSlots"]["head"][number]): string {
@@ -147,13 +150,14 @@ export function critTip(u: UnitState, loc: Loc): string {
         text += ` (${curr}/${max})`;
       }
     }
-    if (slot.kind === "weapon" && u.jammedWeapons.includes(slot.weaponIndex)) text += " ⦗J⦘";
+    if (slot.kind === "weapon" && u.jammedWeapons.includes(slot.weaponIndex))
+      text += ` ${M.chipL}J${M.chipR}`;
     const hit =
       slot.kind !== "empty" &&
       (gone ||
         isSlotDestroyed(u.critSlotsDestroyed, loc, i) ||
         (slot.kind === "weapon" && isWeaponCritted(def, u.critSlotsDestroyed, slot.weaponIndex)));
-    if (hit) text += " ⦗X⦘";
+    if (hit) text += ` ${M.chipL}X${M.chipR}`;
     lines.push(text);
   });
   return lines.join("\n");
@@ -174,7 +178,7 @@ function cell(
 }
 
 function label(side: 0 | 1, u: UnitState, loc: Loc): TuiNode {
-  return span(`⦗${fit(locName(loc), 2)}⦘`, {
+  return span(`${M.chipL}${fit(locName(loc), 2)}${M.chipR}`, {
     tip: critTip(u, loc),
     key: `l${loc}`,
     ...sheetTip(side),
@@ -231,20 +235,20 @@ export function recordSheet(
   // Internal-structure row, armor row(s) for a band of three locations.
   const band = (locs: readonly [Loc, Loc, Loc], k: string): TuiNode[] => {
     const rows: TuiNode[] = [];
-    const isRow: (TuiNode | string)[] = ["│"];
+    const isRow: (TuiNode | string)[] = [G.tv];
     for (const loc of locs)
-      isRow.push(cell(side, u, loc, is[loc], def.internalStructure[loc], "I", `i${loc}`), "│");
+      isRow.push(cell(side, u, loc, is[loc], def.internalStructure[loc], "I", `i${loc}`), G.tv);
     rows.push(L(`${k}i`, ...isRow));
     const torso = locs.every((l) => TORSO.has(l));
-    const front: (TuiNode | string)[] = ["│"];
+    const front: (TuiNode | string)[] = [G.tv];
     for (const loc of locs)
-      front.push(cell(side, u, loc, a[loc], def.armor[loc], torso ? "F" : "A", `a${loc}`), "│");
+      front.push(cell(side, u, loc, a[loc], def.armor[loc], torso ? "F" : "A", `a${loc}`), G.tv);
     rows.push(L(`${k}a`, ...front));
     if (torso) {
-      const rear: (TuiNode | string)[] = ["│"];
+      const rear: (TuiNode | string)[] = [G.tv];
       for (const loc of locs) {
         const tl = loc as "centerTorso" | "leftTorso" | "rightTorso";
-        rear.push(cell(side, u, loc, ar[tl], def.armorRear[tl], "R", `r${loc}`), "│");
+        rear.push(cell(side, u, loc, ar[tl], def.armorRear[tl], "R", `r${loc}`), G.tv);
       }
       rows.push(L(`${k}r`, ...rear));
     }
@@ -266,31 +270,31 @@ export function recordSheet(
         "span",
         { class: "ia-sheet-head", attrs: { "data-click": "" }, onClick: onPick },
         span(head, { cls: team }),
-        "▼ ",
+        `${A.pick} `,
       ),
       " ",
     ),
-    text("─".repeat(textW), { cls: "ia-dim", key: "rule" }),
+    text(G.th.repeat(textW), { cls: "ia-dim", key: "rule" }),
     text(`${def.model} ${def.name}`, { cls: "ia-bright", key: "model" }),
     text(`walk:${def.walking} run:${def.running} jump:${def.jumping}`, { key: "mp" }),
     text(`gun:${u.gunnery} pilot:${u.piloting}`, { key: "skill" }),
-    row(`╭${"─".repeat(SHEET_W - 2)}╮`, { key: "top" }),
+    row(`${R.nw}${G.th.repeat(SHEET_W - 2)}${R.ne}`, { key: "top" }),
     L(
       "chips",
-      "│",
-      span(`⦗${fit(uc.text, 8)}⦘`, { cls: uc.cls, id: chipId(side, "unit") }),
+      G.tv,
+      span(`${M.chipL}${fit(uc.text, 8)}${M.chipR}`, { cls: uc.cls, id: chipId(side, "unit") }),
       " ",
-      span(`⦗${fit(pc.text, 7)}⦘`, {
+      span(`${M.chipL}${fit(pc.text, 7)}${M.chipR}`, {
         cls: pc.cls,
         id: chipId(side, "pilot"),
         tip: pilotTip(u),
         ...sheetTip(side),
       }),
-      "│",
+      G.tv,
     ),
     L(
       "pilot",
-      "│",
+      G.tv,
       span(fit(`P:${pips(u.pilotHits, pilotMax)}`, 12), {
         cls: levelCls(u.pilotHitMax - u.pilotHits, u.pilotHitMax),
         tip: pilotTip(u),
@@ -304,12 +308,16 @@ export function recordSheet(
             onClick: () => onPolicy(),
             ...sheetTip(side),
           })
-        : span(`⦗${pol.code}⦘`, { tip: pol.tip, cls: "ia-bright", ...sheetTip(side) }),
-      "│",
+        : span(`${M.chipL}${pol.code}${M.chipR}`, {
+            tip: pol.tip,
+            cls: "ia-bright",
+            ...sheetTip(side),
+          }),
+      G.tv,
     ),
     L(
       "crits",
-      "│",
+      G.tv,
       span(`E:${pips(counts.engine, ENGINE_SLOTS_KILL)}`, {
         cls: componentCls(counts.engine, ENGINE_SLOTS_KILL),
         tip: engineTip(u),
@@ -333,63 +341,74 @@ export function recordSheet(
         tip: lifeSupportTip(u),
         ...sheetTip(side),
       }),
-      " │",
+      ` ${G.tv}`,
     ),
     L(
       "h1",
-      "├─",
+      `${G.tw}${G.th}`,
       label(side, u, "rightArm"),
-      "─┬─",
+      `${G.th}${G.tn}${G.th}`,
       label(side, u, "head"),
-      "─┬─",
+      `${G.th}${G.tn}${G.th}`,
       label(side, u, "leftArm"),
-      "─┤",
+      `${G.th}${G.te}`,
     ),
     ...band(["rightArm", "head", "leftArm"], "b1"),
     L(
       "h2",
-      "├─",
+      `${G.tw}${G.th}`,
       label(side, u, "rightTorso"),
-      "─┼─",
+      `${G.th}${G.tc}${G.th}`,
       label(side, u, "centerTorso"),
-      "─┼─",
+      `${G.th}${G.tc}${G.th}`,
       label(side, u, "leftTorso"),
-      "─┤",
+      `${G.th}${G.te}`,
     ),
     ...band(["rightTorso", "centerTorso", "leftTorso"], "b2"),
-    L("h3", "├─", label(side, u, "rightLeg"), "─┼──────┼─", label(side, u, "leftLeg"), "─┤"),
+    L(
+      "h3",
+      `${G.tw}${G.th}`,
+      label(side, u, "rightLeg"),
+      `${G.th}${G.tc}${G.th.repeat(6)}${G.tc}${G.th}`,
+      label(side, u, "leftLeg"),
+      `${G.th}${G.te}`,
+    ),
     L(
       "l1",
-      "│",
+      G.tv,
       cell(side, u, "rightLeg", is.rightLeg, def.internalStructure.rightLeg, "I", "irl"),
-      "│ ⦗HS⦘ │",
+      `${G.tv} ${M.chipL}HS${M.chipR} ${G.tv}`,
       cell(side, u, "leftLeg", is.leftLeg, def.internalStructure.leftLeg, "I", "ill"),
-      "│",
+      G.tv,
     ),
     L(
       "l2",
-      "│",
+      G.tv,
       cell(side, u, "rightLeg", a.rightLeg, def.armor.rightLeg, "A", "arl"),
-      "│",
+      G.tv,
       span(`-${fit(sinks, 2, "right")}/${fit(sinksMax, 2, "right")}`, {
         cls: levelCls(sinks, sinksMax),
       }),
-      "│",
+      G.tv,
       cell(side, u, "leftLeg", a.leftLeg, def.armor.leftLeg, "A", "all"),
-      "│",
+      G.tv,
     ),
     L(
       "bottom",
-      "╰──────╯",
-      span(`╭HT${fit(heat, 2, "right")}╮`, { cls: heatCls, tip: heatTip(u), ...sheetTip(side) }),
-      "╰──────╯",
+      `${R.sw}${G.th.repeat(6)}${R.se}`,
+      span(`${R.nw}HT${fit(heat, 2, "right")}${R.ne}`, {
+        cls: heatCls,
+        tip: heatTip(u),
+        ...sheetTip(side),
+      }),
+      `${R.sw}${G.th.repeat(6)}${R.se}`,
     ),
     L(
       "heat",
-      "▕",
-      span("█".repeat(filled), { cls: heatCls, tip: heatTip(u), ...sheetTip(side) }),
-      span("░".repeat(20 - filled), { cls: "ia-dim", tip: heatTip(u), ...sheetTip(side) }),
-      "▏",
+      B.capL,
+      span(B.full.repeat(filled), { cls: heatCls, tip: heatTip(u), ...sheetTip(side) }),
+      span(B.empty.repeat(20 - filled), { cls: "ia-dim", tip: heatTip(u), ...sheetTip(side) }),
+      B.capR,
     ),
   ];
 }

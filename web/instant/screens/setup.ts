@@ -33,8 +33,11 @@ import {
   type WeightClass,
 } from "../setup/loadout";
 import { app, type Modal, rerender } from "../state";
+import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { blank, fit, h, mapSlot, modal, row, statusbar } from "./common";
+
+const { GRID: G, MARK: M, ARROW: A } = UI_THEME;
 
 const AMMO = ["exposed", "core", "spread", "leastFirst"] as const;
 const AMS = ["expected", "firstHit", "priority", "off"] as const;
@@ -205,7 +208,7 @@ function sideBox(side: 0 | 1): TuiNode {
 function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
   const def = s.model === null ? null : mechDef(s.model);
   const mech = def ? `${def.model} ${def.name}` : "N/A";
-  const id = s.id.length > 4 ? `${s.id.slice(0, 3)}…` : s.id;
+  const id = s.id.length > 4 ? `${s.id.slice(0, 3)}${M.more}` : s.id;
   return line(
     `slot${i}`,
     tight("del", "-", () => removeSlot(side, i)),
@@ -226,7 +229,7 @@ function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
     "  ",
     select("ctl", 18, CONTROLS, s.persona, controlName, (v) => (s.persona = v)),
     "  ",
-    tight("pol", "…", () => {
+    tight("pol", M.more, () => {
       app.modal = {
         kind: "policy",
         id: s.id,
@@ -268,7 +271,7 @@ function configRows(): TuiNode[] {
         l.map,
         (n) => {
           const m = maps.find((x) => x.name === n)!;
-          return `${m.name} (${m.width}×${m.height})`;
+          return `${m.name} (${m.width}${M.times}${m.height})`;
         },
         (n) => (l.map = n),
       ),
@@ -278,7 +281,7 @@ function configRows(): TuiNode[] {
       fit(t("setup.seed"), 14),
       field("seed", ` ${l.seed}`, CFG - 21, () => editSeed()),
       " ",
-      tight("seednew", "↻", () => {
+      tight("seednew", A.reroll, () => {
         l.seed = Math.floor(Math.random() * SEED_MAX);
       }),
     ),
@@ -690,7 +693,7 @@ function columnTitle(labels: readonly [number, string][]): string {
   let out = "";
   let at = 0;
   for (const [x, label] of labels) {
-    out += "─".repeat(Math.max(0, x - 2 - at)) + label;
+    out += G.th.repeat(Math.max(0, x - 2 - at)) + label;
     at = Math.max(at, x - 2) + kitLen(label);
   }
   return out;

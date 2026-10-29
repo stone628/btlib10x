@@ -30,6 +30,10 @@ import { MapView } from "./map/view";
 import { type Loadout, loadoutProblem, mechDef, randomLoadout, saveLoadout } from "./setup/loadout";
 import { app, newBattleUi, type Placement, rerender } from "./state";
 
+import { UI_THEME } from "./theme";
+
+const { BAR: B } = UI_THEME;
+
 export interface DeployUnit {
   id: string;
   side: 0 | 1;
@@ -286,8 +290,8 @@ export function battleBanners(): Banner[] {
       : u.shutdown !== "not"
         ? "OFF"
         : u.prone
-          ? `PRN ${"▮".repeat(Math.min(2, pips))}`
-          : `${"▮".repeat(pips)}${"▯".repeat(5 - pips)}`;
+          ? `PRN ${B.mpOn.repeat(Math.min(2, pips))}`
+          : `${B.mpOn.repeat(pips)}${B.mpOff.repeat(5 - pips)}`;
     out.push({
       id: hull ? `-${u.id}` : u.id,
       hex: u.position,

@@ -24,8 +24,11 @@ import {
 import { t } from "../i18n";
 import type { BandHex } from "../map/view";
 import { app, kitModal, rerender } from "../state";
+import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { fit, h, kit, mapSlot, row, statusbar } from "./common";
+
+const { ARROW: A } = UI_THEME;
 
 /** Side pane width in cells, and its content width (one cell of padding each side). */
 const PANE = 38;
@@ -33,7 +36,7 @@ const W = PANE - 2;
 /** Content rows of the 31-row split. */
 const ROWS = 29;
 const FACINGS: readonly Facing[] = ["n", "ne", "se", "s", "sw", "nw"];
-const ARROWS = ["↑", "↗", "↘", "↓", "↙", "↖"];
+const ARROWS = A.facing;
 
 /** Wrap kit controls and text into one text row. */
 function line(key: string, cls: string, ...kids: (TuiNode | string)[]): TuiNode {
@@ -74,14 +77,14 @@ export function deployScreen(): TuiNode {
     statusbar(
       choosing
         ? [
-            ["↑→↓←", "key.edge"],
+            [`${A.up}${A.right}${A.down}${A.left}`, "key.edge"],
             ["Enter", "key.select"],
             ["Esc", "key.discard", confirmDiscard],
             ["F10", "key.proceed", proceed],
           ]
         : [
-            ["↑↓", "key.unit"],
-            ["←→", "key.facing"],
+            [`${A.up}${A.down}`, "key.unit"],
+            [`${A.left}${A.right}`, "key.facing"],
             ["Tab", "key.next"],
             ["Esc", "key.discard", confirmDiscard],
             ["F10", "key.done", done],
@@ -262,7 +265,7 @@ function unitRow(u: DeployUnit, i: number): TuiNode {
       class: `ia-row ${u.side === 0 ? "ia-team1" : "ia-team2"}`,
       ...(long ? { tip: control } : {}),
     },
-    sel ? "▸" : " ",
+    sel ? A.cursor : " ",
     H.btn(
       {
         key: "unit",

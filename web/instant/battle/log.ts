@@ -6,6 +6,10 @@
 import type { AttackResolution, BattleState, GameEvent, HitGroup } from "btlib10x";
 import { locName, t } from "../i18n";
 
+import { UI_THEME } from "../theme";
+
+const { ARROW: A } = UI_THEME;
+
 export interface LogEntry {
   readonly text: string;
   /** CSS class hint: banner, prompt, hit, miss, crit, err, dim. */
@@ -77,7 +81,7 @@ export function formatEvents(events: readonly GameEvent[], _state: BattleState):
         break;
       case "attackResolved": {
         const r = e.resolution;
-        const head = `[${e.unitId} → ${e.targetId}] ${r.weapon}`;
+        const head = `[${e.unitId} ${A.to} ${e.targetId}] ${r.weapon}`;
         if (!r.hit) {
           out.push({
             text: t("log.miss", { head, tn: tn(r), roll: r.toHitRoll ?? "-" }),
@@ -98,7 +102,7 @@ export function formatEvents(events: readonly GameEvent[], _state: BattleState):
       }
       case "physicalAttackResolved": {
         const r = e.resolution;
-        const head = `[${e.unitId} → ${e.targetId}] ${t(`phys.${r.type}`)}`;
+        const head = `[${e.unitId} ${A.to} ${e.targetId}] ${t(`phys.${r.type}`)}`;
         out.push(
           r.hit
             ? {

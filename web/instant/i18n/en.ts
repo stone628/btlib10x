@@ -160,7 +160,7 @@ export const en = {
   "edge.east": "East",
 
   "battle.log": "Log",
-  "battle.race": "Attrition · turn {turn}/{n} · {a} : {b}",
+  "battle.race": "Attrition · {a} : {b}",
   "battle.destroyAll": "Annihilation · units {a} : {b}",
   "phase.movement": "Movement",
   "phase.attack": "Attack",

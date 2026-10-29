@@ -9,6 +9,10 @@
  */
 import type { Facing, HexCoord, TerrainType } from "btlib10x";
 
+import { UI_THEME } from "../theme";
+
+const { MARK: M, ARROW: A } = UI_THEME;
+
 export interface MapSource {
   readonly width: number;
   readonly height: number;
@@ -1046,7 +1050,7 @@ export class MapView {
     ctx.fillText("N", cx - nx * 7, cy - ny * 7);
     // view state at the indicator's top-left, outlined to read over any terrain
     const zoom = this.fs === null ? 1 : this.fs / this.fitFs();
-    const text = `⟲${Math.round(this.angle) % 360}° ×${zoom.toFixed(1)} ⦟${this.tilt}°`;
+    const text = `${A.rotate}${Math.round(this.angle) % 360}° ${M.times}${zoom.toFixed(1)} ${A.tilt}${this.tilt}°`;
     ctx.font = `${fs * 1.2}px ${FONT}`;
     ctx.textAlign = "right";
     ctx.textBaseline = "top";

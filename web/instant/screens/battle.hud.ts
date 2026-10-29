@@ -7,9 +7,12 @@
 import { actorQueue, isUnitOnBoard, type UnitState, unitPolicyOf } from "btlib10x";
 import { t } from "../i18n";
 import { app, kitModal, rerender } from "../state";
+import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
 import { recordSheet, SHEET_W } from "./battle.sheet";
 import { at, cells, fit, h, kit, logView, row, span } from "./common";
+
+const { FRAME: F, GRID: G, ROUND: R, MARK: M, ARROW: A } = UI_THEME;
 
 /** Map area: inside the border, between the header strip and the bottom border. */
 export const BODY = { col: 1, row: 4, cols: 98, rows: 26 } as const;
@@ -48,13 +51,13 @@ export function queueEntries(): QueueEntry[] {
 }
 
 function entryText(e: QueueEntry): string {
-  const body = `${e.unit.id}(S${e.unit.team}•${e.unit.model})`;
-  if (e.state === "current") return `▶${body}◀`;
-  if (e.state === "out") return `×${body}`;
+  const body = `${e.unit.id}(S${e.unit.team}${M.on}${e.unit.model})`;
+  if (e.state === "current") return `${A.current[0]}${body}${A.current[1]}`;
+  if (e.state === "out") return `${M.out}${body}`;
   return body;
 }
 
-const SEP = " → ";
+const SEP = ` ${A.to} `;
 
 /** The whole queue on one line; the kit scrollbox scrolls it sideways. */
 function queueLine(): TuiNode {
@@ -175,7 +178,7 @@ function pickUnit(side: 0 | 1, e: MouseEvent): void {
       el,
       ids.map((id) => {
         const u = b.state.units[id]!;
-        return { label: `${id === d.unitId ? "•" : " "} ${fit(id, 3)} S${u.team} ${u.model}` };
+        return { label: `${id === d.unitId ? M.on : " "} ${fit(id, 3)} S${u.team} ${u.model}` };
       }),
       { cols: SHEET_W, active: Math.max(0, ids.indexOf(d.unitId ?? "")) },
     )
@@ -216,11 +219,11 @@ function tabLetters(arrow: string): string[] {
 function edgeTab(side: 0 | 1): TuiNode {
   const H = h();
   const left = side === 0;
-  const letters = tabLetters(left ? "▶" : "◀");
+  const letters = tabLetters(left ? A.tabR : A.tabL);
   const rows = [
-    left ? "╙─╮" : "╭─╜",
-    ...letters.map((c) => (left ? ` ${c}│` : `│${c} `)),
-    left ? "╓─╯" : "╰─╖",
+    left ? `${F.vEndUp}${G.th}${R.ne}` : `${R.nw}${G.th}${F.vEndUpL}`,
+    ...letters.map((c) => (left ? ` ${c}${G.tv}` : `${G.tv}${c} `)),
+    left ? `${F.vEndDown}${G.th}${R.se}` : `${R.sw}${G.th}${F.vEndDownL}`,
   ];
   return at(
     left ? 0 : 97,
@@ -248,9 +251,13 @@ function drawer(side: 0 | 1): TuiNode | null {
   if (!d.open || !u) return null;
   const left = side === 0;
   const x0 = left ? 0 : DRAWER_RIGHT;
-  const edge = "─".repeat(SHEET_W - 1);
+  const edge = G.th.repeat(SHEET_W - 1);
   const rows: TuiNode[] = [];
-  rows.push(row(left ? `╙${edge}╖` : `╓${edge}╜`, { key: "t" }));
+  rows.push(
+    row(left ? `${F.vEndUp}${edge}${F.vEndDownL}` : `${F.vEndDown}${edge}${F.vEndUpL}`, {
+      key: "t",
+    }),
+  );
   recordSheet(
     u,
     side,
@@ -258,17 +265,21 @@ function drawer(side: 0 | 1): TuiNode | null {
     u.id === b.actorId && b.actorPersona === null ? () => openPolicy(u.id) : null,
   ).forEach((body, i) => {
     const r = DRAWER_ROW + 1 + i;
-    const bar = span(r >= TAB_ROW && r <= TAB_ROW + 8 ? " " : "║", { key: "bar" });
+    const bar = span(r >= TAB_ROW && r <= TAB_ROW + 8 ? " " : F.v, { key: "bar" });
     rows.push(
       H.el("div", { class: "ia-drawer-line", key: `r${i}` }, left ? body : bar, left ? bar : body),
     );
   });
-  rows.push(row(left ? `╓${edge}╜` : `╙${edge}╖`, { key: "b" }));
-  const letters = tabLetters(left ? "◀" : "▶");
+  rows.push(
+    row(left ? `${F.vEndDown}${edge}${F.vEndUpL}` : `${F.vEndUp}${edge}${F.vEndDownL}`, {
+      key: "b",
+    }),
+  );
+  const letters = tabLetters(left ? A.tabL : A.tabR);
   const tab = [
-    left ? "╙─╮" : "╭─╜",
-    ...letters.map((c) => (left ? ` ${c}│` : `│${c} `)),
-    left ? "╓─╯" : "╰─╖",
+    left ? `${F.vEndUp}${G.th}${R.ne}` : `${R.nw}${G.th}${F.vEndUpL}`,
+    ...letters.map((c) => (left ? ` ${c}${G.tv}` : `${G.tv}${c} `)),
+    left ? `${F.vEndDown}${G.th}${R.se}` : `${R.sw}${G.th}${F.vEndDownL}`,
   ];
   return H.el(
     "div",
@@ -346,7 +357,7 @@ function fill(col: number, rowN: number, cols: number, rows: number, key: string
 
 function logsTab(open: boolean): TuiNode {
   const label = fit(
-    ` ${open ? "▼" : "▲"} ${t("battle.logsTab")} ${open ? "▼" : "▲"} `,
+    ` ${open ? A.tabDown : A.tabUp} ${t("battle.logsTab")} ${open ? A.tabDown : A.tabUp} `,
     10,
     "center",
   );
@@ -356,7 +367,7 @@ function logsTab(open: boolean): TuiNode {
 function logDrawer(): TuiNode {
   const H = h();
   const b = app.battle!;
-  const side = "═".repeat(43);
+  const side = F.h.repeat(43);
   const blank = " ".repeat(43);
   return at(
     0,
@@ -364,16 +375,22 @@ function logDrawer(): TuiNode {
     { class: "ia-logdrawer", key: "logdrawer" },
     fill(44.5, 0.5, 11, 1.5, "tabfill"),
     fill(0.5, 1.5, 99, 25, "fill"),
-    row(`║${blank}╭──────────╮${blank}║`, { key: "lt" }),
-    H.el("div", { class: "ia-row", key: "lb" }, `╠${side}╛`, logsTab(true), `╘${side}╣`),
+    row(`${F.v}${blank}${R.nw}${G.th.repeat(10)}${R.ne}${blank}${F.v}`, { key: "lt" }),
+    H.el(
+      "div",
+      { class: "ia-row", key: "lb" },
+      `${F.w}${side}${F.hEndL}`,
+      logsTab(true),
+      `${F.hEndR}${side}${F.e}`,
+    ),
     H.el(
       "div",
       { class: "ia-logbody", key: "body" },
-      H.el("div", { class: "ia-logside", key: "l" }, "║\n".repeat(24)),
+      H.el("div", { class: "ia-logside", key: "l" }, `${F.v}\n`.repeat(24)),
       H.el("div", { class: "ia-logpane", key: "p" }, logView(b.log, 24, 96)),
-      H.el("div", { class: "ia-logside", key: "r" }, "║\n".repeat(24)),
+      H.el("div", { class: "ia-logside", key: "r" }, `${F.v}\n`.repeat(24)),
     ),
-    row(`╚${"═".repeat(98)}╝`, { key: "lz" }),
+    row(`${F.sw}${F.h.repeat(98)}${F.se}`, { key: "lz" }),
   );
 }
 
@@ -393,12 +410,12 @@ function header(title: string): TuiNode[] {
   const t0 = ` ${title} `;
   const w = cells(t0);
   const lpad = Math.floor((98 - w) / 2);
-  const top = `╔${"═".repeat(lpad)}${t0}${"═".repeat(Math.max(0, 98 - w - lpad))}╗`;
+  const top = `${F.nw}${F.h.repeat(lpad)}${t0}${F.h.repeat(Math.max(0, 98 - w - lpad))}${F.ne}`;
   const edges: TuiNode[] = [];
   for (let r = 1; r <= 3; r++)
     edges.push(
-      at(0, r, { class: "ia-row ia-frame", key: `hl${r}` }, "║"),
-      at(99, r, { class: "ia-row ia-frame", key: `hr${r}` }, "║"),
+      at(0, r, { class: "ia-row ia-frame", key: `hl${r}` }, F.v),
+      at(99, r, { class: "ia-row ia-frame", key: `hr${r}` }, F.v),
     );
   const cell = (text: string | number, cols: number) =>
     H.line({}, span(fit(text, cols, "center"), { cls: "ia-bright" }));
@@ -445,7 +462,7 @@ function sideBorders(): TuiNode[] {
     const drawn = r >= DRAWER_ROW && r <= DRAWER_ROW + 22;
     ([0, 1] as const).forEach((side) => {
       if (ui.sheets[side].open ? drawn : tab) return;
-      out.push(at(side ? 99 : 0, r, { class: "ia-row ia-frame", key: `b${side}${r}` }, "║"));
+      out.push(at(side ? 99 : 0, r, { class: "ia-row ia-frame", key: `b${side}${r}` }, F.v));
     });
   }
   return out;
@@ -453,17 +470,17 @@ function sideBorders(): TuiNode[] {
 
 function bottomBorder(): TuiNode[] {
   const H = h();
-  const side = "═".repeat(43);
+  const side = F.h.repeat(43);
   return [
     fill(44.5, 29.5, 11, 1.5, "ltfill"),
-    at(44, 29, { class: "ia-row ia-frame", key: "lt" }, "╭──────────╮"),
+    at(44, 29, { class: "ia-row ia-frame", key: "lt" }, `${R.nw}${G.th.repeat(10)}${R.ne}`),
     at(
       0,
       30,
       { class: "ia-row ia-frame", key: "f30" },
-      H.el("span", {}, `╠${side}╛`),
+      H.el("span", {}, `${F.w}${side}${F.hEndL}`),
       logsTab(false),
-      H.el("span", {}, `╘${side}╣`),
+      H.el("span", {}, `${F.hEndR}${side}${F.e}`),
     ),
   ];
 }

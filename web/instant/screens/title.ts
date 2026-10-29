@@ -2,9 +2,13 @@
 import { randomBattle } from "../flow";
 import { t } from "../i18n";
 import { app, rerender } from "../state";
+import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { blank, h, kit, row, statusbar } from "./common";
 
+const { ARROW: A } = UI_THEME;
+
+/** The logo is art: its block glyphs stay inline, outside UI_THEME. */
 const ART = [
   "██████╗ ████████╗ ██╗ ██████╗ ██╗  ██╗",
   "██╔══██╗╚══██╔══╝███║██╔═████╗╚██╗██╔╝",
@@ -77,7 +81,7 @@ export function titleScreen(): TuiNode {
     ),
     statusbar(
       [
-        ["↑↓", "key.select"],
+        [`${A.up}${A.down}`, "key.select"],
         ["Enter", "key.ok"],
       ],
       `v${app.version}`,

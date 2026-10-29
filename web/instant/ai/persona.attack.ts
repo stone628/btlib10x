@@ -38,6 +38,7 @@ import {
   validatePickup,
   weaponDefFor,
 } from "btlib10x";
+import { UI_THEME } from "../theme";
 import {
   dissipationOf,
   expectedHitDamage,
@@ -47,6 +48,8 @@ import {
   type TraceTerm,
 } from "./persona.common";
 import { isMeleeBiased, MELEE_FACTOR, type Persona } from "./persona.data";
+
+const { MARK: M } = UI_THEME;
 
 /** Kicks risk a fall on a miss (TW p. 147): Opportunistic personas skip worse TNs
  *  (Never personas do not reach physical options at all). */
@@ -299,7 +302,7 @@ export function scoreAttacks(input: AttackScoringInput): AttackScoring {
       { id: "heat", value: round1(-w.heat * heatOver) },
     ].filter((t) => t.value !== 0) as TraceTerm[];
     return {
-      label: parts.length > 0 ? parts.join(" · ") : "hold fire",
+      label: parts.length > 0 ? parts.join(` ${M.sep} `) : "hold fire",
       score: round1(terms.reduce((a, t) => a + t.value, 0)),
       terms,
       commands,

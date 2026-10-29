@@ -142,7 +142,7 @@ export const ko: Catalog = {
   "edge.west": "서쪽",
   "edge.east": "동쪽",
   "battle.log": "기록",
-  "battle.race": "소모전 · {turn}/{n}턴 · {a} : {b}",
+  "battle.race": "소모전 · {a} : {b}",
   "battle.destroyAll": "섬멸전 · 유닛 {a} : {b}",
   "phase.movement": "이동",
   "phase.attack": "공격",
