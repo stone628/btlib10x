@@ -78,8 +78,6 @@ fieldset { border:1px solid var(--line); border-radius:4px; margin:0 0 10px; pad
 #foldWrap { margin-left:auto; }
 #menu { position:absolute; left:0; top:calc(100% + 4px); z-index:5; display:flex; flex-direction:column; gap:4px; min-width:190px; padding:6px; background:var(--c-panel); border:1px solid var(--acc); border-radius:4px; box-shadow:0 6px 18px rgba(0,0,0,.5); }
 #menu[hidden] { display:none; }
-#menu button { display:flex; justify-content:space-between; gap:16px; text-align:left; }
-#menu .hint { font-style:normal; }
 #view { overflow:auto; background:var(--cb-dim); min-width:0; min-height:0; position:relative; overflow-anchor:none; }
 #stage { position:relative; margin:16px; width:max-content; height:max-content; }
 #stage canvas { display:block; }
@@ -140,6 +138,9 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
 .hint { color:var(--dim); font-size:11px; }
 /* bt10x.css italicises hints; numeric read-outs stay upright. */
 .bgrow span.hint, #lOpv { font-style:normal; }
+/* Menu entries come after the generic button / .hint rules (Biome noDescendingSpecificity). */
+#menu button { display:flex; justify-content:space-between; gap:16px; text-align:left; }
+#menu .hint { font-style:normal; }
 #back { position:fixed; inset:0; z-index:9; background:rgba(0,0,0,.6); }
 #back[hidden] { display:none; }
 #gp { position:fixed; inset:5vh 0 0 0; margin:0 auto; width:min(780px,94vw); height:90vh; max-height:90vh; display:flex; flex-direction:column; gap:8px; padding:10px 12px; background:var(--panel); border:1px solid var(--acc); border-radius:4px; z-index:10; }
