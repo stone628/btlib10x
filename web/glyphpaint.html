@@ -67,6 +67,19 @@ fieldset { border:1px solid var(--line); border-radius:4px; margin:0 0 10px; pad
 /* The glyph palette takes the rest of the left column; its strip scrolls inside it. */
 #left > #palBox { flex:1 0 180px; margin-bottom:0; display:flex; flex-direction:column; }
 #right > fieldset:last-child { margin-top:auto; margin-bottom:0; }
+/* Folding the right pane hides it; the canvas view takes the width. The top bar button shows the action it will do. */
+#app.rfold { grid-template-columns:210px minmax(0,1fr) 0; }
+#app.rfold #right { display:none; }
+#rFold .unfold, #app.rfold #rFold .fold { display:none; }
+#app.rfold #rFold .unfold { display:inline; }
+/* File commands live in a dropdown under the Menu button; it closes on pick, outside click or Esc. */
+#menuWrap { position:relative; }
+/* The right pane's fold button sits at the right end of the bar, above the pane it folds. */
+#foldWrap { margin-left:auto; }
+#menu { position:absolute; left:0; top:calc(100% + 4px); z-index:5; display:flex; flex-direction:column; gap:4px; min-width:190px; padding:6px; background:var(--c-panel); border:1px solid var(--acc); border-radius:4px; box-shadow:0 6px 18px rgba(0,0,0,.5); }
+#menu[hidden] { display:none; }
+#menu button { display:flex; justify-content:space-between; gap:16px; text-align:left; }
+#menu .hint { font-style:normal; }
 #view { overflow:auto; background:var(--cb-dim); min-width:0; min-height:0; position:relative; overflow-anchor:none; }
 #stage { position:relative; margin:16px; width:max-content; height:max-content; }
 #stage canvas { display:block; }
@@ -161,11 +174,18 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
 </header>
 <div id="app">
   <header id="bar">
-    <div class="grp"><button type="button" id="bNew" data-tip="bNew"><span lang="en">New</span><span lang="ko">새 장면</span></button><button type="button" id="bLoad" data-tip="bLoad"><span lang="en">Load…</span><span lang="ko">열기…</span></button><button type="button" id="bSave" data-tip="bSave"><span lang="en">Save .json</span><span lang="ko">.json 저장</span></button><button type="button" id="bExport" data-tip="bExport"><span lang="en">Export…</span><span lang="ko">내보내기…</span></button></div>
+    <div class="grp" id="menuWrap"><button type="button" id="bMenu" data-tip="bMenu" aria-haspopup="menu" aria-expanded="false" aria-controls="menu"><span lang="en">Menu ▾</span><span lang="ko">메뉴 ▾</span></button>
+      <div id="menu" role="menu" hidden>
+        <button type="button" role="menuitem" id="bNew" data-tip="bNew"><span lang="en">New</span><span lang="ko">새 장면</span></button>
+        <button type="button" role="menuitem" id="bLoad" data-tip="bLoad"><span><span lang="en">Load…</span><span lang="ko">열기…</span></span><span class="hint">Ctrl+O</span></button>
+        <button type="button" role="menuitem" id="bSave" data-tip="bSave"><span><span lang="en">Save .json</span><span lang="ko">.json 저장</span></span><span class="hint">Ctrl+S</span></button>
+        <button type="button" role="menuitem" id="bExport" data-tip="bExport"><span lang="en">Export…</span><span lang="ko">내보내기…</span></button>
+      </div></div>
     <div class="grp"><button type="button" id="bUndo" data-tip="bUndo"><span lang="en">Undo</span><span lang="ko">되돌리기</span></button><button type="button" id="bRedo" data-tip="bRedo"><span lang="en">Redo</span><span lang="ko">다시 실행</span></button></div>
     <div class="grp" data-tip="scene"><span class="lbl"><span lang="en">Scene</span><span lang="ko">장면</span></span><input type="number" id="sw" min="1" max="500"><span>×</span><input type="number" id="sh" min="1" max="500"><input type="color" id="sbg" data-tip="sbg"></div>
     <div class="grp"><span class="grp" data-tip="zoom"><button type="button" id="zOut">−</button><span id="zv" class="lbl"></span><button type="button" id="zIn">+</button></span>
       <label class="opt" data-tip="cGrid"><input type="checkbox" id="cGrid"> <span lang="en">grid</span><span lang="ko">격자</span></label><label class="opt" data-tip="cBounds"><input type="checkbox" id="cBounds"> <span lang="en">layer box</span><span lang="ko">레이어 상자</span></label></div>
+    <div class="grp" id="foldWrap"><button type="button" id="rFold" data-tip="rFold" aria-expanded="true"><span class="fold"><span lang="en">Fold right pane ▸</span><span lang="ko">오른쪽 패널 접기 ▸</span></span><span class="unfold"><span lang="en">◂ Unfold right pane</span><span lang="ko">◂ 오른쪽 패널 펼치기</span></span></button></div>
   </header>
 
   <aside id="left">
@@ -214,11 +234,11 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
     <fieldset><legend><span lang="en">Keys</span><span lang="ko">단축키</span></legend>
       <div class="hint keys" lang="en">B pencil<br>E eraser<br>L line<br>R rect (again: filled / outline)<br>G fill<br>I pick<br>T text<br>
       Ctrl+Z / Ctrl+Y undo / redo<br>Ctrl+C / X / V copy / cut / paste<br>Del clear selection<br>Ctrl+A select all<br>Esc deselect<br>
-      Space-drag scene pan<br>Ctrl+wheel zoom<br>Alt+click pick cell<br>Ctrl+S save<br>
+      Space-drag scene pan<br>Ctrl+wheel zoom<br>Alt+click pick cell<br>Ctrl+S save<br>\ fold / unfold right pane<br>
       Touch: two-finger drag scene pan</div>
       <div class="hint keys" lang="ko">B 연필<br>E 지우개<br>L 직선<br>R 사각형 (한 번 더: 채움 / 테두리)<br>G 채우기<br>I 스포이트<br>T 텍스트<br>
       Ctrl+Z / Ctrl+Y 되돌리기 / 다시 실행<br>Ctrl+C / X / V 복사 / 잘라내기 / 붙여넣기<br>Del 선택 영역 지우기<br>Ctrl+A 모두 선택<br>Esc 선택 해제<br>
-      Space+드래그 화면 이동<br>Ctrl+휠 확대 / 축소<br>Alt+클릭 셀 스포이트<br>Ctrl+S 저장<br>
+      Space+드래그 화면 이동<br>Ctrl+휠 확대 / 축소<br>Alt+클릭 셀 스포이트<br>Ctrl+S 저장<br>\ 오른쪽 패널 접기 / 펼치기<br>
       터치: 두 손가락 드래그로 화면 이동</div>
     </fieldset>
   </aside>
@@ -379,6 +399,8 @@ const STR = {
       lDel: 'Delete the focused layer. A scene keeps at least one layer.',
       lUp: 'Move the focused layer up one step.',
       lDn: 'Move the focused layer down one step.',
+      bMenu: 'File commands: new scene, load, save and export.',
+      rFold: 'Hide the right pane (layers, cell glyphs, keys) to give the canvas more room, or show it again. Key: \\',
       lMerge: 'Merge the focused layer into the one below; its opacity is baked into the colours.',
       lMergeAll: 'Merge all visible layers into one. Hidden layers are left alone.',
       lName: 'Name of the focused layer.',
@@ -490,6 +512,8 @@ const STR = {
       lDel: '선택한 레이어를 삭제합니다. 장면에는 레이어가 하나 이상 남습니다.',
       lUp: '선택한 레이어를 한 칸 위로 옮깁니다.',
       lDn: '선택한 레이어를 한 칸 아래로 옮깁니다.',
+      bMenu: '파일 명령: 새 장면, 열기, 저장, 내보내기.',
+      rFold: '오른쪽 패널(레이어, 셀 글리프, 단축키)을 숨겨 캔버스를 넓히거나 다시 보여 줍니다. 단축키: \\',
       lMerge: '선택한 레이어를 아래 레이어에 병합합니다. 불투명도는 색에 반영됩니다.',
       lMergeAll: '보이는 레이어를 모두 하나로 병합합니다. 숨긴 레이어는 그대로 둡니다.',
       lName: '선택한 레이어의 이름.',
@@ -1309,6 +1333,12 @@ $('#bExport').onclick = () => { syncInfo(); ex.hidden = false; modals(); };
 $('#bExpCancel').onclick = () => { ex.hidden = true; modals(); };
 for (const id of ['#bExpJson', '#bExpPng']) $(id).addEventListener('click', () => { ex.hidden = true; modals(); });
 $('#bLoad').onclick = () => $('#fileIn').click();
+const menu = $('#menu'), menuItems = () => [...menu.querySelectorAll('button')];
+function setMenu(open) { menu.hidden = !open; $('#bMenu').setAttribute('aria-expanded', String(open)); }
+$('#bMenu').onclick = () => setMenu(menu.hidden);
+// capture: close before the item's own handler runs, so a confirm() or file picker doesn't sit over an open menu
+menu.addEventListener('click', e => { if (e.target.closest('button')) setMenu(false); }, true);
+addEventListener('pointerdown', e => { if (!menu.hidden && !e.target.closest('#menuWrap')) setMenu(false); });
 $('#fileIn').onchange = e => { const f = e.target.files[0]; e.target.value = ''; if (f) readFile(f); };
 function readFile(f) { f.text().then(t => { loadDoc(JSON.parse(t)); msg(T().msg.loaded(f.name)); }).catch(err => msg(T().msg.loadFailed(err.message))); }
 addEventListener('dragover', e => e.preventDefault());
@@ -1323,6 +1353,14 @@ for (const id of MODES) { const b = mk('button', { type: 'button' }); b.dataset.
 for (const [id, k] of TOOLS) { const b = mk('button', { type: 'button' }, mk('span'), mk('small', { textContent: k })); b.dataset.tool = id; b.dataset.tip = `tool-${id}`; b.onclick = () => chooseTool(id); $('#tools').append(b); }
 $('#bUndo').onclick = doUndo; $('#bRedo').onclick = doRedo;
 $('#zIn').onclick = () => zoom(1); $('#zOut').onclick = () => zoom(-1);
+// the right pane fold is a view preference; the canvas view just gets the freed width (no relayout needed)
+function setRightFold(on, quiet) {
+  S.rfold = !!on; $('#app').classList.toggle('rfold', S.rfold);
+  $('#rFold').setAttribute('aria-expanded', String(!S.rfold));
+  if (tipEl && !tipEl.checkVisibility?.()) showTip(null);
+  if (!quiet) saveView();
+}
+$('#rFold').onclick = () => setRightFold(!S.rfold);
 $('#cGrid').onchange = e => { S.grid = e.target.checked; redraw(); saveView(); }; $('#cBounds').onchange = e => { S.bounds = e.target.checked; redraw(); saveView(); };
 $('#bsize').onchange = e => { S.brush.size = Math.max(1, Math.min(9, +e.target.value || 1)); redraw(); saveView(); };
 $('#ttext').oninput = e => { S.text = e.target.value; redraw(); saveView(); };
@@ -1360,6 +1398,11 @@ addEventListener('paste', e => {
 addEventListener('keydown', e => {
   if (e.key === 'Shift' && !shiftDown) { shiftDown = true; modeInfo(); }
   const t = e.target, typing = t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && ['text', 'number'].includes(t.type));
+  if (!menu.hidden && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+    const it = menuItems(), n = it.indexOf(document.activeElement), d = e.key === 'ArrowDown' ? 1 : -1;
+    e.preventDefault(); it[n < 0 ? (d > 0 ? 0 : it.length - 1) : (n + d + it.length) % it.length].focus(); return;
+  }
+  if (e.key === 'Escape' && !menu.hidden) { setMenu(false); $('#bMenu').focus(); return; }
   if (e.key === 'Escape') { if (!ex.hidden) { ex.hidden = true; modals(); } else if (!gp.hidden) closePanel(); else { S.sel = null; syncInfo(); redraw(); } return; }
   if (typing || !gp.hidden || !ex.hidden) return;
   const ctrl = e.ctrlKey || e.metaKey, k = e.key.toLowerCase();
@@ -1376,6 +1419,8 @@ addEventListener('keydown', e => {
   }
   if (k === ' ') { if (!spaceDown) { spaceDown = true; modeInfo(); } e.preventDefault(); return; }
   if (e.key === 'Delete' || e.key === 'Backspace') { doClearSel(); return; }
+  // physical key, so the Korean layout's ₩ on the same key works too
+  if (e.code === 'Backslash' && !e.altKey) { e.preventDefault(); setRightFold(!S.rfold); return; }
   const tool = TOOLS.find(x => x[1].toLowerCase() === k); if (tool) { e.preventDefault(); chooseTool(tool[0]); }
 });
 addEventListener('keyup', e => {
@@ -1401,7 +1446,7 @@ function loadPalettes() {
 // view preferences (zoom, grid, tool, mode...) persist across reloads, separate from the document
 const VIEW_KEY = 'glyphpaint.view';
 function saveView() {
-  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ fs: S.fs, grid: S.grid, bounds: S.bounds, tool: S.tool, mode: S.mode, fillRect: S.fillRect, size: S.brush.size, text: S.text })); } catch (e) {}
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify({ fs: S.fs, grid: S.grid, bounds: S.bounds, tool: S.tool, mode: S.mode, fillRect: S.fillRect, size: S.brush.size, text: S.text, rfold: !!S.rfold })); } catch (e) {}
 }
 function loadView() {
   try {
@@ -1414,6 +1459,7 @@ function loadView() {
     if (MODES.includes(v.mode)) S.mode = v.mode;
     S.brush.size = Math.max(1, Math.min(9, v.size | 0 || 1));
     if (typeof v.text === 'string') S.text = v.text;
+    if (typeof v.rfold === 'boolean') S.rfold = v.rfold;
   } catch (e) {}
   $('#bsize').value = String(S.brush.size); $('#ttext').value = S.text;
 }
@@ -1449,7 +1495,7 @@ new MutationObserver(localize).observe(document.documentElement, { attributes: t
 function boot() {
   loadView(); S.palettes = defaultPalettes(); loadPalettes(); S.layers = [newLayer(T().layer(1))];
   try { const t = localStorage.getItem('glyphpaint.doc'); if (t) loadDoc(JSON.parse(t)); } catch (e) { S.layers = S.layers.length ? S.layers : [newLayer(T().layer(1))]; }
-  localize(); setTool(S.tool); setMode(S.mode); syncAll(true);
+  localize(); setTool(S.tool); setMode(S.mode); setRightFold(S.rfold, true); syncAll(true);
   if (document.fonts) document.fonts.load('20px "Bt10x Mono"').then(() => { cssCache.clear(); redraw(); });
 }
 boot();
