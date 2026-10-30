@@ -22,7 +22,7 @@ import { debriefKey, debriefOverlays, debriefScreen } from "./screens/debrief";
 import { deployAfterRender, deployKey, deployOverlays, deployScreen } from "./screens/deploy";
 import { setupAfterRender, setupKey, setupMapPreview, setupScreen } from "./screens/setup";
 import { titleAfterRender, titleScreen } from "./screens/title";
-import { defaultLoadout, loadLoadout } from "./setup/loadout";
+import { emptyLoadout } from "./setup/loadout";
 import { app, kitModal, setRerender } from "./state";
 import type { TuiNode, TuiScene } from "./tui";
 
@@ -222,7 +222,7 @@ async function boot(): Promise<void> {
       .then((text) => appendCatalog(text, "ia", () => {}))
       .catch(() => {});
     ensureMapRegistered("quickstart");
-    app.loadout = loadLoadout() ?? defaultLoadout();
+    app.loadout = emptyLoadout();
     app.screen = "title";
   } catch (e) {
     app.error = e instanceof Error ? e.message : String(e);

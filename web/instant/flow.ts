@@ -27,7 +27,14 @@ import {
 import { t } from "./i18n";
 import type { Banner, MapSource } from "./map/view";
 import { MapView } from "./map/view";
-import { type Loadout, loadoutProblem, mechDef, randomLoadout, saveLoadout } from "./setup/loadout";
+import {
+  emptyLoadout,
+  type Loadout,
+  loadoutProblem,
+  mechDef,
+  newSeed,
+  randomLoadout,
+} from "./setup/loadout";
 import { app, newBattleUi, type Placement, rerender } from "./state";
 
 import { UI_THEME } from "./theme";
@@ -65,8 +72,10 @@ export function sideHasPlayer(l: Loadout, side: 0 | 1): boolean {
 }
 
 export function currentMap(): MapDef {
-  const map = ensureMapRegistered(app.loadout.map);
-  if (!map) throw new Error(t("err.unknownMap", { name: app.loadout.map }));
+  const name = app.loadout.map;
+  if (name === null) throw new Error(t("err.noMap"));
+  const map = ensureMapRegistered(name);
+  if (!map) throw new Error(t("err.unknownMap", { name }));
   return map;
 }
 
@@ -100,7 +109,6 @@ export function launch(): void {
   const l = app.loadout;
   const problem = loadoutProblem(l);
   if (problem) throw new Error(t(problem.key, problem.vars));
-  saveLoadout(l);
   const rng = setupRng(l.seed);
   const roll = rollOff(rng);
   const cursor = deployUnits(l).findIndex((u) => u.persona === null);
@@ -228,6 +236,8 @@ export function deployBanners(): Banner[] {
 export function beginBattle(): void {
   const d = app.deploy!;
   const l = app.loadout;
+  if (l.mode === null) throw new Error(t("err.noMode"));
+  const mode = l.mode;
   const units = deployUnits(l);
   const missing = units.find((u) => !d.placements[u.id]);
   if (missing) throw new Error(t("err.notPlaced", { id: missing.id }));
@@ -249,11 +259,12 @@ export function beginBattle(): void {
     );
   });
   const control = Object.fromEntries(units.map((u) => [u.id, l.sides[u.side][u.index]!.persona]));
-  app.battle = new BattleController(currentMap(), inits, control, l.seed, l.mode);
+  app.battle = new BattleController(currentMap(), inits, control, l.seed, mode);
   app.screen = "battle";
   app.orderCursor = 0;
   app.battleUi = newBattleUi();
   app.modal = null;
+  aiHeld = false;
   const view = ensureMapView();
   const battle = app.battle;
   view.setMap(battleMapSource(battle));
@@ -275,9 +286,20 @@ export function rematch(): void {
   beginBattle();
 }
 
+/** Title ▸ Random battle: a fresh random match, left on New Battle to review. */
 export function randomBattle(): void {
-  app.loadout = randomLoadout((Date.now() & 0x7fffffff) >>> 0, mapNames());
-  launch();
+  app.loadout = randomLoadout(newSeed(), mapNames());
+  app.error = null;
+  app.screen = "setup";
+  app.tab = 0;
+}
+
+/** Title ▸ New battle: no units, map or engagement yet. */
+export function newBattle(): void {
+  app.loadout = emptyLoadout();
+  app.error = null;
+  app.screen = "setup";
+  app.tab = 0;
 }
 
 /** Banners for every unit on the board; hulls are neutral. */
@@ -332,6 +354,16 @@ function unitLeft(
 }
 
 let aiTimer: ReturnType<typeof setTimeout> | null = null;
+/** Persona play is on hold while the battle menu (or its Withdraw confirm) is open. */
+let aiHeld = false;
+
+/** Hold persona play (menu shown) or resume it (menu closed). */
+export function holdAi(on: boolean): void {
+  if (aiHeld === on) return;
+  aiHeld = on;
+  if (on) stopAi();
+  else pumpAi();
+}
 
 /** Advance persona prompts at the chosen pace until a Player prompt or the end. */
 export function pumpAi(force = false): void {
@@ -349,7 +381,7 @@ export function pumpAi(force = false): void {
     rerender();
     return;
   }
-  if (b.actorPersona === null) {
+  if (b.actorPersona === null || aiHeld) {
     rerender();
     return;
   }

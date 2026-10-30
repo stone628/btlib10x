@@ -71,7 +71,7 @@ export function deployScreen(): TuiNode {
     { class: "ia-root" },
     H.split(
       { cols: 100, rows: 31, border: "double", sizes: `1fr ${PANE}`, fixed: true },
-      H.pane({ title: t("deploy.title", { map: app.loadout.map }), pad: 0 }, mapSlot()),
+      H.pane({ title: t("deploy.title", { map: app.loadout.map ?? "" }), pad: 0 }, mapSlot()),
       H.pane(t("deploy.side"), ...side),
     ),
     statusbar(

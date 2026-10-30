@@ -14,17 +14,19 @@ import {
 import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../ai/persona.data";
 import { launch, mapSource } from "../flow";
 import { locName, t } from "../i18n";
+import { createRng } from "../rng";
 import {
+  addedSlot,
   defaultFilter,
   filterMechs,
-  freeId,
   idProblem,
   loadoutProblem,
   MAX_SLOTS,
   mechDef,
-  newSlot,
+  newSeed,
   PILOT_HIT_MAX,
   PILOT_HIT_MIN,
+  SEED_MAX,
   type Slot,
   sideBv,
   TURN_LIMIT_DEFAULT,
@@ -32,7 +34,7 @@ import {
   TURN_LIMIT_MIN,
   type WeightClass,
 } from "../setup/loadout";
-import { app, type Modal, rerender } from "../state";
+import { AI_PACES, app, type Modal, rerender, setAiPace } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { blank, fit, h, mapSlot, modal, row, statusbar } from "./common";
@@ -49,7 +51,7 @@ const HIT_MAXES = Array.from(
   (_, i) => PILOT_HIT_MIN + i,
 );
 const CONTROLS: (PersonaKey | null)[] = [null, ...PERSONA_KEYS];
-const SEED_MAX = 0x7fffffff;
+const MODES = [null, "destroyAll", "damageRace"] as const;
 
 /** Width of the map box, and of the config column beside it. */
 const MAP_COLS = 50;
@@ -133,7 +135,15 @@ export function setupScreen(): TuiNode {
         },
         H.box(
           { key: "mapbox", cols: MAP_COLS, rows: 15, pad: 0 },
-          H.el("div", { style: { height: "calc(13 * var(--ch))" } }, mapSlot()),
+          ...(l.map === null
+            ? [
+                ...blank(6),
+                row(fit(t("setup.noMapPreview"), MAP_COLS - 2, "center"), {
+                  key: "nomap",
+                  cls: "ia-dim",
+                }),
+              ]
+            : [H.el("div", { style: { height: "calc(13 * var(--ch))" } }, mapSlot())]),
         ),
         H.el("div", {}),
         H.el("div", { key: "cfg" }, ...configRows()),
@@ -245,7 +255,8 @@ function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
 function addSlot(side: 0 | 1): void {
   const slots = app.loadout.sides[side];
   if (slots.length >= MAX_SLOTS) return;
-  slots.push(newSlot(null, side === 1 ? "gladiator" : null, freeId(app.loadout, side)));
+  const slot = addedSlot(createRng(newSeed()), app.loadout, side);
+  if (slot) slots.push(slot);
 }
 
 function removeSlot(side: 0 | 1, i: number): void {
@@ -257,8 +268,7 @@ function removeSlot(side: 0 | 1, i: number): void {
 function configRows(): TuiNode[] {
   const l = app.loadout;
   const maps = catalogMaps();
-  const names = maps.map((m) => m.name);
-  const modes = ["destroyAll", "damageRace"] as const;
+  const names = [null, ...maps.map((m) => m.name)];
   const out: TuiNode[] = [
     row(" ", { key: "c0" }),
     line(
@@ -270,8 +280,8 @@ function configRows(): TuiNode[] {
         names,
         l.map,
         (n) => {
-          const m = maps.find((x) => x.name === n)!;
-          return `${m.name} (${m.width}${M.times}${m.height})`;
+          const m = maps.find((x) => x.name === n);
+          return m ? `${m.name} (${m.width}${M.times}${m.height})` : t("setup.noMap");
         },
         (n) => (l.map = n),
       ),
@@ -282,30 +292,39 @@ function configRows(): TuiNode[] {
       field("seed", ` ${l.seed}`, CFG - 21, () => editSeed()),
       " ",
       tight("seednew", A.reroll, () => {
-        l.seed = Math.floor(Math.random() * SEED_MAX);
+        l.seed = newSeed();
       }),
     ),
-    row(" ", { key: "c3" }),
     line(
-      "c4",
+      "c3",
+      fit(t("menu.pace"), 14),
+      select("pace", CFG - 16, AI_PACES, app.aiPace, (p) => t(`pace.${p}`), setAiPace),
+    ),
+    row(" ", { key: "c4" }),
+    line(
+      "c5",
       fit(t("setup.victory"), 14),
       select(
         "mode",
         CFG - 16,
-        modes,
-        l.mode.kind,
-        (k) => t(k === "damageRace" ? "victory.damage" : "victory.destroyAll"),
+        MODES,
+        l.mode?.kind ?? null,
+        (k) =>
+          k === null
+            ? t("setup.noMode")
+            : t(k === "damageRace" ? "victory.damage" : "victory.destroyAll"),
         (k) => {
-          if (k === "destroyAll") l.mode = { kind: "destroyAll" };
-          else if (l.mode.kind !== "damageRace")
+          if (k === null) l.mode = null;
+          else if (k === "destroyAll") l.mode = { kind: "destroyAll" };
+          else if (l.mode?.kind !== "damageRace")
             l.mode = { kind: "damageRace", turns: TURN_LIMIT_DEFAULT };
         },
       ),
     ),
-    l.mode.kind === "damageRace"
-      ? line("c5", fit(t("setup.turnLimit"), 14), field("turns", ` ${l.mode.turns}`, 6, editTurns))
-      : row(" ", { key: "c5" }),
-    ...blank(2),
+    l.mode?.kind === "damageRace"
+      ? line("c6", fit(t("setup.turnLimit"), 14), field("turns", ` ${l.mode.turns}`, 6, editTurns))
+      : row(" ", { key: "c6" }),
+    ...blank(1),
     ...bvRows(),
     row(" ", { key: "c10" }),
   ];
@@ -388,7 +407,7 @@ function editSeed(): void {
 
 function editTurns(): void {
   const l = app.loadout;
-  if (l.mode.kind !== "damageRace") return;
+  if (l.mode?.kind !== "damageRace") return;
   const range = { min: TURN_LIMIT_MIN, max: TURN_LIMIT_MAX };
   inputDialog(t("turnsDialog.title"), t("turnsDialog.label", range), String(l.mode.turns), (v) => {
     const n = Number(v.trim());
@@ -987,7 +1006,7 @@ export function setupAfterRender(): void {
 
 export function setupMapPreview(): void {
   if (!app.mapView) return;
-  const map = ensureMapRegistered(app.loadout.map);
+  const map = app.loadout.map === null ? null : ensureMapRegistered(app.loadout.map);
   if (map) app.mapView.setMap(mapSource(map));
   app.mapView.overlays = {};
   app.mapView.banners = [];

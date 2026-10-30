@@ -1,5 +1,5 @@
 /** Screen 0: title menu. */
-import { randomBattle } from "../flow";
+import { newBattle, randomBattle } from "../flow";
 import { t } from "../i18n";
 import { app, rerender } from "../state";
 import { UI_THEME } from "../theme";
@@ -20,24 +20,19 @@ const ART = [
 
 /** Rows above the status bar. */
 const ROWS = 31;
+/** Help lines under the menu. */
+const INFO_ROWS = 2;
 
 export interface TitleItem {
   label: string;
-  /** Message key of the line under the menu that explains this item. */
+  /** Message key of the help under the menu: up to two lines, split at `\n`. */
   info: string;
   run: () => void;
 }
 
 export function titleItems(): TitleItem[] {
   return [
-    {
-      label: "title.new",
-      info: "title.info.new",
-      run: () => {
-        app.screen = "setup";
-        app.tab = 0;
-      },
-    },
+    { label: "title.new", info: "title.info.new", run: newBattle },
     { label: "title.random", info: "title.info.random", run: randomBattle },
   ];
 }
@@ -61,8 +56,9 @@ export function titleScreen(): TuiNode {
     },
     ...items.map((it) => H.item({ key: it.label, value: it.label }, t(it.label))),
   );
-  // logo, gap, subtitle, gap ×3, boxed menu, gap, info line
-  const used = ART.length + 1 + 1 + 3 + (items.length + 2) + 1 + 1;
+  // logo, gap, subtitle, gap ×3, boxed menu, gap, info lines
+  const used = ART.length + 1 + 1 + 3 + (items.length + 2) + 1 + INFO_ROWS;
+  const info = t(items[cur]!.info).split("\n");
   const top = Math.floor((ROWS - used) / 2);
   return H.el(
     "div",
@@ -77,7 +73,9 @@ export function titleScreen(): TuiNode {
       ...blank(3),
       H.el("div", { style: { display: "flex", "justify-content": "center" } }, menu),
       ...blank(1),
-      row(t(items[cur]!.info), { cls: "ia-center", key: "info" }),
+      ...Array.from({ length: INFO_ROWS }, (_, i) =>
+        row(info[i] ?? " ", { cls: "ia-center", key: `info${i}` }),
+      ),
     ),
     statusbar(
       [

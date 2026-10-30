@@ -10,6 +10,27 @@ import type { Loadout, MechFilter } from "./setup/loadout";
 
 export type ScreenId = "loading" | "title" | "setup" | "deploy" | "battle" | "debrief";
 export type AiPace = "instant" | "step" | "timed";
+export const AI_PACES: readonly AiPace[] = ["instant", "step", "timed"];
+const PACE_KEY = "bt10x.instant.pace";
+
+/** Persona pace kept between visits (New Battle and the battle menu); "step" by default. */
+function loadPace(): AiPace {
+  try {
+    const v = localStorage.getItem(PACE_KEY);
+    return AI_PACES.find((p) => p === v) ?? "step";
+  } catch {
+    return "step";
+  }
+}
+
+export function setAiPace(p: AiPace): void {
+  app.aiPace = p;
+  try {
+    localStorage.setItem(PACE_KEY, p);
+  } catch {
+    // private mode or blocked storage: the pace lasts for this visit
+  }
+}
 
 export interface Placement {
   hex: HexCoord;
@@ -60,6 +81,7 @@ export type Modal =
       apply: (p: UnitPolicy) => void;
     }
   | { kind: "battleMenu"; cursor: number }
+  | { kind: "debriefMenu"; cursor: number }
   | { kind: "message"; title: string; text: string }
   /** The debrief's after-action report, as copied to the clipboard. */
   | { kind: "aar"; text: string };
@@ -84,7 +106,7 @@ export interface SheetDrawer {
 export interface BattleUi {
   sheets: [SheetDrawer, SheetDrawer];
   logs: boolean;
-  /** Actor the Action Order scroll was last fitted to; a new actor re-fits it. */
+  /** Action Order (ids and states) the scroll was last centred for; a change re-centres it. */
   queueFor: string | null;
   /** Actor and attack target whose sheet the right drawer last showed. */
   sheetTarget: string | null;
@@ -144,7 +166,7 @@ export interface App {
 
 export const app: App = {
   screen: "loading",
-  loadout: { sides: [[], []], map: "quickstart", mode: { kind: "destroyAll" }, seed: 42 },
+  loadout: { sides: [[], []], map: null, mode: null, seed: 42 },
   tab: 0,
   debriefUnit: 0,
   cursors: { title: 0 },
@@ -153,7 +175,7 @@ export const app: App = {
   battle: null,
   orderCursor: 0,
   battleUi: newBattleUi(),
-  aiPace: "instant",
+  aiPace: loadPace(),
   aiReasoning: false,
   mapView: null,
   error: null,

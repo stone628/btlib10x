@@ -24,7 +24,7 @@ import { type BattleResult, unitLoss } from "../battle/victory";
 import { battleBanners, battleMapSource, rematch } from "../flow";
 import { locName, t } from "../i18n";
 import type { Banner } from "../map/view";
-import { app } from "../state";
+import { app, kitModal, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
 import { levelCls } from "./battle.sheet";
@@ -33,6 +33,7 @@ import {
   cells,
   fit,
   h,
+  kit,
   logView,
   mapSlot,
   modal,
@@ -1012,6 +1013,62 @@ function aarModal(text: string): TuiNode {
   );
 }
 
+// ------------------------------------------------------------ menu
+
+/** Esc menu: the debrief's keyboard features, each with its key. */
+const MENU: readonly { label: string; key: string; run: () => void }[] = [
+  { label: "debriefMenu.close", key: "Esc", run: () => {} },
+  { label: "debriefMenu.copyAar", key: "C", run: () => copyAar() },
+  { label: "debriefMenu.rematch", key: "R", run: () => confirmRematch() },
+  { label: "debriefMenu.setup", key: "Enter", run: () => toSetup() },
+  { label: "debriefMenu.toTitle", key: "", run: () => (app.screen = "title") },
+];
+
+function menuModal(cursor: number): TuiNode {
+  const cols = 40;
+  return modal(
+    { cols, title: t("debriefMenu.title"), footer: t("dialog.footer") },
+    ...MENU.map((it, i) =>
+      row(
+        `${i === cursor ? A.cursor : " "} ${fit(t(it.label), cols - 12)}${fit(it.key, 6, "right")}`,
+        {
+          sel: i === cursor,
+          key: it.label,
+          onClick: () => runMenu(i),
+        },
+      ),
+    ),
+  );
+}
+
+function runMenu(i: number): void {
+  app.modal = null;
+  MENU[i]?.run();
+  rerender();
+}
+
+function toSetup(): void {
+  app.screen = "setup";
+  app.tab = 0;
+}
+
+/** Rematch replays the battle from scratch, so it asks first. */
+function confirmRematch(): void {
+  kitModal.open = true;
+  void kit()
+    .dialog({
+      title: t("debriefMenu.rematch"),
+      text: t("rematch.confirm"),
+      buttons: [t("yes"), t("no")],
+      defaultIndex: 1,
+    })
+    .then((r) => {
+      kitModal.open = false;
+      if (r === t("yes")) rematch();
+      rerender();
+    });
+}
+
 // ------------------------------------------------------------ screen
 
 export function debriefScreen(): TuiNode {
@@ -1058,16 +1115,26 @@ export function debriefScreen(): TuiNode {
       ["Tab", "key.tab"],
       ["↑↓", "key.pickUnit"],
       ["C", "key.copyAar", copyAar],
-      ["R", "key.rematch"],
-      ["Enter", "key.setup"],
-      ["Esc", "key.title"],
+      ["R", "key.rematch", confirmRematch],
+      ["Enter", "key.setup", toSetup],
+      ["Esc", "key.menu", () => (app.modal = { kind: "debriefMenu", cursor: 0 })],
     ]),
     m?.kind === "aar" ? aarModal(m.text) : null,
+    m?.kind === "debriefMenu" ? menuModal(m.cursor) : null,
   );
 }
 
 export function debriefKey(e: KeyboardEvent): boolean {
-  if (app.modal) {
+  const m = app.modal;
+  if (m?.kind === "debriefMenu") {
+    if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % MENU.length;
+    else if (e.key === "ArrowUp") m.cursor = (m.cursor + MENU.length - 1) % MENU.length;
+    else if (e.key === "Enter") runMenu(m.cursor);
+    else if (e.key === "Escape") app.modal = null;
+    else return false;
+    return true;
+  }
+  if (m) {
     app.modal = null;
     return true;
   }
@@ -1079,11 +1146,9 @@ export function debriefKey(e: KeyboardEvent): boolean {
   else if ((e.key === "PageDown" || e.key === "PageUp") && body)
     body.scrollTop += (e.key === "PageDown" ? 1 : -1) * body.clientHeight * 0.8;
   else if (e.code === "KeyC") copyAar();
-  else if (e.code === "KeyR") rematch();
-  else if (e.key === "Enter") {
-    app.screen = "setup";
-    app.tab = 0;
-  } else if (e.key === "Escape") app.screen = "title";
+  else if (e.code === "KeyR") confirmRematch();
+  else if (e.key === "Enter") toSetup();
+  else if (e.key === "Escape") app.modal = { kind: "debriefMenu", cursor: 0 };
   else return false;
   return true;
 }

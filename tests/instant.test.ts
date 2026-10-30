@@ -38,7 +38,16 @@ import {
   sensorTip,
 } from "../web/instant/screens/battle.hints";
 import { pileTip } from "../web/instant/screens/piles";
-import { defaultFilter, filterMechs, generateSide } from "../web/instant/setup/loadout";
+import {
+  addedSlot,
+  bvOf,
+  defaultFilter,
+  emptyLoadout,
+  filterMechs,
+  generateSide,
+  loadoutProblem,
+  randomLoadout,
+} from "../web/instant/setup/loadout";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
 
@@ -338,6 +347,42 @@ describe("Instant Action setup", () => {
     });
     expect(slots).toHaveLength(3);
     expect(slots.every((s) => s.persona !== null)).toBe(true);
+  });
+
+  it("New battle starts empty and blocks launch until map and engagement are set", () => {
+    const l = emptyLoadout();
+    expect(l.sides).toEqual([[], []]);
+    expect(loadoutProblem(l)?.key).toBe("err.emptySide");
+    l.sides[0].push(addedSlot(createRng(1), l, 0)!);
+    l.sides[1].push(addedSlot(createRng(2), l, 1)!);
+    expect(loadoutProblem(l)?.key).toBe("err.noMap");
+    l.map = "quickstart";
+    expect(loadoutProblem(l)?.key).toBe("err.noMode");
+    l.mode = { kind: "destroyAll" };
+    expect(loadoutProblem(l)).toBeNull();
+  });
+
+  it("[+] adds a persona slot BV-matched to the opponent's average", () => {
+    const l = emptyLoadout();
+    const first = addedSlot(createRng(3), l, 0)!;
+    expect(first).toMatchObject({ id: "A1", gunnery: 4, piloting: 5, pilotHitMax: 6 });
+    expect(first.persona).not.toBeNull();
+    l.sides[0].push(first, addedSlot(createRng(4), l, 0)!);
+    const avg = (bvOf(l.sides[0][0]!.model) + bvOf(l.sides[0][1]!.model)) / 2;
+    for (let seed = 0; seed < 20; seed++) {
+      const s = addedSlot(createRng(seed), l, 1)!;
+      expect(s.id).toBe("B1");
+      expect(s.persona).not.toBeNull();
+      expect(bvOf(s.model)).toBeGreaterThanOrEqual(avg * 0.9);
+      expect(bvOf(s.model)).toBeLessThanOrEqual(avg * 1.1);
+    }
+  });
+
+  it("Random battle sets no Player slot", () => {
+    const l = randomLoadout(7, ["quickstart"]);
+    expect(l.sides.flat().every((s) => s.persona !== null)).toBe(true);
+    expect(l.mode).toEqual({ kind: "destroyAll" });
+    expect(loadoutProblem(l)).toBeNull();
   });
 });
 

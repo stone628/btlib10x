@@ -1,6 +1,6 @@
 /**
  * The Instant Action loadout: two sides of 1–4 'Mechs, a map, a victory mode
- * and a seed. Pure data, kept in localStorage between visits.
+ * and a seed. Pure data; New Battle starts from `emptyLoadout`.
  */
 import {
   catalogMechs,
@@ -30,8 +30,10 @@ export interface Slot {
 
 export interface Loadout {
   sides: [Slot[], Slot[]];
-  map: string;
-  mode: VictoryMode;
+  /** Null: not chosen yet (blocks launch). */
+  map: string | null;
+  /** Null: not chosen yet (blocks launch). */
+  mode: VictoryMode | null;
   seed: number;
 }
 
@@ -42,6 +44,7 @@ export const PILOT_HIT_MAX = 8;
 export const TURN_LIMIT_DEFAULT = 10;
 export const TURN_LIMIT_MIN = 3;
 export const TURN_LIMIT_MAX = 30;
+export const SEED_MAX = 0x7fffffff;
 
 /** 1–12 letters, digits, `-` or `_`. */
 export const ID_PATTERN = /^[A-Za-z0-9_-]{1,12}$/;
@@ -73,9 +76,10 @@ export function idProblem(
 }
 
 /** Why the loadout cannot launch yet, or null when it can. */
-export function loadoutProblem(
-  l: Loadout,
-): { key: "err.emptySide" | "err.emptySlot" | "err.idTaken"; vars: Record<string, string> } | null {
+export function loadoutProblem(l: Loadout): {
+  key: "err.emptySide" | "err.emptySlot" | "err.idTaken" | "err.noMap" | "err.noMode";
+  vars: Record<string, string>;
+} | null {
   for (const side of [0, 1] as const) {
     if (l.sides[side].length === 0)
       return { key: "err.emptySide", vars: { side: String(side + 1) } };
@@ -87,6 +91,8 @@ export function loadoutProblem(
     if (seen.has(s.id.toLowerCase())) return { key: "err.idTaken", vars: { id: s.id } };
     seen.add(s.id.toLowerCase());
   }
+  if (l.map === null) return { key: "err.noMap", vars: {} };
+  if (l.mode === null) return { key: "err.noMode", vars: {} };
   return null;
 }
 
@@ -102,16 +108,14 @@ export function newSlot(model: string | null, persona: PersonaKey | null, id: st
   };
 }
 
-export function defaultLoadout(): Loadout {
-  return {
-    sides: [
-      [newSlot("HBK-4G", null, "A1"), newSlot("CN9-YLW2", "alpha", "A2")],
-      [newSlot("GRF-1N", "longtom", "B1"), newSlot("ENF-4R", "gladiator", "B2")],
-    ],
-    map: "quickstart",
-    mode: { kind: "destroyAll" },
-    seed: 42,
-  };
+/** A fresh random seed for a new match. */
+export function newSeed(): number {
+  return Math.floor(Math.random() * SEED_MAX);
+}
+
+/** New Battle from the title: no units, no map, no engagement, a fresh seed. */
+export function emptyLoadout(): Loadout {
+  return { sides: [[], []], map: null, mode: null, seed: newSeed() };
 }
 
 /** The resolved sheet of a catalog model (decoded and registered on first use). */
@@ -179,6 +183,29 @@ function pick<T>(rng: Rng, list: readonly T[]): T {
   return list[n % list.length]!;
 }
 
+/**
+ * [+]: a slot with the next free id, default skills and policy, and a random
+ * persona. Its 'Mech is any MUL-BV 'Mech while the opponent side is empty,
+ * else one within 90–110% of the opponent's average BV (the closest BV when
+ * none is in that band).
+ */
+export function addedSlot(rng: Rng, l: Loadout, side: 0 | 1): Slot | null {
+  const pool = catalogMechs().filter((m) => m.bv > 0);
+  if (pool.length === 0) return null;
+  const foes = l.sides[1 - side]!.filter((s) => s.model !== null);
+  let models = pool.map((m) => m.model);
+  if (foes.length > 0) {
+    const avg = sideBv(foes) / foes.length;
+    const band = pool.filter((m) => m.bv >= avg * 0.9 && m.bv <= avg * 1.1);
+    if (band.length > 0) models = band.map((m) => m.model);
+    else {
+      const gap = Math.min(...pool.map((m) => Math.abs(m.bv - avg)));
+      models = pool.filter((m) => Math.abs(m.bv - avg) === gap).map((m) => m.model);
+    }
+  }
+  return newSlot(pick(rng, models), pick(rng, PERSONA_KEYS), freeId(l, side));
+}
+
 export interface GenerateOptions {
   count: number;
   /** BV target for the whole side; 0 picks freely. */
@@ -220,10 +247,7 @@ export function generateSide(rng: Rng, o: GenerateOptions): Slot[] {
 export function randomLoadout(seed: number, maps: readonly string[]): Loadout {
   const rng = createRng((seed ^ 0x1a5eed) >>> 0);
   const count = 2 + (rng.d6() % 3);
-  const a = generateSide(rng, { count, bvTarget: 0, classes: [], personas: "none" });
-  a.slice(1).forEach((s) => {
-    s.persona = pick(rng, PERSONA_KEYS);
-  });
+  const a = generateSide(rng, { count, bvTarget: 0, classes: [], personas: "random" });
   const b = generateSide(rng, {
     count,
     bvTarget: sideBv(a),
@@ -232,38 +256,4 @@ export function randomLoadout(seed: number, maps: readonly string[]): Loadout {
     side: 1,
   });
   return { sides: [a, b], map: pick(rng, maps), mode: { kind: "destroyAll" }, seed };
-}
-
-const STORAGE_KEY = "bt10x.instant.loadout";
-
-export function saveLoadout(l: Loadout): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(l));
-  } catch {
-    // storage unavailable: the loadout just won't survive a reload
-  }
-}
-
-export function loadLoadout(): Loadout | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw === null) return null;
-    const l = JSON.parse(raw) as Loadout;
-    const known = new Set(catalogMechs().map((m) => m.model));
-    if (!Array.isArray(l.sides) || l.sides.length !== 2) return null;
-    for (const side of l.sides) {
-      if (!Array.isArray(side) || side.length > MAX_SLOTS) return null;
-      for (const s of side) if (s.model !== null && !known.has(s.model)) return null;
-    }
-    // Loadouts saved before ids were editable: give each slot its default id.
-    l.sides.forEach((side, si) => {
-      side.forEach((s, i) => {
-        if (typeof s.id !== "string" || !ID_PATTERN.test(s.id)) s.id = slotId(si as 0 | 1, i);
-        s.pilotHitMax = Math.max(PILOT_HIT_MIN, Math.min(PILOT_HIT_MAX, s.pilotHitMax));
-      });
-    });
-    return l;
-  } catch {
-    return null;
-  }
 }

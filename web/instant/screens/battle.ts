@@ -14,9 +14,9 @@ import {
 } from "btlib10x";
 import type { MoveChoice } from "../battle/controller";
 import { tallies } from "../battle/victory";
-import { battleBanners, pumpAi, stopAi } from "../flow";
+import { battleBanners, holdAi, pumpAi, stopAi } from "../flow";
 import { locName, t } from "../i18n";
-import { type AttackRow, app, kitModal, rerender } from "../state";
+import { AI_PACES, type AttackRow, app, kitModal, rerender, setAiPace } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
 import {
@@ -553,7 +553,7 @@ export function battleScreen(): TuiNode {
           "Esc",
           "key.menu",
           () => {
-            app.modal = { kind: "battleMenu", cursor: 0 };
+            openMenu();
             rerender();
           },
         ],
@@ -716,6 +716,17 @@ function openFacingMenu(here: RevealedLanding[], ev: MouseEvent): void {
 
 const MENU = ["menu.resume", "menu.pace", "menu.withdraw"];
 
+/** Open the battle menu; persona play holds until it closes (`closeMenu`). */
+function openMenu(cursor = 0): void {
+  app.modal = { kind: "battleMenu", cursor };
+  holdAi(true);
+}
+
+function closeMenu(): void {
+  app.modal = null;
+  holdAi(false);
+}
+
 function battleModal(): TuiNode | null {
   const m = app.modal!;
   if (m.kind === "battleMenu") {
@@ -742,12 +753,12 @@ function battleModal(): TuiNode | null {
 
 function runMenu(i: number): void {
   const k = MENU[i];
-  app.modal = null;
   if (k === "menu.pace") {
-    const paces = ["instant", "step", "timed"] as const;
-    app.aiPace = paces[(paces.indexOf(app.aiPace) + 1) % 3]!;
+    setAiPace(AI_PACES[(AI_PACES.indexOf(app.aiPace) + 1) % AI_PACES.length]!);
     app.modal = { kind: "battleMenu", cursor: i };
   } else if (k === "menu.withdraw") {
+    // The menu closes but play stays on hold until the confirm is answered.
+    app.modal = null;
     kitModal.open = true;
     void kit()
       .dialog({
@@ -763,10 +774,10 @@ function runMenu(i: number): void {
           stopAi();
           app.battle = null;
           app.screen = "setup";
-        }
+        } else holdAi(false);
         rerender();
       });
-  }
+  } else closeMenu();
   rerender();
 }
 
@@ -780,7 +791,7 @@ export function battleKey(e: KeyboardEvent): boolean {
       if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % MENU.length;
       else if (e.key === "ArrowUp") m.cursor = (m.cursor + MENU.length - 1) % MENU.length;
       else if (e.key === "Enter") runMenu(m.cursor);
-      else if (e.key === "Escape") app.modal = null;
+      else if (e.key === "Escape") closeMenu();
       else return false;
       return true;
     }
@@ -793,7 +804,7 @@ export function battleKey(e: KeyboardEvent): boolean {
     app.modal = null;
     return true;
   }
-  if (e.key === "Escape") app.modal = { kind: "battleMenu", cursor: 0 };
+  if (e.key === "Escape") openMenu();
   // [ and ] open and close the left and right record sheets; on a gamepad
   // these will be the left and right shoulder buttons.
   else if (e.key === "[") toggleSheet(0);

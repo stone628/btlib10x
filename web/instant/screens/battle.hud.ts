@@ -79,8 +79,9 @@ function queueLine(): TuiNode {
 }
 
 /**
- * After a render: scroll the Action Order to the current actor when the actor
- * changes, and let the plain wheel scroll it sideways.
+ * After a render: centre the current actor in the Action Order whenever the
+ * order changes (as far as the scroll range allows), and let the plain wheel
+ * scroll it sideways.
  */
 export function queueAfterRender(): void {
   const box = document.querySelector<HTMLElement>("#app .ia-queue");
@@ -92,15 +93,16 @@ export function queueAfterRender(): void {
     body.scrollLeft += e.deltaX + e.deltaY;
   };
   const ui = app.battleUi;
-  const b = app.battle!;
-  if (ui.queueFor === b.actorId) return;
-  ui.queueFor = b.actorId;
+  const order = queueEntries()
+    .map((e) => `${e.unit.id}:${e.state}`)
+    .join(" ");
+  if (ui.queueFor === order) return;
+  ui.queueFor = order;
   const cur = body.querySelector<HTMLElement>(".ia-q-current");
   if (!cur) return;
   const left = cur.offsetLeft - body.offsetLeft;
-  const right = left + cur.offsetWidth;
-  if (left < body.scrollLeft) body.scrollLeft = left;
-  else if (right > body.scrollLeft + body.clientWidth) body.scrollLeft = right - body.clientWidth;
+  const max = body.scrollWidth - body.clientWidth;
+  body.scrollLeft = Math.max(0, Math.min(max, left + (cur.offsetWidth - body.clientWidth) / 2));
 }
 
 // ------------------------------------------------------------ sheet drawers
