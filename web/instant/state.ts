@@ -60,7 +60,9 @@ export type Modal =
       apply: (p: UnitPolicy) => void;
     }
   | { kind: "battleMenu"; cursor: number }
-  | { kind: "message"; title: string; text: string };
+  | { kind: "message"; title: string; text: string }
+  /** The debrief's after-action report, as copied to the clipboard. */
+  | { kind: "aar"; text: string };
 
 /** One row of the attack panel: a weapon, a physical attack, a club action. */
 export type AttackRow =
@@ -123,6 +125,8 @@ export interface App {
   loadout: Loadout;
   /** Debrief tab. */
   tab: number;
+  /** Debrief unit cursor (Units and Fires tabs), in roster order. */
+  debriefUnit: number;
   cursors: { title: number };
   modal: Modal | null;
   deploy: DeployState | null;
@@ -142,6 +146,7 @@ export const app: App = {
   screen: "loading",
   loadout: { sides: [[], []], map: "quickstart", mode: { kind: "destroyAll" }, seed: 42 },
   tab: 0,
+  debriefUnit: 0,
   cursors: { title: 0 },
   modal: null,
   deploy: null,

@@ -25,8 +25,13 @@ export interface SideTally {
   readonly score: number;
 }
 
+/** What settled the result: a side left alone in play, Attrition's damage
+ *  total, its BV score tiebreak, or a tie on both. */
+export type DecidedBy = "elimination" | "damage" | "score" | "tie";
+
 export interface BattleResult {
   readonly winnerTeam: number | null;
+  readonly decidedBy: DecidedBy;
   readonly turn: number;
   readonly sides: readonly SideTally[];
 }
@@ -96,11 +101,13 @@ export function battleResult(
   const alive = teamsAlive(state);
   const turn = mode.kind === "damageRace" ? Math.min(state.turn, mode.turns) : state.turn;
   if (alive.size <= 1) {
-    return { winnerTeam: alive.size === 1 ? [...alive][0]! : null, turn, sides };
+    const winnerTeam = alive.size === 1 ? [...alive][0]! : null;
+    return { winnerTeam, decidedBy: "elimination", turn, sides };
   }
   const [a, b] = sides as [SideTally, SideTally];
-  let winnerTeam: number | null = null;
-  if (a.dealt !== b.dealt) winnerTeam = a.dealt > b.dealt ? a.team : b.team;
-  else if (a.score !== b.score) winnerTeam = a.score > b.score ? a.team : b.team;
-  return { winnerTeam, turn, sides };
+  if (a.dealt !== b.dealt)
+    return { winnerTeam: a.dealt > b.dealt ? a.team : b.team, decidedBy: "damage", turn, sides };
+  if (a.score !== b.score)
+    return { winnerTeam: a.score > b.score ? a.team : b.team, decidedBy: "score", turn, sides };
+  return { winnerTeam: null, decidedBy: "tie", turn, sides };
 }

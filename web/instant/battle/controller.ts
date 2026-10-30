@@ -77,6 +77,7 @@ import { decide, newPersonaContext, type PersonaContext } from "../ai/persona";
 import type { PersonaKey } from "../ai/persona.data";
 import { t } from "../i18n";
 import { createRng } from "../rng";
+import { type Chronicle, digest, newChronicle } from "./chronicle";
 import { formatEvents, type LogEntry } from "./log";
 import {
   type BattleResult,
@@ -142,6 +143,9 @@ export class BattleController {
   move: MoveDraft | null = null;
   attack: AttackDraft | null = null;
   readonly log: LogEntry[] = [];
+  /** Fire statistics and key moments for the debrief. */
+  chronicle: Chronicle;
+  readonly mapName: string;
   result: BattleResult | null = null;
   /** Log a one-line summary of each persona decision. */
   reasoning = false;
@@ -160,6 +164,8 @@ export class BattleController {
     this.control = control;
     this.mode = mode;
     this.totals = startTotals(this.state);
+    this.chronicle = newChronicle(this.state);
+    this.mapName = map.name;
     this.drive();
   }
 
@@ -185,6 +191,7 @@ export class BattleController {
     const r = gameLoop(this.state, this.rng, makeStopper(this.mode), events);
     stopped = r.stopped;
     this.log.push(...formatEvents(events, this.state));
+    digest(this.chronicle, events, this.state);
     this.move = null;
     this.attack = null;
     if (stopped) {
@@ -227,17 +234,20 @@ export class BattleController {
     const battle = structuredClone(this.state);
     const rng = this.rng.snapshot();
     const logLength = this.log.length;
+    const chronicle = structuredClone(this.chronicle);
     const move = structuredClone(this.move);
     const attack = structuredClone(this.attack);
     try {
       const sink: GameEvent[] = [];
       fn(sink);
       this.log.push(...formatEvents(sink, this.state));
+      digest(this.chronicle, sink, this.state);
       this.drive();
     } catch (e) {
       this.state = battle;
       this.rng.load(rng);
       this.log.length = logLength;
+      this.chronicle = chronicle;
       this.move = move;
       this.attack = attack;
       throw e;

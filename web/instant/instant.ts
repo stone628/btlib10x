@@ -18,7 +18,7 @@ import {
 import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
 import { queueAfterRender } from "./screens/battle.hud";
 import { h, kit, row } from "./screens/common";
-import { debriefKey, debriefScreen } from "./screens/debrief";
+import { debriefKey, debriefOverlays, debriefScreen } from "./screens/debrief";
 import { deployAfterRender, deployKey, deployOverlays, deployScreen } from "./screens/deploy";
 import { setupAfterRender, setupKey, setupMapPreview, setupScreen } from "./screens/setup";
 import { titleAfterRender, titleScreen } from "./screens/title";
@@ -77,6 +77,7 @@ function afterRender(): void {
     queueAfterRender();
   } else if (app.screen === "deploy") deployOverlays();
   else if (app.screen === "setup") setupMapPreview();
+  else if (app.screen === "debrief") debriefOverlays();
   view.render();
 }
 

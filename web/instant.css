@@ -341,6 +341,11 @@
   overflow-y: auto;
   overflow-x: hidden;
 }
+/* debrief tab body: scrolls when a tab is taller than its rows */
+.ia-scroll {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
 
 .ia-hint[data-click] {
   cursor: pointer;

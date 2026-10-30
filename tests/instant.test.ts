@@ -146,6 +146,54 @@ describe("Instant Action victory modes", () => {
   });
 });
 
+describe("Instant Action debrief record", () => {
+  it("keeps fire statistics, damage per turn and key moments, not the events", () => {
+    const b = battle({ kind: "destroyAll" }, ALL_AI);
+    runAi(b);
+    const c = b.chronicle;
+    expect(b.result!.decidedBy).toBe("elimination");
+    for (const rec of Object.values(c.units)) {
+      expect(rec.hits).toBeLessThanOrEqual(rec.shots);
+      expect(rec.weapons.reduce((n, w) => n + w.shots, 0)).toBe(rec.shots);
+      expect(rec.weapons.reduce((n, w) => n + w.hits, 0)).toBe(rec.hits);
+    }
+    // Damage per turn adds up to what each side's hits dealt.
+    for (const team of [1, 2]) {
+      const units = Object.values(b.state.units).filter((u) => u.team === team);
+      const dealt = units.reduce((n, u) => n + c.units[u.id]!.dealt, 0);
+      expect(c.perTurn[team]!.reduce((n, d) => n + d, 0)).toBe(dealt);
+      expect(c.perTurn[team]!.length).toBeLessThanOrEqual(b.state.turn);
+    }
+    // Every unit out of play has a removal moment; kills go to enemies.
+    const removed = Object.values(b.state.units).filter((u) => u.removed !== "not");
+    expect(removed.length).toBeGreaterThan(0);
+    for (const u of removed) {
+      expect(c.moments.some((m) => m.kind === "removed" && m.unitId === u.id)).toBe(true);
+    }
+    for (const [id, rec] of Object.entries(c.units)) {
+      for (const k of rec.kills) expect(b.state.units[k]!.team).not.toBe(b.state.units[id]!.team);
+    }
+    const first = c.moments.findIndex((m) => m.kind === "firstBlood");
+    expect(first).toBeGreaterThanOrEqual(0);
+    expect(c.moments.filter((m) => m.kind === "firstBlood")).toHaveLength(1);
+    // Moments come in turn order.
+    const turns = c.moments.map((m) => m.turn);
+    expect(turns).toEqual([...turns].sort((x, y) => x - y));
+  });
+
+  it("names what settled an Attrition result", () => {
+    const b = battle({ kind: "damageRace", turns: 2 }, ALL_AI);
+    runAi(b);
+    const r = b.result!;
+    const [s1, s2] = r.sides;
+    if (r.decidedBy === "damage") expect(s1!.dealt).not.toBe(s2!.dealt);
+    else if (r.decidedBy === "score") {
+      expect(s1!.dealt).toBe(s2!.dealt);
+      expect(s1!.score).not.toBe(s2!.score);
+    } else if (r.decidedBy === "tie") expect(r.winnerTeam).toBeNull();
+  });
+});
+
 describe("Instant Action battle controller", () => {
   it("plays a player prompt through menu actions and lets the AI answer", () => {
     const b = battle(
@@ -184,9 +232,11 @@ describe("Instant Action battle controller", () => {
       path: Array(9).fill(step),
     });
     const before = structuredClone(b.state);
+    const chronicle = structuredClone(b.chronicle);
     const rng = b.rng.snapshot();
     expect(() => b.commitMove()).toThrow();
     expect(b.state).toEqual(before);
+    expect(b.chronicle).toEqual(chronicle);
     expect(b.rng.snapshot()).toBe(rng);
     expect(b.actorId).toBe(actor);
   });

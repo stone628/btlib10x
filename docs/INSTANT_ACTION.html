@@ -153,6 +153,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
     draft.ts          per-activation draft: mode, chosen landing, twist, checked weapons, physicals
     deploy.ts         TW p. 256 home edges and entry hexes (§10.1)
     victory.ts        Annihilation + Attrition stoppers and the debrief tally (§10.2)
+    chronicle.ts      debrief record: fire statistics, damage per turn, key moments
     undo.ts           snapshot stack
   ai/                 copied persona player; decide() → Action[]
   log/                GameEvent → log entries (spans)
@@ -610,40 +611,50 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 ├─ Settings…               AI pace, reasoning level, language
 └─ Withdraw           F9   end the battle and return to Setup (confirm)</code></pre>
 
-<h3>8.8 Debrief (screen 4)</h3>
-<pre class="screen"><code>╔═ Debrief · Side 1 wins · Annihilation · turn 7 ══════════════════════════════════════════════════╗
-║ [ Result ]  Units   Salvage   Log                                                                ║
-╟──────────────────────────────────────────────────────────────────────────────────────────────────╢
+<h3>8.8 Battle Debrief (screen 4)</h3>
+<pre class="screen"><code>╔═ Battle Debrief ═════════════════════════════════════════════════════════════════════════════════╗
 ║                                                                                                  ║
-║ Side   Damage dealt   Damage taken   Units lost   BV score (TW p. 257)                           ║
-║ ────────────────────────────────────────────────────────────────────────                         ║
-║  1          212              96        0 of 3          3 801                                     ║
-║  2           96             212        3 of 3          1 041                                     ║
+║                                 ═══════  SIDE 1 VICTORY  ═══════                                 ║
+║                             Annihilation · quickstart · ended turn 8                             ║
+║                                every Side 2 unit is out of action                                ║
+║                                                                                                  ║
+║         SIDE 1  1/3 lost · 412 dmg · BV +5,576      SIDE 2  3/3 lost · 187 dmg · BV +620         ║
+║ ──────────────────────────────────────────────────────────────────────────────────────────────── ║
+║              [ Result ]    Units      Fires     Timeline     Salvage     Map     Log              ║
+║ ──────────────────────────────────────────────────────────────────────────────────────────────── ║
+║                                                                                                  ║
+║   WHY SIDE 1 WON                                                                                 ║
+║    Side 2 has no unit left in play.                                                              ║
+║    Last out: B2 GRF-1N, hull, ejected, turn 8.                                                   ║
+║                                                                                                  ║
+║   MVP  ⦗A2 WHM-6R Warhammer⦘  2 kills · 168 damage dealt · 61% hits                              ║
+║                                                                                                  ║
+║   BV SCORE (TW p.257)  each side scores 2 × the value it took from the enemy − the value it lost ║
+║    S1 = 2 × (B1 1,840×1.00 + B2 1,272×1.00 + B3 812×1.00)                                        ║
+║         − (A1 1,903×1.00 + A2 1,361×0.21 + A3 1,041×0.08)                                        ║
+║         = 2 × 3,924 − 2,272                                             = +5,576                 ║
+║    S2 = 2 × (A1 1,903×1.00 + A2 1,361×0.21 + A3 1,041×0.08)                                      ║
+║         − (B1 1,840×1.00 + B2 1,272×1.00 + B3 812×1.00)                                          ║
+║         = 2 × 2,272 − 3,924                                             = +620                   ║
+║    lost share: 1.00 out of play · 0.50 crippled · otherwise half the damage taken                ║
 ║                                                                                                  ║
 ║                                                                                                  ║
-║ A1 HBK-4G    damaged     CT 4/26, RA gone         B1 GRF-1N   destroyed  wreckage (07,09)        ║
-║ A2 CN9-YLW2  intact                               B2 ENF-4R   hull       pilot ejected           ║
-║ A3 GRF-1N    damaged     LT armor 3/18            B3 HER-5SA  destroyed  head lost               ║
 ║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║                                                                                                  ║
-║ [ Rematch  R ]   [ Setup  Enter ]   [ Title  Esc ]                                               ║
 ║                                                                                                  ║
 ║                                                                                                  ║
 ╚══════════════════════════════════════════════════════════════════════════════════════════════════╝
- R Rematch  Enter Setup  Ctrl+Z Back to last prompt  Esc Title  F1 Help                             </code></pre>
-<p>Numbers are illustrative. Damage dealt and taken come from §10.2; BV score from <code>scoreReport</code>; Salvage from <code>salvageReport</code> (hulls, wreckage, salvageable equipment per unit).</p>
+ Tab Tab  ↑↓ Pick unit  C Copy AAR  R Rematch  Enter Setup  Esc Title                               </code></pre>
+<p>Numbers are illustrative. The letterhead (verdict, mode, map, the turn it ended, why, and one line per side: units lost, damage dealt from §10.2, BV score from <code>scoreReport</code>) stays above the tabs; the tab body under it is 20 rows and scrolls (wheel, <kbd>PgUp</kbd> <kbd>PgDn</kbd>) when a tab is taller.</p>
+<ul>
+<li><strong>Result</strong>: why the side won (last unit out, Attrition damage, BV tiebreak or a tie), the MVP (most kills, then damage, then hit rate, on the winning side) and the BV score worked out per unit.</li>
+<li><strong>Units</strong>: the roster (removed units carry a DESTROYED or HULL chip; units still in play carry none) and a card for the picked unit (<kbd>↑</kbd> <kbd>↓</kbd> or a click): pilot, skills, BV and lost share, kills and assists from the engine's kill credit, damage dealt and taken, peak heat and shutdowns, internal structure, then armor, then rear armor per location, and critical hits.</li>
+<li><strong>Fires</strong>: shots, hits, hit %, damage dealt and taken, kills, peak heat and ammo spent per unit, and the picked unit's weapons with their best hit.</li>
+<li><strong>Timeline</strong>: damage each side's hits dealt per turn, and the key moments: first blood, falls, heat shutdowns, ammo explosions, pilots knocked out, units out of play and who got the kill.</li>
+<li><strong>Salvage</strong>: per wreck or hull, the intact weapons, ammo and equipment from <code>salvageReport</code>.</li>
+<li><strong>Map</strong>: the board as the battle ended: banners for units still on it, hulls, wreckage and clubs (drag to rotate, wheel to zoom).</li>
+<li><strong>Log</strong>: the battle log.</li>
+</ul>
+<p><kbd>C</kbd> copies a plain-text after-action report (result, why, MVP, forces, casualties, headline moments, fires, salvage) and shows it in a window. The fire statistics, damage per turn and key moments are folded from each batch of game events as the battle runs (<code>battle/chronicle.ts</code>); the events themselves are not kept.</p>
 
 </section>
 
@@ -660,7 +671,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td>Movement</td><td><kbd>W</kbd> walk · <kbd>R</kbd> run · <kbd>J</kbd> jump · <kbd>S</kbd> stand still · <kbd>M</kbd> more · <kbd>D</kbd> done · <kbd>Esc</kbd> clear · mouse: click a facing triangle of a landing hex (banner click: facing popup)</td></tr>
 <tr><td>Attack</td><td><kbd>Tab</kbd> target · <kbd>T</kbd> twist · <kbd>Space</kbd> / <kbd>1</kbd>&ndash;<kbd>9</kbd> toggle weapon · <kbd>A</kbd> all · <kbd>N</kbd> none · <kbd>X</kbd> physical · <kbd>D</kbd> done · <kbd>Esc</kbd> clear</td></tr>
 <tr><td>Any battle phase</td><td><kbd>I</kbd> sheet · <kbd>H</kbd> heat · <kbd>O</kbd> policies · <kbd>L</kbd> focus log · <kbd>Ctrl+Z</kbd> undo · <kbd>Space</kbd> next AI activation (Step pace) · <kbd>F2</kbd> menu · <kbd>F9</kbd> withdraw</td></tr>
-<tr><td>Debrief</td><td><kbd>R</kbd> rematch · <kbd>Enter</kbd> setup · <kbd>Ctrl+Z</kbd> back to last prompt · <kbd>Esc</kbd> title</td></tr>
+<tr><td>Debrief</td><td><kbd>Tab</kbd> / <kbd>Shift+Tab</kbd> tab · <kbd>↑</kbd> <kbd>↓</kbd> unit · <kbd>PgUp</kbd> <kbd>PgDn</kbd> scroll · <kbd>C</kbd> copy the after-action report · <kbd>R</kbd> rematch · <kbd>Enter</kbd> setup · <kbd>Esc</kbd> title</td></tr>
 </table></div>
 <p>The keymap is data in <code>keys.ts</code> (screen &rarr; key &rarr; action id + i18n label); the status bar and the <kbd>F1</kbd> window are generated from it.</p>
 
@@ -706,7 +717,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <tr><td><code>ia-facing-popup</code></td><td><code>TUI.popupMenu</code> at the click point</td><td>facings with MP / heat</td></tr>
 <tr><td><code>ia-log</code></td><td>scroll + span lines</td><td>entries (append only)</td></tr>
 <tr><td><code>ia-sheet</code>, <code>ia-heat</code>, <code>ia-tables</code>, <code>ia-trace</code></td><td>window + table / lines</td><td>unit or table id</td></tr>
-<tr><td><code>ia-debrief</code></td><td>tabs(table, units, salvage, ia-log)</td><td>result, tallies, salvage</td></tr>
+<tr><td><code>ia-debrief</code></td><td>letterhead over tabs(result, units, fires, timeline, salvage, raw map, ia-log) in a scrolling body</td><td>result, tallies, chronicle, salvage</td></tr>
 <tr><td><code>ia-help</code></td><td>dialog + table</td><td>current keymap</td></tr>
 </table></div>
 

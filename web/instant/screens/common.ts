@@ -84,16 +84,20 @@ export function modal(props: TuiProps, ...children: TuiChild[]): TuiNode {
   );
 }
 
-/** A row of tab labels; the active one is bracketed, each label is clickable. */
+/**
+ * A row of tab labels; the active one is bracketed, each label is clickable.
+ * `center` centres the row.
+ */
 export function tabBar(
   labels: readonly string[],
   active: number,
   pick: (i: number) => void,
+  center = false,
 ): TuiNode {
   const H = h();
   return H.el(
     "div",
-    { class: "ia-row ia-bright", key: "tabs" },
+    { class: `ia-row ia-bright${center ? " ia-center" : ""}`, key: "tabs" },
     ...labels.map((label, i) =>
       H.el(
         "span",

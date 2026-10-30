@@ -256,14 +256,19 @@ export function beginBattle(): void {
   app.modal = null;
   const view = ensureMapView();
   const battle = app.battle;
-  view.setMap({
+  view.setMap(battleMapSource(battle));
+  view.reset();
+  pumpAi();
+}
+
+/** The live battle board, as the map view draws it. */
+export function battleMapSource(battle: BattleController): MapSource {
+  return {
     width: battle.state.width,
     height: battle.state.height,
     terrainAt: (hex) => cellAt(app.battle!.state, hex).terrain,
     levelAt: (hex) => cellAt(app.battle!.state, hex).level,
-  });
-  view.reset();
-  pumpAi();
+  };
 }
 
 export function rematch(): void {
@@ -340,6 +345,7 @@ export function pumpAi(force = false): void {
   if (b.result !== null) {
     app.screen = "debrief";
     app.tab = 0;
+    app.debriefUnit = 0;
     rerender();
     return;
   }
