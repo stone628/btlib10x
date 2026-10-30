@@ -1,5 +1,5 @@
 /**
- * Engagement modes (plan §10.2). The engine never decides the winner: both
+ * Engagement modes (docs/INSTANT.md "Victory"). The engine never decides the winner: both
  * modes are stoppers handed to `gameLoop`, and the tallies are read from unit
  * state.
  *

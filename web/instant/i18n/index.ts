@@ -1,5 +1,5 @@
 /**
- * Instant Action's own catalog (plan §13): `en` is canonical, `ko` is
+ * Instant Action's own catalog (docs/INSTANT.md "i18n"): `en` is canonical, `ko` is
  * compile-checked against it, `kr` is accepted as an alias of `ko`. Locale
  * precedence follows the site: `?lang=`, then localStorage `bt10x.lang`,
  * then English.

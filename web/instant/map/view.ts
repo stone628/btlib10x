@@ -1,5 +1,5 @@
 /**
- * Vector hex map (plan §6), ported from the map viewer's vector renderer
+ * Vector hex map, ported from the map viewer's vector renderer
  * (`map_viewer_vector.html`, generated from `ref/mapviewer/`): flat-top hex
  * prisms on the btlib10x odd-q offset grid, free rotation, view tilt and
  * elevation to scale (a level is 6 m on a 30 m hex, TW pp. 36, 167). Faces are
@@ -83,7 +83,6 @@ const TILT_STEP = 5;
 /** North indicator: radius and gap to the canvas's top-right corner, CSS px. */
 const HUD_R = 16;
 const HUD_PAD = 6;
-
 
 /** Banner metrics (CSS px) at a map font size: font, line height, box height, pole.
  *  The sign's text keeps one size whatever the zoom; only the pole grows with the hexes. */
@@ -1061,7 +1060,7 @@ export class MapView {
     }
   }
 
-  /** Units as upright signs on a pole, back to front (plan §6, starter design). */
+  /** Units as upright signs on a pole, back to front (starter design). */
   private drawBanners(v: ReturnType<MapView["view"]>): void {
     if (!this.src) return;
     const ctx = this.ctx;

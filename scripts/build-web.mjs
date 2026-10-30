@@ -44,7 +44,7 @@ const appCtx = await esbuild.context({
   logLevel: "info",
 });
 
-// Instant Action (docs/INSTANT_ACTION.html): engine kept external like the terminal.
+// Instant Action (docs/INSTANT.md): engine kept external like the terminal.
 const instantCtx = await esbuild.context({
   entryPoints: ["web/instant/instant.ts"],
   outfile: "web/instant.js",

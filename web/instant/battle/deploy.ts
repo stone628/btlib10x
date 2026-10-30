@@ -1,5 +1,5 @@
 /**
- * Starting positions (TW p. 256, plan §10.1): both sides roll 2D6, the higher
+ * Starting positions (TW p. 256, docs/INSTANT.md "Deployment"): both sides roll 2D6, the higher
  * result chooses a home map edge and the other side gets the opposite one.
  * Units enter along their home edge. The engine has no off-map units, so each
  * unit is placed on a home-edge hex before turn 1 and that first placement is

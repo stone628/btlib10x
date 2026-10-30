@@ -1,5 +1,5 @@
 /**
- * Battle screen frame (docs/INSTANT_ACTION.html): the border with the battle
+ * Battle screen frame: the border with the battle
  * title, the Turn / Phase / Action Order strip, the SHEET drawers on both
  * edges, the LOGS drawer and the DONE button. Everything is placed on the
  * 100×32 cell grid over the full-body map.

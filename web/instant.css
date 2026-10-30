@@ -1,7 +1,7 @@
-/* Instant Action (docs/INSTANT_ACTION.html). Loaded after bt10x.css (site fonts,
+/* Instant Action (docs/INSTANT.md). Loaded after bt10x.css (site fonts,
    palette, #legal, .link-button, #lang) and tui.css. The app is a fixed 100×32
    cell screen at the player's font size (header A− / A+ / Fit), centred
-   between the header and the footer (plan §8.0). */
+   between the header and the footer. */
 
 :root {
   /* header height, as on the terminal page; taller on touch screens */
@@ -378,7 +378,7 @@
   width: calc(var(--cols, 20) * var(--cw));
 }
 
-/* Battle screen (docs/INSTANT_ACTION.html): a full-body map with the frame,
+/* Battle screen: a full-body map with the frame,
    header strip, drawers and orders placed on the cell grid over it. */
 .ia-at {
   position: absolute;

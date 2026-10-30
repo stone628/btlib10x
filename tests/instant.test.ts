@@ -1,5 +1,5 @@
 /**
- * Instant Action (docs/INSTANT_ACTION.html): the DOM-free parts — deployment
+ * Instant Action (docs/INSTANT.md): the DOM-free parts — deployment
  * (TW p. 256), victory modes, the battle controller and persona battles.
  * Imports `web/instant/*`, which resolves `btlib10x` to `dist/`.
  */
@@ -342,7 +342,7 @@ describe("Instant Action setup", () => {
 });
 
 describe("Instant Action import boundary", () => {
-  // Decision (plan §2): the app depends only on the engine and the TUI kit.
+  // Boundary (docs/INSTANT.md "Architecture"): the app depends only on the engine and the TUI kit.
   it("never imports the terminal app", () => {
     const root = new URL("../web/instant/", import.meta.url).pathname;
     const files = (readdirSync(root, { recursive: true }) as string[]).filter((f) =>

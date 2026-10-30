@@ -1,5 +1,5 @@
 /**
- * The battle screen's record sheet (22×21 cells, docs/INSTANT_ACTION.html):
+ * The battle screen's record sheet (22×21 cells):
  * unit and pilot status chips, policy code, crit pips, the armor grid and
  * heat. Every tooltip opens at one point beside the pilot chip (sheetTip).
  */

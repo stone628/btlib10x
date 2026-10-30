@@ -1,5 +1,5 @@
 /**
- * bt10x Instant Action (docs/INSTANT_ACTION.html): boot, the root prefab,
+ * bt10x Instant Action (docs/INSTANT.md): boot, the root prefab,
  * the screen router and the global keymap. Depends only on the engine
  * (`btlib10x`) and the TUI kit (`window.TUI`).
  */

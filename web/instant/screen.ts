@@ -1,5 +1,5 @@
 /**
- * The fixed 100×32 cell screen (plan §8.0) at the player's font size: whole px
+ * The fixed 100×32 cell screen at the player's font size: whole px
  * in [MIN_FS, MAX_FS], changed only by the header's A− / A+ / Fit and kept in
  * localStorage. A window resize never changes it; CSS centres the screen and
  * clips or scrolls what doesn't fit. A first visit starts at the Fit size.
