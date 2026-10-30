@@ -82,9 +82,7 @@ export type Modal =
     }
   | { kind: "battleMenu"; cursor: number }
   | { kind: "debriefMenu"; cursor: number }
-  | { kind: "message"; title: string; text: string }
-  /** The debrief's after-action report, as copied to the clipboard. */
-  | { kind: "aar"; text: string };
+  | { kind: "message"; title: string; text: string };
 
 /** One row of the attack panel: a weapon, a physical attack, a club action. */
 export type AttackRow =

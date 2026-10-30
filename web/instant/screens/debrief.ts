@@ -61,8 +61,6 @@ const LOG_TAB = 6;
 const W = 96;
 /** Rows of the tab body under the letterhead and tab bar. */
 const BODY_ROWS = 20;
-/** Report rows the AAR window shows before it scrolls. */
-const AAR_ROWS = 24;
 const LOCS: readonly Location[] = [
   "head",
   "centerTorso",
@@ -914,114 +912,14 @@ export function debriefOverlays(): void {
   }
 }
 
-// ------------------------------------------------------------ AAR
-
-/** The plain-text after-action report [C] copies. */
-export function aarText(b: BattleController): string {
-  const r = b.result!;
-  const verdict =
-    r.winnerTeam === null ? t("debrief.drawTitle") : t("debrief.victory", { side: r.winnerTeam });
-  const L: string[] = [
-    `${t("debrief.aar")} ${M.sep} ${modeName(b)} ${M.sep} ${b.mapName}`,
-    `${fit(t("debrief.aarResult"), 8)}${verdict} ${M.sep} ${t("debrief.ended", { turn: r.turn })} ${M.sep} BV ${r.sides.map((s) => `S${s.team} ${signed(s.score)}`).join(", ")}`,
-    `${fit(t("debrief.aarWhy"), 8)}${reasonShort(r)}`,
-  ];
-  const best = mvp(b.chronicle, units(b), r.winnerTeam);
-  if (best) {
-    const rec = b.chronicle.units[best]!;
-    const u = b.state.units[best]!;
-    L.push(
-      `${fit(t("debrief.mvp"), 8)}${u.id} ${u.model} ${M.sep} ${t("debrief.mvpLine", { k: rec.kills.length, d: rec.dealt, p: pct(rec.hits, rec.shots) })}`,
-    );
-  }
-  L.push("", t("debrief.aarForces"));
-  for (const s of r.sides) {
-    const list = units(b)
-      .filter((u) => u.team === s.team)
-      .map(
-        (u) => `${u.id} ${u.model} (${b.control[u.id] ? t("debrief.ai") : t("debrief.player")})`,
-      );
-    L.push(`  S${s.team}  ${list.join(` ${M.sep} `)}`);
-  }
-  L.push("", t("debrief.aarCasualties"));
-  for (const s of r.sides) {
-    const list = units(b)
-      .filter((u) => u.team === s.team)
-      .map((u) => {
-        const st = isUnitRemoved(u)
-          ? removalText(u)
-          : t("debrief.lostPct", { n: Math.round(unitScore(u).lost * 100) });
-        return `${u.id} ${st}`;
-      });
-    L.push(`  S${s.team}  ${list.join(` ${M.sep} `)}`);
-  }
-  // The report keeps the headline moments: first blood, ammo blasts, units out.
-  const headline = b.chronicle.moments.filter(
-    (m) => m.kind === "firstBlood" || m.kind === "ammoBoom" || m.kind === "removed",
-  );
-  if (headline.length) {
-    L.push("", t("debrief.moments").toUpperCase());
-    for (const m of headline) {
-      const text = momentKids(b, m)
-        .kids.map((k) => (typeof k === "string" ? k : (TEXT.get(k as object) ?? "")))
-        .join("");
-      L.push(`  T${m.turn}  ${text}`);
-    }
-  }
-  L.push(
-    "",
-    `${fit(t("debrief.aarFires"), 8)}${units(b)
-      .map((u) => {
-        const rec = b.chronicle.units[u.id]!;
-        return `${u.id} ${rec.hits}/${rec.shots} ${rec.dealt}`;
-      })
-      .join(` ${M.sep} `)}`,
-  );
-  const sv = salvageReport(b.state);
-  if (sv.length)
-    L.push(
-      `${fit(t("debrief.aarSalvage"), 8)}${t("debrief.svSummary", {
-        n: sv.length,
-        m: sv.reduce((n, e) => n + e.salvageable.reduce((k, x) => k + x.count, 0), 0),
-      })}`,
-    );
-  return L.join("\n");
-}
-
-function copyAar(): void {
-  const b = app.battle;
-  if (!b?.result) return;
-  const text = aarText(b);
-  void navigator.clipboard?.writeText(text).catch(() => {});
-  app.modal = { kind: "aar", text };
-}
-
-function aarModal(text: string): TuiNode {
-  const lines = text.split("\n");
-  const cols = Math.min(96, Math.max(40, ...lines.map((l) => cells(l) + 4)));
-  return modal(
-    { cols, title: t("debrief.aarCopied") },
-    h().el(
-      "div",
-      { class: "ia-scroll", key: "aar", style: { "max-height": `calc(${AAR_ROWS} * var(--ch))` } },
-      ...lines.map((l, i) =>
-        row(` ${fit(l, cols - 4)}`, { key: `a${i}`, cls: i < 4 ? "ia-bright" : "" }),
-      ),
-    ),
-    ...blank(1),
-    row(t("key.anyKey"), { cls: "ia-dim", key: "ak" }),
-  );
-}
-
 // ------------------------------------------------------------ menu
 
-/** Esc menu: the debrief's keyboard features, each with its key. */
-const MENU: readonly { label: string; key: string; run: () => void }[] = [
-  { label: "debriefMenu.close", key: "Esc", run: () => {} },
-  { label: "debriefMenu.copyAar", key: "C", run: () => copyAar() },
-  { label: "debriefMenu.rematch", key: "R", run: () => confirmRematch() },
-  { label: "debriefMenu.setup", key: "Enter", run: () => toSetup() },
-  { label: "debriefMenu.toTitle", key: "", run: () => (app.screen = "title") },
+/** Esc menu: the debrief's actions, which have no keys of their own. */
+const MENU: readonly { label: string; run: () => void }[] = [
+  { label: "debriefMenu.close", run: () => {} },
+  { label: "debriefMenu.rematch", run: () => confirmRematch() },
+  { label: "debriefMenu.setup", run: () => confirmSetup() },
+  { label: "debriefMenu.toTitle", run: () => (app.screen = "title") },
 ];
 
 function menuModal(cursor: number): TuiNode {
@@ -1029,14 +927,11 @@ function menuModal(cursor: number): TuiNode {
   return modal(
     { cols, title: t("debriefMenu.title"), footer: t("dialog.footer") },
     ...MENU.map((it, i) =>
-      row(
-        `${i === cursor ? A.cursor : " "} ${fit(t(it.label), cols - 12)}${fit(it.key, 6, "right")}`,
-        {
-          sel: i === cursor,
-          key: it.label,
-          onClick: () => runMenu(i),
-        },
-      ),
+      row(`${i === cursor ? A.cursor : " "} ${fit(t(it.label), cols - 6)}`, {
+        sel: i === cursor,
+        key: it.label,
+        onClick: () => runMenu(i),
+      }),
     ),
   );
 }
@@ -1047,26 +942,34 @@ function runMenu(i: number): void {
   rerender();
 }
 
-function toSetup(): void {
-  app.screen = "setup";
-  app.tab = 0;
+/** A Yes / No confirm (No by default) that runs `then` on Yes. */
+function confirm(title: string, text: string, then: () => void): void {
+  kitModal.open = true;
+  void kit()
+    .dialog({ title: t(title), text: t(text), buttons: [t("yes"), t("no")], defaultIndex: 1 })
+    .then((r) => {
+      kitModal.open = false;
+      if (r === t("yes")) then();
+      rerender();
+    });
 }
 
 /** Rematch replays the battle from scratch, so it asks first. */
 function confirmRematch(): void {
-  kitModal.open = true;
-  void kit()
-    .dialog({
-      title: t("debriefMenu.rematch"),
-      text: t("rematch.confirm"),
-      buttons: [t("yes"), t("no")],
-      defaultIndex: 1,
-    })
-    .then((r) => {
-      kitModal.open = false;
-      if (r === t("yes")) rematch();
-      rerender();
-    });
+  confirm("debriefMenu.rematch", "rematch.confirm", rematch);
+}
+
+/** Editing the setup leaves the debrief for good, so it asks first. */
+function confirmSetup(): void {
+  confirm("debriefMenu.setup", "setup.confirm", () => {
+    app.screen = "setup";
+    app.tab = 0;
+  });
+}
+
+/** Steps the debrief tab by `d` (−1 previous, +1 next), wrapping. */
+function stepTab(d: number): void {
+  app.tab = (app.tab + d + TABS.length) % TABS.length;
 }
 
 // ------------------------------------------------------------ screen
@@ -1112,14 +1015,10 @@ export function debriefScreen(): TuiNode {
           ),
     ),
     statusbar([
-      ["Tab", "key.tab"],
+      ["[ ]", "key.tab"],
       ["↑↓", "key.pickUnit"],
-      ["C", "key.copyAar", copyAar],
-      ["R", "key.rematch", confirmRematch],
-      ["Enter", "key.setup", toSetup],
       ["Esc", "key.menu", () => (app.modal = { kind: "debriefMenu", cursor: 0 })],
     ]),
-    m?.kind === "aar" ? aarModal(m.text) : null,
     m?.kind === "debriefMenu" ? menuModal(m.cursor) : null,
   );
 }
@@ -1129,7 +1028,7 @@ export function debriefKey(e: KeyboardEvent): boolean {
   if (m?.kind === "debriefMenu") {
     if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % MENU.length;
     else if (e.key === "ArrowUp") m.cursor = (m.cursor + MENU.length - 1) % MENU.length;
-    else if (e.key === "Enter") runMenu(m.cursor);
+    else if (e.key === "Enter" || e.key === " ") runMenu(m.cursor);
     else if (e.key === "Escape") app.modal = null;
     else return false;
     return true;
@@ -1139,15 +1038,12 @@ export function debriefKey(e: KeyboardEvent): boolean {
     return true;
   }
   const n = Object.keys(app.battle?.state.units ?? {}).length;
-  const body = document.querySelector<HTMLElement>("#app .ia-debrief-body");
-  if (e.key === "Tab") app.tab = (app.tab + (e.shiftKey ? TABS.length - 1 : 1)) % TABS.length;
+  const page = e.key === "PageDown" ? 1 : e.key === "PageUp" ? -1 : 0;
+  const body = page ? document.querySelector<HTMLElement>("#app .ia-debrief-body") : null;
+  if (e.key === "[" || e.key === "]") stepTab(e.key === "]" ? 1 : -1);
   else if (e.key === "ArrowDown" && n > 0) app.debriefUnit = (app.debriefUnit + 1) % n;
   else if (e.key === "ArrowUp" && n > 0) app.debriefUnit = (app.debriefUnit + n - 1) % n;
-  else if ((e.key === "PageDown" || e.key === "PageUp") && body)
-    body.scrollTop += (e.key === "PageDown" ? 1 : -1) * body.clientHeight * 0.8;
-  else if (e.code === "KeyC") copyAar();
-  else if (e.code === "KeyR") confirmRematch();
-  else if (e.key === "Enter") toSetup();
+  else if (body) body.scrollTop += page * body.clientHeight * 0.8;
   else if (e.key === "Escape") app.modal = { kind: "debriefMenu", cursor: 0 };
   else return false;
   return true;

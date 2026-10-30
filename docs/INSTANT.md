@@ -33,8 +33,9 @@ covers what Instant Action adds or does differently.
 - **Battle** — movement and attack prompts until the engagement mode's
   stopper ends it. Withdraw (battle menu, confirm) drops the battle and
   returns to New Battle.
-- **Debrief** — the result and battle record. R rematches (confirm), Enter
-  returns to New Battle (loadout kept), Esc opens the debrief menu (below).
+- **Debrief** — the result and battle record. Esc opens the debrief menu
+  (below): Rematch and Edit battle setup (back to New Battle, loadout kept)
+  each ask first.
 
 The loadout lives only in memory: a reload, or *New battle* from the title,
 starts from an empty one.
@@ -263,17 +264,20 @@ per side (units lost, damage dealt, BV score), then:
 | Map | the board as the battle ended: units in play, hulls, wrecks at each destroyed unit's last hex, wreckage terrain, severed limbs and clubs |
 | Log | the battle log |
 
-C copies a plain-text after-action report (result, why, forces, casualties,
-fires, salvage) to the clipboard and shows it. The fire statistics, damage
-per turn and key moments are folded from each batch of game events as the
-battle runs (`web/instant/battle/chronicle.ts`); the events are not kept.
+The fire statistics, damage per turn and key moments are folded from each
+batch of game events as the battle runs (`web/instant/battle/chronicle.ts`);
+the events are not kept.
 
 **Rematch** (after a Yes / No confirm) rebuilds the battle from the same
 loadout, deployment and seed: the same orders replay the same battle.
 
-**Debrief menu** (Esc) lists the debrief's keyboard features with their keys:
-Close (Esc), Copy AAR (C), Rematch (R), Back to New Battle (Enter), Back to
-title.
+**Edit battle setup** (after a Yes / No confirm) leaves the debrief for New
+Battle with the same loadout (sides, map, mode) to change; the debrief cannot
+be reopened. *New battle* on the title starts from an empty loadout instead.
+
+**Debrief menu** (Esc) holds the debrief's actions, which have no shortcut
+keys: Close, Rematch, Edit battle setup, Back to title. ↑ ↓ pick,
+Enter or Space run, Esc close.
 
 ## Controls
 
@@ -289,7 +293,7 @@ Mouse first; everything except picking a hex also works from the keyboard.
 | Battle, any prompt | Esc battle menu, `[` / `]` left / right record sheet, L log, Space next persona activation (step pace) |
 | Movement | ↑ ↓ choice, Enter / Space choose (again: commit), D / F10 done |
 | Attack | Tab / Shift+Tab target, T twist, ↑ ↓ row, Space toggle row, A all, N none, X jump to physical / club rows, D / F10 / Enter done |
-| Debrief | Tab / Shift+Tab section, ↑ ↓ unit, PgUp PgDn scroll, C copy report, R rematch (confirm), Enter New Battle, Esc menu |
+| Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (↑ ↓ pick, Enter / Space run) |
 
 **Map view** (setup preview, deployment, battle, debrief): drag to rotate,
 wheel to zoom about the cursor, middle-drag to pan; on the north indicator,

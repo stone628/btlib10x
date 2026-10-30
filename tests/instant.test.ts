@@ -37,6 +37,7 @@ import {
   pilotTip,
   sensorTip,
 } from "../web/instant/screens/battle.hints";
+import { debriefKey } from "../web/instant/screens/debrief";
 import { pileTip } from "../web/instant/screens/piles";
 import {
   addedSlot,
@@ -48,6 +49,7 @@ import {
   loadoutProblem,
   randomLoadout,
 } from "../web/instant/setup/loadout";
+import { app } from "../web/instant/state";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
 
@@ -201,6 +203,46 @@ describe("Instant Action debrief record", () => {
       expect(s1!.dealt).toBe(s2!.dealt);
       expect(s1!.score).not.toBe(s2!.score);
     } else if (r.decidedBy === "tie") expect(r.winnerTeam).toBeNull();
+  });
+});
+
+describe("Instant Action debrief keys", () => {
+  const key = (k: string, code = "") => debriefKey({ key: k, code } as KeyboardEvent);
+
+  it("steps the sections with [ and ], wrapping; Tab no longer does", () => {
+    app.modal = null;
+    app.tab = 0;
+    expect(key("]")).toBe(true);
+    expect(app.tab).toBe(1);
+    expect(key("[")).toBe(true);
+    expect(key("[")).toBe(true);
+    expect(app.tab).toBe(6);
+    expect(key("]")).toBe(true);
+    expect(app.tab).toBe(0);
+    expect(key("Tab")).toBe(false);
+  });
+
+  it("has no shortcut keys for Rematch or Edit battle setup", () => {
+    app.modal = null;
+    app.screen = "debrief";
+    expect(key("c", "KeyC")).toBe(false);
+    expect(key("r", "KeyR")).toBe(false);
+    expect(key("Enter")).toBe(false);
+    expect(key(" ")).toBe(false);
+    expect(app.modal).toBeNull();
+    expect(app.screen).toBe("debrief");
+  });
+
+  it("runs the menu item under the cursor on Enter and Space alike", () => {
+    for (const k of ["Enter", " "]) {
+      app.screen = "debrief";
+      expect(key("Escape")).toBe(true);
+      expect(app.modal).toEqual({ kind: "debriefMenu", cursor: 0 });
+      expect(key("ArrowUp")).toBe(true); // wraps to Back to title
+      expect(key(k)).toBe(true);
+      expect(app.modal).toBeNull();
+      expect(app.screen).toBe("title");
+    }
   });
 });
 
