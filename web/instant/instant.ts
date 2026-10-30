@@ -66,7 +66,12 @@ function afterRender(): void {
   else if (app.screen === "title") titleAfterRender();
   else if (app.screen === "deploy") deployAfterRender();
   const slot = document.querySelector<HTMLElement>("#app .ia-mapslot");
-  if (!slot) return;
+  // Map tooltips only where a screen's overlays set tipFor (battle, debrief Map tab).
+  if (app.mapView) app.mapView.tipFor = null;
+  if (!slot) {
+    app.mapView?.hideTip();
+    return;
+  }
   const view = ensureMapView();
   if (view.canvas.parentElement !== slot) {
     slot.replaceChildren(view.canvas);
@@ -78,6 +83,7 @@ function afterRender(): void {
   } else if (app.screen === "deploy") deployOverlays();
   else if (app.screen === "setup") setupMapPreview();
   else if (app.screen === "debrief") debriefOverlays();
+  if (!view.tipFor) view.hideTip();
   view.render();
 }
 

@@ -32,6 +32,7 @@ import {
 } from "./battle.hud";
 import { SHEET_W } from "./battle.sheet";
 import { at, blank, cells, fit, h, kit, mapSlot, modal, row, span, statusbar } from "./common";
+import { pileTipFor } from "./piles";
 import { policyWindow } from "./setup";
 
 const { MARK: M, ARROW: A } = UI_THEME;
@@ -612,6 +613,7 @@ export function battleOverlays(): void {
     }
   }
   v.overlays = o;
+  v.tipFor = pileTipFor(b.state);
   v.banners = battleBanners();
   const ui = app.battleUi;
   if (ui.centerPending && actor) {

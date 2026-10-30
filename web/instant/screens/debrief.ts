@@ -23,6 +23,7 @@ import type { BattleController } from "../battle/controller";
 import { type BattleResult, unitLoss } from "../battle/victory";
 import { battleBanners, battleMapSource, rematch } from "../flow";
 import { locName, t } from "../i18n";
+import type { Banner } from "../map/view";
 import { app } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
@@ -40,6 +41,7 @@ import {
   statusbar,
   tabBar,
 } from "./common";
+import { pileTipFor } from "./piles";
 
 const { GRID: G, MARK: M, ARROW: A, BAR: B, FRAME: F } = UI_THEME;
 
@@ -837,14 +839,58 @@ function salvageTab(b: BattleController): TuiNode[] {
 // ------------------------------------------------------------ map
 
 function mapTab(): TuiNode[] {
+  const glyph = (g: string, label: string, k: string) => [
+    span(g, { cls: "ia-bright", key: `g${k}` }),
+    span(` ${t(label)}`, { key: `l${k}` }),
+  ];
+  const sep = (k: string) => span(` ${M.sep} `, { cls: "ia-dim", key: `s${k}` });
+  const legend = h().el(
+    "span",
+    { key: "legend" },
+    ...glyph("■", "debrief.lg.inPlay", "a"),
+    sep("a"),
+    ...glyph("▣", "debrief.lg.hull", "b"),
+    sep("b"),
+    ...glyph(M.out, "debrief.lg.wreck", "c"),
+    sep("c"),
+    ...glyph("%", "debrief.lg.wreckage", "d"),
+    sep("d"),
+    ...glyph("!", "debrief.lg.limb", "e"),
+  );
+  const band = h().el(
+    "div",
+    { class: "ia-maplegend", key: "maplegend" },
+    legend,
+    span(t("debrief.mapHint"), { cls: "ia-dim", key: "hint" }),
+  );
   return [
     h().el(
       "div",
-      { key: "mapbox", style: { height: `calc(${BODY_ROWS - 1} * var(--ch))` } },
+      { class: "ia-mapbox", key: "mapbox", style: { height: `calc(${BODY_ROWS} * var(--ch))` } },
       mapSlot(),
+      band,
     ),
-    row(fit(t("debrief.mapHint"), W, "center"), { cls: "ia-dim", key: "maphint" }),
   ];
+}
+
+/** The debrief board's signs: units in play, team-tinted hulls and the wrecks of destroyed units. */
+function debriefBanners(b: BattleController): Banner[] {
+  const out: Banner[] = [];
+  for (const u of Object.values(b.state.units)) {
+    if (!isUnitRemoved(u)) continue;
+    const hull = isHull(u);
+    if (!hull && u.destroyed === "not") continue;
+    out.push({
+      id: hull ? `-${u.id}` : `${M.out}${u.id}`,
+      hex: u.position,
+      facing: u.facing,
+      team: u.team,
+      sub: hull ? "HULL" : "WRECK",
+      ghost: true,
+    });
+  }
+  // Signs sharing a hex stack in list order, so the wrecks and hulls stand above the units in play.
+  return [...battleBanners().filter((x) => !x.id.startsWith("-")), ...out];
 }
 
 /** Battle the map was last fitted for: the Map tab shows and fits the board once per battle. */
@@ -855,10 +901,11 @@ export function debriefOverlays(): void {
   const v = app.mapView;
   const b = app.battle;
   if (!v || !b || app.tab !== MAP_TAB) return;
+  v.tipFor = pileTipFor(b.state);
   const piles = (by: Readonly<Record<string, readonly unknown[] | undefined>>) =>
     new Set(Object.keys(by).filter((k) => (by[k]?.length ?? 0) > 0));
   v.overlays = { wreckage: piles(b.state.wreckage), clubs: piles(b.state.clubs) };
-  v.banners = battleBanners();
+  v.banners = debriefBanners(b);
   if (fittedFor !== b) {
     fittedFor = b;
     v.setMap(battleMapSource(b));

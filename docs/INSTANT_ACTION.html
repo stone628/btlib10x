@@ -651,7 +651,7 @@ section.bt10x pre.screen { font-size: 12px; width: max-content; max-width: 100%;
 <li><strong>Fires</strong>: shots, hits, hit %, damage dealt and taken, kills, peak heat and ammo spent per unit, and the picked unit's weapons with their best hit.</li>
 <li><strong>Timeline</strong>: damage each side's hits dealt per turn, and the key moments: first blood, falls, heat shutdowns, ammo explosions, pilots knocked out, units out of play and who got the kill.</li>
 <li><strong>Salvage</strong>: per wreck or hull, the intact weapons, ammo and equipment from <code>salvageReport</code>.</li>
-<li><strong>Map</strong>: the board as the battle ended: banners for units still on it, hulls, wreckage and clubs (drag to rotate, wheel to zoom).</li>
+<li><strong>Map</strong>: the board as the battle ended, filling the tab: banners for units in play, team-tinted dimmed hull banners (<code>-A1</code> / <code>HULL</code>) and, on this map only, dimmed wreck banners at each destroyed unit's last hex (<code>×A1</code> / <code>WRECK</code>, any tonnage); signs sharing a hex stack. <code>%</code> wreckage terrain and <code>!</code> severed limbs / clubs are drawn upright. A legend band on translucent black rides the bottom row, with the drag / wheel hint at its right.</li>
 <li><strong>Log</strong>: the battle log.</li>
 </ul>
 <p><kbd>C</kbd> copies a plain-text after-action report (result, why, MVP, forces, casualties, headline moments, fires, salvage) and shows it in a window. The fire statistics, damage per turn and key moments are folded from each batch of game events as the battle runs (<code>battle/chronicle.ts</code>); the events themselves are not kept.</p>

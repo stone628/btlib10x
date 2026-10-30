@@ -37,6 +37,7 @@ import {
   pilotTip,
   sensorTip,
 } from "../web/instant/screens/battle.hints";
+import { pileTip } from "../web/instant/screens/piles";
 import { defaultFilter, filterMechs, generateSide } from "../web/instant/setup/loadout";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
@@ -191,6 +192,30 @@ describe("Instant Action debrief record", () => {
       expect(s1!.dealt).toBe(s2!.dealt);
       expect(s1!.score).not.toBe(s2!.score);
     } else if (r.decidedBy === "tie") expect(r.winnerTeam).toBeNull();
+  });
+});
+
+describe("Instant Action debrief map pile tips", () => {
+  it("names each wreck, severed limb and club in a hex", () => {
+    const b = battle({ kind: "destroyAll" }, ALL_AI);
+    runAi(b);
+    const s = b.state;
+    const u = Object.values(s.units).find((x) => x.removed !== "not")!;
+    s.wreckage["30,30"] = [
+      { unitId: u.id, model: u.model },
+      { unitId: null, model: "XX-1" },
+    ];
+    s.clubs["30,30"] = [
+      { kind: "limb", limb: "leftArm", model: u.model, ownerId: u.id },
+      { kind: "girder" },
+    ];
+    expect(pileTip(s, "30,30")!.split("\n")).toEqual([
+      `${u.id} ${u.model} · wreckage`,
+      "XX-1 · wreckage",
+      `${u.id} ${u.model} · severed LA`,
+      "dropped girder club",
+    ]);
+    expect(pileTip(s, "31,31")).toBeNull();
   });
 });
 

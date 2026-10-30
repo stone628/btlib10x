@@ -84,9 +84,12 @@ const TILT_STEP = 5;
 const HUD_R = 16;
 const HUD_PAD = 6;
 
-/** Banner metrics (CSS px) at a map font size: font, line height, box height, pole. */
+
+/** Banner metrics (CSS px) at a map font size: font, line height, box height, pole.
+ *  The sign's text keeps one size whatever the zoom; only the pole grows with the hexes. */
 const bannerMetrics = (fs: number) => {
-  const bfs = Math.max(9, fs * 0.85);
+  // the page's own text size (the kit's --tui-fs), so it follows the A / A buttons
+  const bfs = Number.parseFloat(css("--tui-fs", "")) || 14;
   const chh = bfs * 1.175;
   return { fs: bfs, chh, bh: chh * 2.1, pole: Math.max(chh * 0.9, HEX_R * fs * 0.45) };
 };
@@ -138,11 +141,18 @@ export class MapView {
   showCoords = false;
   /** `facing`: the facing triangle of the hex's top face, null on a wall or banner. */
   onPick: ((hex: HexCoord, ev: MouseEvent, facing: Facing | null) => void) | null = null;
+  /** Hover text for a hex, shown in the kit tooltip under the pointer; null = none. */
+  tipFor: ((hex: HexCoord) => string | null) | null = null;
   private drawn: Shape[] = [];
   private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
   private world = { cx: 0, cy: 0 };
   private hover: string | null = null;
   private hoverFacing: Facing | null = null;
+  /** Hex whose tooltip shows, the zero-size point the kit tooltip hangs from
+   *  and where that point was last put (`"x,y,anchor"`). */
+  private tipHex: HexCoord | null = null;
+  private tipAnchor: HTMLElement | null = null;
+  private tipPlace = "";
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -170,6 +180,7 @@ export class MapView {
       if (onHud(e)) e.preventDefault();
     });
     canvas.addEventListener("pointerdown", (e) => {
+      this.hideTip();
       if (onHud(e)) {
         e.preventDefault();
         if (e.button === 0) this.north();
@@ -189,6 +200,7 @@ export class MapView {
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener("pointermove", (e) => {
+      if (pan || drag) this.hideTip();
       if (pan) {
         this.panX = pan.px + e.clientX - pan.x;
         this.panY = pan.py + e.clientY - pan.y;
@@ -212,6 +224,7 @@ export class MapView {
       const p = hud ? null : this.pickAtEvent(e);
       const k = p ? key(p.hex) : null;
       const f = p?.facing ?? null;
+      this.showTip(p?.hex ?? null);
       if (k !== this.hover || f !== this.hoverFacing) {
         this.hover = k;
         this.hoverFacing = f;
@@ -233,6 +246,7 @@ export class MapView {
     canvas.addEventListener("pointerup", end);
     canvas.addEventListener("pointercancel", end);
     canvas.addEventListener("pointerleave", () => {
+      this.hideTip();
       this.hover = null;
       this.hoverFacing = null;
       this.render();
@@ -241,6 +255,7 @@ export class MapView {
       "wheel",
       (e) => {
         e.preventDefault();
+        this.hideTip();
         if (onHud(e)) {
           this.tiltBy(e.deltaY < 0 ? TILT_STEP : -TILT_STEP);
           return;
@@ -268,6 +283,68 @@ export class MapView {
   clearHover(): void {
     this.hover = null;
     this.hoverFacing = null;
+    this.hideTip();
+  }
+
+  /** Hide the hex tooltip, if one shows (other kit tooltips are left alone). */
+  hideTip(): void {
+    if (this.tipHex === null) return;
+    this.tipHex = null;
+    window.TUI.hideTip();
+  }
+
+  /** Tip the hovered hex (`tipFor`); a new hex replaces it. */
+  private showTip(hex: HexCoord | null): void {
+    const text = hex && this.tipFor ? this.tipFor(hex) : null;
+    if (!hex || !text) {
+      this.hideTip();
+      return;
+    }
+    if (this.tipHex && key(this.tipHex) === key(hex)) return;
+    this.tipHex = hex;
+    if (!this.tipAnchor) {
+      this.tipAnchor = document.createElement("div");
+      Object.assign(this.tipAnchor.style, {
+        position: "fixed",
+        width: "0",
+        height: "0",
+        pointerEvents: "none",
+      });
+      document.body.appendChild(this.tipAnchor);
+    }
+    this.tipAnchor.dataset.tip = text;
+    this.tipPlace = "";
+    this.placeTip(this.view());
+  }
+
+  /**
+   * Hang the tip beside its hex, opening toward the canvas centre: a hex in
+   * the upper-right quadrant gets the tip's top-right corner, and so on. The
+   * corner sits one hex radius to the side, clear of the hex's marks; the kit
+   * keeps the tip inside the viewport. Re-placed only when the spot moves.
+   */
+  private placeTip(v: ReturnType<MapView["view"]>): void {
+    const hex = this.tipHex;
+    const el = this.tipAnchor;
+    if (!hex || !el || !this.src) return;
+    const c = worldCenter(hex.col, hex.row);
+    const [x, y] = v.proj(
+      v.rot([c[0] - this.world.cx, c[1] - this.world.cy]),
+      this.src.levelAt(hex),
+    );
+    const east = x >= v.W / 2;
+    const anchor = `${y < v.H / 2 ? "n" : "s"}${east ? "e" : "w"}`;
+    const r = this.canvas.getBoundingClientRect();
+    const px = Math.round(r.left + x + (east ? -v.R : v.R));
+    const py = Math.round(r.top + y);
+    const place = `${px},${py},${anchor}`;
+    if (place === this.tipPlace) return;
+    this.tipPlace = place;
+    el.style.left = `${px}px`;
+    el.style.top = `${py}px`;
+    el.dataset.tipAnchor = anchor;
+    // The kit opens its tooltip on mouseover of a [data-tip] element.
+    el.dispatchEvent(new MouseEvent("mouseover", { bubbles: true }));
   }
 
   rotate(dir: number): void {
@@ -721,6 +798,7 @@ export class MapView {
     if (this.canvas.width !== Math.round(W * d)) this.canvas.width = Math.round(W * d);
     if (this.canvas.height !== Math.round(H * d)) this.canvas.height = Math.round(H * d);
     const v = this.view();
+    this.placeTip(v);
     const ctx = this.ctx;
     ctx.setTransform(d, 0, 0, d, 0, 0);
     ctx.fillStyle = css("--ia-map-bg", "#141414");
@@ -867,26 +945,36 @@ export class MapView {
   }
 
   /**
-   * Reachable MP, wreckage and club marks: text lying on the top face just
-   * below its centre, flattened by the tilt like the labels, so it stays on
-   * the face (not hanging onto the wall) at any tilt.
+   * Hex marks below the face centre: the reachable MP lies on the top face,
+   * flattened by the tilt like the labels so it stays on the face at any
+   * tilt; wreckage `%` and club `!` stand upright there, like the banners.
    */
   private drawMarks(v: ReturnType<MapView["view"]>, s: Shape, k: string, d: number): void {
-    const marks: string[] = [];
     const mp = this.overlays.reachable?.get(k);
-    if (mp) marks.push(mp);
-    if (this.overlays.wreckage?.has(k)) marks.push("%");
-    if (this.overlays.clubs?.has(k)) marks.push("!");
-    if (marks.length === 0) return;
+    const items: string[] = [];
+    if (this.overlays.wreckage?.has(k)) items.push("%");
+    if (this.overlays.clubs?.has(k)) items.push("!");
+    if (!mp && items.length === 0) return;
     const ctx = this.ctx;
     const [x, y] = v.proj([s.hex.x, s.hex.y + (v.fs * 0.35) / v.R], s.hex.drawn);
+    const text = [mp, ...items].filter(Boolean).join(" ");
     ctx.save();
-    ctx.setTransform(d, 0, 0, d * v.sq, d * x, d * y);
     ctx.font = `${Math.max(8, v.fs * 0.8)}px ${FONT}`;
-    ctx.textAlign = "center";
+    ctx.textAlign = "left";
     ctx.textBaseline = "middle";
     ctx.fillStyle = css("--ia-map-mark", "#f0f0f0");
-    ctx.fillText(marks.join(" "), 0, 0);
+    // Lay the whole run out once so the flat and upright parts keep their places.
+    let cx = -ctx.measureText(text).width / 2;
+    if (mp) {
+      ctx.setTransform(d, 0, 0, d * v.sq, d * x, d * y);
+      ctx.fillText(mp, cx, 0);
+      cx += ctx.measureText(`${mp} `).width;
+    }
+    if (items.length) {
+      ctx.setTransform(d, 0, 0, d, d * x, d * y);
+      ctx.textBaseline = "alphabetic";
+      ctx.fillText(items.join(" "), cx, 0);
+    }
     ctx.restore();
   }
 
@@ -987,17 +1075,21 @@ export class MapView {
     });
     items.sort((a, b) => a.p[1] - b.p[1]);
     this.bannerBoxes = [];
+    /** Signs already on each hex: a later one stands on a taller pole above them. */
+    const stacked = new Map<string, number>();
     for (const { b, base } of items) {
+      const k = key(b.hex);
+      const tier = stacked.get(k) ?? 0;
+      stacked.set(k, tier + 1);
       const l1 = ` ${b.id} `;
       const l2 = ` ${b.sub} `;
       const cols = Math.max(l1.length, l2.length);
       const bw = cols * cw;
       const x0 = base[0] - bw / 2;
-      const y0 = base[1] - pole - bh;
+      const y0 = base[1] - pole - bh - tier * (bh + chh * 0.3);
       const color =
         b.team === 0 ? css("--ia-hull", "#8a8a8a") : css(`--ia-team${b.team}`, "#4fa3ff");
       ctx.save();
-      if (b.ghost) ctx.globalAlpha = 0.55;
       ctx.strokeStyle = color;
       ctx.lineWidth = Math.max(1, fs * 0.09);
       ctx.beginPath();

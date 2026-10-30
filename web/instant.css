@@ -501,3 +501,22 @@
   background: var(--tui-sel-bg);
   color: var(--tui-sel-fg);
 }
+
+/* debrief map: the board fills the tab, the legend rides its bottom row on a translucent band */
+.ia-mapbox {
+  position: relative;
+}
+.ia-maplegend {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: var(--ch);
+  line-height: var(--ch);
+  padding: 0 var(--cw);
+  display: flex;
+  justify-content: space-between;
+  white-space: pre;
+  background: rgba(0, 0, 0, 0.6);
+  pointer-events: none;
+}
