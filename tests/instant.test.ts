@@ -298,6 +298,27 @@ describe("Instant Action battle controller", () => {
     b.commitAttack();
     expect(b.actorId).not.toBe(actor);
   });
+
+  it("persona never fires on a hull, even with no live enemy in reach", () => {
+    // B2 is an ejected hull two hexes ahead; the live B1 is far out of range.
+    const units: [string, string, 1 | 2, HexCoord, Facing][] = [
+      ["A1", "HBK-4G", 1, { col: 4, row: 16 }, "n"],
+      ["B1", "GRF-1N", 2, { col: 12, row: 1 }, "s"],
+      ["B2", "ENF-4R", 2, { col: 4, row: 14 }, "s"],
+    ];
+    const b = battle({ kind: "destroyAll" }, { A1: "alpha", B1: null, B2: null }, 7, units);
+    b.state.units.B2!.removed = "pilotEjected";
+    // Play turn 1 out: A1 has only the hull in reach, the humans pass.
+    for (let i = 0; i < 40 && b.state.turn === 1 && b.result === null; i++) {
+      if (b.actorPersona !== null) b.stepAi();
+      else if (b.phase === "movement") {
+        b.chooseMove("standStill");
+        b.commitMove();
+      } else b.commitAttack();
+    }
+    expect(b.state.turn).toBe(2);
+    expect(b.log.filter((l) => l.text.includes("→ B2"))).toEqual([]);
+  });
 });
 
 describe("Instant Action plays the same battle as the terminal", () => {

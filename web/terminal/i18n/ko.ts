@@ -245,7 +245,6 @@ export const ko: Catalog = {
   "pp.note.noTarget": "교전 가능한 적 없음",
   "pp.note.pressing":
     "{quiet}턴째 교전 없음: {distance}헥스까지 압박, 엄폐·노출 가중치 x{factor}, 탄약 명중치 {tn}까지, 열 한도 +{heat}",
-  "pp.note.hullTarget": "사거리 안에 적이 없음: 회수를 막기 위해 {target} 의 빈 기체를 사격",
 
   // command acknowledgements
   "ok.mapLoaded": "맵 {name}: {w}x{h}개",

@@ -232,9 +232,9 @@ If `yieldAt > 0` and the unit's remaining armor + structure is at or below
 Ejection stands in for a proper yield rule (GDD R6). Gladiator (`yieldAt 0`)
 never yields.
 
-Abandoned enemy 'Mechs (hulls) are never the committed target. When no attack
-on the live target scores above zero, the attack scorer also tries every enemy
-hull and fires on one to deny the enemy its salvage (`pp.note.hullTarget`).
+Personas only target active units: abandoned enemy 'Mechs (hulls) and wreckage
+are never the committed target, a move or charge / DFA target, or fired on,
+even when no attack on the live target scores above zero.
 
 ### 4.2 Scripted recovery
 

@@ -20,7 +20,6 @@ import {
   hexDistance,
   hitProbability,
   isFireableWeapon,
-  isHull,
   isUnitAvailable,
   isWeaponCritted,
   type Location,
@@ -221,12 +220,6 @@ export function remainingFraction(unit: UnitState): number {
 
 export function enemiesOf(battle: BattleState, unit: UnitState): UnitState[] {
   return Object.values(battle.units).filter((u) => isUnitAvailable(u) && u.team !== unit.team);
-}
-
-/** Abandoned enemy 'Mechs still on the board: worth shooting only to deny
- *  the enemy their salvage, when nothing live is in reach. */
-export function enemyHullsOf(battle: BattleState, unit: UnitState): UnitState[] {
-  return Object.values(battle.units).filter((u) => isHull(u) && u.team !== unit.team);
 }
 
 /** Heat the unit dissipates in the coming heat phase. */

@@ -183,8 +183,8 @@ Conservative (TN ≤ 8, 25% reserve) / Miser (TN ≤ 7, 50% reserve, energy firs
 - **Yield**: at the persona's armor + structure threshold (or with no weapons
   left for a Never-melee persona) it declares `mode eject`, standing in for the
   missing yield helper (GDD R6).
-- **Hulls**: abandoned enemy 'Mechs are ignored unless no attack on a live
-  enemy scores; then the persona fires on an enemy hull to deny its salvage.
+- **Hulls**: personas only target active units; abandoned enemy 'Mechs
+  (hulls) and wreckage are never targeted, moved on or fired on.
   Autoplay retires a unit with nothing left to fight with (or stuck prone) by
   `mode shutdown`, then `mode abandon` the next turn.
 - **Own RNG**: a separate stream seeded from the battle seed, used only for

@@ -248,7 +248,6 @@ export const en = {
   "pp.note.noTarget": "no enemy in play",
   "pp.note.pressing":
     "{quiet} quiet turns: presses in to {distance} hexes, cover and exposure x{factor}, ammo to-hit up to {tn}, heat ceiling +{heat}",
-  "pp.note.hullTarget": "nothing live in reach: fire on {target}'s empty hull to deny salvage",
 
   // command acknowledgements
   "ok.mapLoaded": "map {name}: {w}x{h}",
