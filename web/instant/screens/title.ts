@@ -5,6 +5,7 @@ import { app, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { blank, h, kit, row, statusbar } from "./common";
+import { menuKey, menuWindow, openMenu, prefItems } from "./menu";
 
 const { ARROW: A } = UI_THEME;
 
@@ -52,7 +53,9 @@ export function titleScreen(): TuiNode {
         items[i]?.run();
         rerender();
       },
-      on: { mousemove: syncCursor, keydown: syncCursor },
+      // the cursor follows the keys only: hover never moves it
+      attrs: { "data-no-hover": "" },
+      on: { keydown: syncCursor },
     },
     ...items.map((it) => H.item({ key: it.label, value: it.label }, t(it.label))),
   );
@@ -81,13 +84,32 @@ export function titleScreen(): TuiNode {
       [
         [`${A.up}${A.down}`, "key.select"],
         ["Enter", "key.ok"],
+        ["Esc", "key.menu", openTitleMenu],
       ],
       `v${app.version}`,
     ),
+    app.modal?.kind === "menu" ? menuWindow(app.modal) : null,
   );
 }
 
-/** The kit menu's own cursor (hover, arrows); read once its handler has run. */
+function openTitleMenu(): void {
+  openMenu(t("titleMenu.title"), prefItems());
+}
+
+/** Title keys outside the kit menu: Esc opens the menu; an open menu takes its keys. */
+export function titleKey(e: KeyboardEvent): boolean {
+  const m = app.modal;
+  if (m?.kind === "menu") return menuKey(e, m);
+  if (m) {
+    app.modal = null;
+    return true;
+  }
+  if (e.key !== "Escape") return false;
+  openTitleMenu();
+  return true;
+}
+
+/** The kit menu's own cursor (arrows); read once its handler has run. */
 interface MenuCtl {
   readonly active: number;
   set(i: number): void;
@@ -112,6 +134,11 @@ export function titleAfterRender(): void {
   const el = document.querySelector<HTMLElement>('#app [data-tui="menu"]');
   const ctl = menuCtl(el);
   if (!el || !ctl) return;
+  // an open Esc menu takes the keys: the title menu gives up the focus
+  if (app.modal) {
+    if (document.activeElement === el) el.blur();
+    return;
+  }
   if (ctl.active !== app.cursors.title) ctl.set(app.cursors.title);
   if (!app.modal && (document.activeElement === document.body || !document.activeElement))
     el.focus();

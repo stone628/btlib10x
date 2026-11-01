@@ -82,7 +82,19 @@ export type Modal =
     }
   | { kind: "battleMenu"; cursor: number }
   | { kind: "debriefMenu"; cursor: number }
-  | { kind: "message"; title: string; text: string };
+  | { kind: "message"; title: string; text: string }
+  | { kind: "menu"; title: string; items: readonly MenuItem[]; cursor: number };
+
+/**
+ * An Esc menu entry (title, New Battle, deployment): label, action, keep the
+ * menu open, a separator line above it.
+ */
+export interface MenuItem {
+  readonly label: () => string;
+  readonly run: () => void;
+  readonly keep?: boolean;
+  readonly sepAbove?: boolean;
+}
 
 /** One row of the attack panel: a weapon, a physical attack, a club action. */
 export type AttackRow =
@@ -160,6 +172,8 @@ export interface App {
   mapView: MapView | null;
   error: string | null;
   version: string;
+  /** When control last passed from a persona to the Player (ms, `performance.now`). */
+  playerSince: number;
 }
 
 export const app: App = {
@@ -178,6 +192,7 @@ export const app: App = {
   mapView: null,
   error: null,
   version: "",
+  playerSince: 0,
 };
 
 /** True while a kit popup or dialog owns the keyboard (cleared after it resolves). */

@@ -226,7 +226,7 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 | Checkbox | `<label class="tui-check"><input type="checkbox"><span class="tui-mark"></span><span>Label</span></label>` | `[ ]` `[x]` `[-]`. CSS only, native input kept for a11y. |
 | Radio | same with `tui-radio` and `type="radio"` | `( )` `(•)`. |
 | Select | `<select data-tui="select" data-cols="20">` | Native select stays as the source of truth (hidden); a cell-sized button (label, then `▼` in the last cell) opens a box-drawn popup; a second click closes it. `change` fires on the select. In a scene, a new `value` prop updates the label in place (focus survives). |
-| Menu | `<div data-tui="menu" data-title="File">` with child items, `<hr>` for separators | `data-key` shows a shortcut, `data-value` is reported, `disabled` greys out, `<u>x</u>` is a hotkey letter. ↑ ↓ Home End Enter. Fires `tui-select` `{index, value}`. |
+| Menu | `<div data-tui="menu" data-title="File">` with child items, `<hr>` for separators | `data-key` shows a shortcut, `data-value` is reported, `disabled` greys out, `<u>x</u>` is a hotkey letter, `data-no-hover` keeps the pointer from moving the cursor. ↑ ↓ Home End Enter. Fires `tui-select` `{index, value}`. |
 | List | `<div data-tui="list" data-selected="0">` | Like menu but with a `▸` cursor and a persistent selection. |
 | Menubar | `<nav data-tui="menubar"><div data-label="<u>F</u>ile">items…</div></nav>` | Opens menus as popups; ← → move across menus. `data-right` pushes a menu to the right. Fires `tui-select` `{menu, value}` on the nav. |
 | Tabs | `<div data-tui="tabs"><section data-tab="Armor">…</section></div>` | Tab labels sit in the top border; active one in reverse video. ← → on a focused tab. Fires `tui-tab`. |

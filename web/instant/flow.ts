@@ -394,6 +394,7 @@ export function pumpAi(force = false): void {
     aiTimer = null;
     b.stepAi();
     app.orderCursor = 0;
+    if (b.actorPersona === null) app.playerSince = performance.now();
     rerender();
     if (app.aiPace !== "step") pumpAi();
     else if (b.result !== null || b.actorPersona === null) pumpAi();

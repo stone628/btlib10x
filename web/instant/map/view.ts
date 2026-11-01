@@ -138,15 +138,24 @@ export class MapView {
   banners: Banner[] = [];
   /** Draw every hex's CCRR coordinate on its face; off, only the hovered hex's. */
   showCoords = false;
-  /** `facing`: the facing triangle of the hex's top face, null on a wall or banner. */
-  onPick: ((hex: HexCoord, ev: MouseEvent, facing: Facing | null) => void) | null = null;
-  /** Hover text for a hex, shown in the kit tooltip under the pointer; null = none. */
+  /**
+   * A click, or A on the reticle. On a banded hex `facing` is the one the pick
+   * takes (`pickFacing`); elsewhere it is the triangle of the top face, null on
+   * a wall or banner.
+   */
+  onPick: ((hex: HexCoord, facing: Facing | null) => void) | null = null;
+  /** Hover text for a hex, shown in the kit tooltip beside it; null = none. */
   tipFor: ((hex: HexCoord) => string | null) | null = null;
   private drawn: Shape[] = [];
   private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
   private world = { cx: 0, cy: 0 };
   private hover: string | null = null;
-  private hoverFacing: Facing | null = null;
+  /** Canvas point (CSS px) over the hovered hex: the pointer, or the reticle. */
+  private hoverAt: readonly [number, number] | null = null;
+  /** Centre reticle (gamepad stick, Shift+arrows), shown until the mouse moves. */
+  reticle = false;
+  /** Canvas rectangle (CSS px) whose centre holds the reticle; null = the whole canvas. */
+  reticleRect: { x0: number; y0: number; x1: number; y1: number } | null = null;
   /** Hex whose tooltip shows, the zero-size point the kit tooltip hangs from
    *  and where that point was last put (`"x,y,anchor"`). */
   private tipHex: HexCoord | null = null;
@@ -175,16 +184,14 @@ export class MapView {
       const r = canvas.getBoundingClientRect();
       return this.onIndicator(e.clientX - r.left, e.clientY - r.top);
     };
-    canvas.addEventListener("contextmenu", (e) => {
-      if (onHud(e)) e.preventDefault();
-    });
+    // Right click does nothing on the map.
+    canvas.addEventListener("contextmenu", (e) => e.preventDefault());
     canvas.addEventListener("pointerdown", (e) => {
       this.hideTip();
       if (onHud(e)) {
         e.preventDefault();
-        if (e.button === 0) this.north();
+        if (e.button === 0) this.snapTurn();
         else if (e.button === 1) this.fit();
-        else if (e.button === 2) this.turn(e.shiftKey ? -60 : 60);
         return;
       }
       if (e.button === 1) {
@@ -199,6 +206,7 @@ export class MapView {
       canvas.setPointerCapture(e.pointerId);
     });
     canvas.addEventListener("pointermove", (e) => {
+      if (this.reticle && (e.movementX || e.movementY)) this.hideReticle();
       if (pan || drag) this.hideTip();
       if (pan) {
         this.panX = pan.px + e.clientX - pan.x;
@@ -218,17 +226,11 @@ export class MapView {
         }
         return;
       }
+      if (this.reticle) return;
       const hud = onHud(e);
       canvas.style.cursor = hud ? "pointer" : "";
-      const p = hud ? null : this.pickAtEvent(e);
-      const k = p ? key(p.hex) : null;
-      const f = p?.facing ?? null;
-      this.showTip(p?.hex ?? null);
-      if (k !== this.hover || f !== this.hoverFacing) {
-        this.hover = k;
-        this.hoverFacing = f;
-        this.render();
-      }
+      const r = canvas.getBoundingClientRect();
+      this.hoverPoint(hud ? null : [e.clientX - r.left, e.clientY - r.top]);
     });
     const end = (e: PointerEvent) => {
       if (pan) {
@@ -238,16 +240,17 @@ export class MapView {
       const d = drag;
       drag = null;
       if (d && !d.moved && e.type === "pointerup") {
-        const p = this.pickAtEvent(e);
-        if (p) this.onPick?.(p.hex, e, p.facing);
+        const r = canvas.getBoundingClientRect();
+        this.pickPoint(e.clientX - r.left, e.clientY - r.top);
       }
     };
     canvas.addEventListener("pointerup", end);
     canvas.addEventListener("pointercancel", end);
     canvas.addEventListener("pointerleave", () => {
+      if (this.reticle) return;
       this.hideTip();
       this.hover = null;
-      this.hoverFacing = null;
+      this.hoverAt = null;
       this.render();
     });
     canvas.addEventListener(
@@ -281,8 +284,94 @@ export class MapView {
   /** Forget the hovered hex (the canvas moved to another screen without a pointerleave). */
   clearHover(): void {
     this.hover = null;
-    this.hoverFacing = null;
+    this.hoverAt = null;
+    this.reticle = false;
     this.hideTip();
+  }
+
+  /** Hover a canvas point (null: nothing): highlight its hex and facing, tip it. */
+  private hoverPoint(at: readonly [number, number] | null): void {
+    const p = at ? this.pickAt(at[0], at[1]) : null;
+    const k = p ? key(p.hex) : null;
+    const f0 = this.hover && this.hoverAt ? this.pickFacing(this.hover, this.hoverAt) : null;
+    const f1 = k && at ? this.pickFacing(k, at) : null;
+    const changed = k !== this.hover || f0 !== f1;
+    this.hover = k;
+    this.hoverAt = p ? at : null;
+    this.showTip(p?.hex ?? null);
+    if (changed) this.render();
+  }
+
+  /** A click (or A) at a canvas point: the hex there and the facing it takes. */
+  private pickPoint(px: number, py: number): void {
+    const p = this.pickAt(px, py);
+    if (!p) return;
+    this.onPick?.(p.hex, this.pickFacing(key(p.hex), [px, py]) ?? p.facing);
+  }
+
+  /**
+   * The facing a pick at a canvas point takes on banded hex `k` (null when the
+   * hex has no band): the next available facing clockwise when one is already
+   * chosen there, else the available triangle under the point, else the
+   * available facing whose triangle lies nearest the point.
+   */
+  private pickFacing(k: string, at: readonly [number, number]): Facing | null {
+    const band = this.overlays.bands?.get(k);
+    const poly = this.drawn.find((s) => s.top && key(s.hex) === k)?.polys[0];
+    if (!band || band.facings.length === 0 || !poly) return null;
+    const chosen = this.overlays.chosen?.hex === k ? this.overlays.chosen.facing : null;
+    return resolveFacing(poly, at, band.facings, chosen);
+  }
+
+  /** The reticle's canvas point (CSS px): the centre of `reticleRect`. */
+  reticlePoint(): [number, number] {
+    const r = this.reticleRect;
+    if (r) return [(r.x0 + r.x1) / 2, (r.y0 + r.y1) / 2];
+    return [(this.canvas.clientWidth || 300) / 2, (this.canvas.clientHeight || 200) / 2];
+  }
+
+  /** Show the reticle; the hex under it takes the hover highlight and tip. */
+  showReticle(): void {
+    if (!this.src || !this.canvas.isConnected) return;
+    if (!this.reticle) {
+      this.reticle = true;
+      this.canvas.style.cursor = "";
+      this.render();
+    }
+    this.hoverPoint(this.reticlePoint());
+  }
+
+  hideReticle(): void {
+    if (!this.reticle) return;
+    this.reticle = false;
+    this.hover = null;
+    this.hoverAt = null;
+    this.hideTip();
+    this.render();
+  }
+
+  /** A on the reticle: a click at its point. */
+  pickReticle(): void {
+    if (!this.reticle) return;
+    const [x, y] = this.reticlePoint();
+    this.pickPoint(x, y);
+  }
+
+  /** Pan so the map moves `dx`, `dy` CSS px under a fixed reticle (stick right: map left). */
+  panBy(dx: number, dy: number): void {
+    if (!this.src) return;
+    this.unfit();
+    this.panX -= dx;
+    this.panY -= dy;
+    this.render();
+    if (this.reticle) this.hoverPoint(this.reticlePoint());
+  }
+
+  /** Shift+arrow: move the reticle one hex across the screen, showing it. */
+  stepReticle(dx: number, dy: number): void {
+    const v = this.view();
+    this.showReticle();
+    this.panBy(dx * 1.5 * v.R, dy * SQ3 * v.R * v.sq);
   }
 
   /** Hide the hex tooltip, if one shows (other kit tooltips are left alone). */
@@ -590,6 +679,16 @@ export class MapView {
     this.render();
   }
 
+  /** North indicator click (L3): snap to the nearest 60° step; on a step already, turn +60°. */
+  snapTurn(): void {
+    const near = Math.round(this.angle / 60);
+    const on = Math.abs(this.angle - near * 60) < 0.5;
+    this.anchored(null, () => {
+      this.angle = ((((on ? near + 1 : near) * 60) % 360) + 360) % 360;
+    });
+    this.render();
+  }
+
   /** Turn by a number of degrees about the view centre. */
   turn(deg: number): void {
     this.anchored(null, () => {
@@ -845,7 +944,7 @@ export class MapView {
       const dz = s.top ? this.overlays.bands?.get(k) : undefined;
       if (dz !== undefined) {
         const chosen = this.overlays.chosen?.hex === k ? this.overlays.chosen.facing : null;
-        const hot = this.hover === k ? this.hoverFacing : null;
+        const hot = this.hover === k && this.hoverAt ? this.pickFacing(k, this.hoverAt) : null;
         this.drawBand(s.polys[0]!, team(dz.team), dz.facings, chosen, hot);
       }
       if (s.top && s.label && (this.hover === k || (this.showCoords && v.fs >= 6)))
@@ -857,6 +956,36 @@ export class MapView {
     this.drawFacings(v);
     this.drawBanners(v);
     this.drawHud(v);
+    if (this.reticle) this.drawReticle();
+  }
+
+  /** The reticle: a ring with four ticks, outlined to read over any terrain. */
+  private drawReticle(): void {
+    const ctx = this.ctx;
+    const [x, y] = this.reticlePoint();
+    const r = 7;
+    ctx.save();
+    ctx.lineCap = "round";
+    for (const [w, c] of [
+      [4, "#000"],
+      [2, css("--ia-select", "#ffffff")],
+    ] as const) {
+      ctx.lineWidth = w;
+      ctx.strokeStyle = c;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      for (const [dx, dy] of [
+        [1, 0],
+        [-1, 0],
+        [0, 1],
+        [0, -1],
+      ] as const) {
+        ctx.moveTo(x + dx * (r + 2), y + dy * (r + 2));
+        ctx.lineTo(x + dx * (r + 6), y + dy * (r + 6));
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   private tintFor(k: string): string | null {
@@ -1166,11 +1295,6 @@ export class MapView {
     ctx.restore();
   }
 
-  private pickAtEvent(e: MouseEvent): { hex: HexCoord; facing: Facing | null } | null {
-    const r = this.canvas.getBoundingClientRect();
-    return this.pickAt(e.clientX - r.left, e.clientY - r.top);
-  }
-
   hexAt(px: number, py: number): HexCoord | null {
     return this.pickAt(px, py)?.hex ?? null;
   }
@@ -1203,6 +1327,54 @@ function facingAt(px: number, py: number, poly: readonly (readonly [number, numb
     inside(px, py, [[cx, cy], poly[(i + 4) % 6]!, poly[(i + 5) % 6]!]),
   );
   return FACINGS[Math.max(0, i)]!;
+}
+
+/**
+ * The facing a pick at `at` takes on a hex top face `poly` with `facings`
+ * available: the next available one clockwise after `chosen`, else the
+ * available triangle holding the point, else the available facing whose
+ * triangle's centre lies nearest the point in angle about the hex centre
+ * (ties go clockwise).
+ */
+export function resolveFacing(
+  poly: readonly (readonly [number, number])[],
+  at: readonly [number, number],
+  facings: readonly Facing[],
+  chosen: Facing | null,
+): Facing | null {
+  const open = FACINGS.filter((f) => facings.includes(f));
+  if (open.length === 0) return null;
+  if (chosen !== null && open.includes(chosen)) {
+    const i = FACINGS.indexOf(chosen);
+    for (let k = 1; k <= 6; k++) {
+      const f = FACINGS[(i + k) % 6]!;
+      if (open.includes(f)) return f;
+    }
+  }
+  const [px, py] = at;
+  const under = inside(px, py, poly) ? facingAt(px, py, poly) : null;
+  if (under !== null && open.includes(under)) return under;
+  const cx = poly.reduce((a, p) => a + p[0], 0) / poly.length;
+  const cy = poly.reduce((a, p) => a + p[1], 0) / poly.length;
+  const a = Math.atan2(py - cy, px - cx);
+  // clockwise from the triangle under the point (or north), so a tie goes clockwise
+  const start = under === null ? 0 : FACINGS.indexOf(under);
+  let best: Facing | null = null;
+  let gap = Infinity;
+  for (let k = 0; k < 6; k++) {
+    const f = FACINGS[(start + k) % 6]!;
+    if (!open.includes(f)) continue;
+    const i = FACINGS.indexOf(f);
+    const p = poly[(i + 4) % 6]!;
+    const q = poly[(i + 5) % 6]!;
+    const b = Math.atan2((cy + p[1] + q[1]) / 3 - cy, (cx + p[0] + q[0]) / 3 - cx);
+    const d = Math.abs(((((b - a) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI);
+    if (d < gap - 1e-9) {
+      gap = d;
+      best = f;
+    }
+  }
+  return best;
 }
 
 function inside(px: number, py: number, poly: readonly (readonly [number, number])[]): boolean {

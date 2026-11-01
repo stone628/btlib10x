@@ -27,6 +27,7 @@ import { app, kitModal, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { fit, h, kit, mapSlot, row, statusbar } from "./common";
+import { menuKey, menuWindow, openMenu, prefItems } from "./menu";
 
 const { ARROW: A } = UI_THEME;
 
@@ -79,18 +80,19 @@ export function deployScreen(): TuiNode {
         ? [
             [`${A.up}${A.right}${A.down}${A.left}`, "key.edge"],
             ["Enter", "key.select"],
-            ["Esc", "key.discard", confirmDiscard],
+            ["Esc", "key.menu", openDeployMenu],
             ["F10", "key.proceed", proceed],
           ]
         : [
             [`${A.up}${A.down}`, "key.unit"],
             [`${A.left}${A.right}`, "key.facing"],
-            ["Tab", "key.next"],
-            ["Esc", "key.discard", confirmDiscard],
+            ["Bksp", "key.unplace"],
+            ["Esc", "key.menu", openDeployMenu],
             ["F10", "key.done", done],
           ],
       app.error ? `! ${app.error}` : t(choosing ? "deploy.mouseChoose" : "deploy.mouse"),
     ),
+    app.modal?.kind === "menu" ? menuWindow(app.modal) : null,
   );
 }
 
@@ -198,7 +200,7 @@ function edgeRows(): TuiNode[] {
 function exitRow(next: "proceed" | "done"): TuiNode {
   const H = h();
   const len = (s: string) => kit().compensatedLength(s);
-  const discard = `${t("deploy.discard")}  Esc`;
+  const discard = t("deploy.discard");
   const nextLabel = `${t(next === "done" ? "deploy.done" : "deploy.proceed")}  F10`;
   // a kit button adds four cells: "[ " and " ]"
   const width = len(discard) + 4 + 2 + len(nextLabel) + 4;
@@ -210,7 +212,14 @@ function exitRow(next: "proceed" | "done"): TuiNode {
     H.btn({ key: "discard", onClick: confirmDiscard }, discard),
     "  ",
     H.btn(
-      { key: next, primary: ready, disabled: !ready, onClick: next === "done" ? done : proceed },
+      {
+        key: next,
+        primary: ready,
+        disabled: !ready,
+        // F10 or a click only: Enter / Space on the focused button does nothing
+        attrs: { "data-commit": "" },
+        onClick: next === "done" ? done : proceed,
+      },
       nextLabel,
     ),
   );
@@ -401,15 +410,12 @@ function openFacingMenu(u: DeployUnit, anchor: HTMLElement): Promise<void> {
     });
 }
 
-function pointAnchor(ev: MouseEvent): HTMLElement {
-  const el = document.createElement("div");
-  el.style.cssText = `position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;width:1px;height:1px`;
-  document.body.appendChild(el);
-  return el;
-}
-
-/** A click on the map: choose an edge, select a unit, turn it, or place it. */
-function pickHex(hex: HexCoord, ev: MouseEvent, facing: Facing | null): void {
+/**
+ * A click on the map (or A on the reticle): choose an edge, select a unit,
+ * turn it, or place it. On a banded hex the map view has already picked the
+ * facing (`pickFacing`): on the selected unit's own hex, the next one clockwise.
+ */
+function pickHex(hex: HexCoord, facing: Facing | null): void {
   const d = app.deploy!;
   const map = currentMap();
   if (d.edges[0] === null) {
@@ -427,13 +433,7 @@ function pickHex(hex: HexCoord, ev: MouseEvent, facing: Facing | null): void {
   if (at >= 0) {
     const u = units[at]!;
     if (at === d.cursor && u.persona === null) {
-      // a facing triangle turns it; its banner opens the facing menu
-      if (facing !== null) {
-        d.placements[u.id]!.facing = facing;
-        return;
-      }
-      const anchor = pointAnchor(ev);
-      void openFacingMenu(u, anchor).then(() => anchor.remove());
+      if (facing !== null) d.placements[u.id]!.facing = facing;
     } else {
       d.cursor = at;
       d.focusUnit = true;
@@ -478,7 +478,7 @@ export function deployOverlays(): void {
   }
   v.overlays = { bands: zone, chosen };
   v.banners = deployBanners();
-  v.onPick = (hex, ev, facing) => report(() => pickHex(hex, ev, facing));
+  v.onPick = (hex, facing) => report(() => pickHex(hex, facing));
 }
 
 /** After a render: move the focus to the selected unit's button when asked (one cursor). */
@@ -497,10 +497,28 @@ const ARROW_EDGE: Partial<Record<string, Edge>> = {
   ArrowLeft: "west",
 };
 
+/** Esc menu: the step's side actions and Discard. */
+function openDeployMenu(): void {
+  const d = app.deploy!;
+  const units = d.edges[0] !== null;
+  openMenu(t("deployMenu.title"), [
+    ...(units && playerChoosesEdge()
+      ? [{ label: () => t("deploy.changeEdge"), run: () => report(changeEdge) }]
+      : []),
+    ...(units && deployUnits(app.loadout).some((u) => u.persona === null)
+      ? [{ label: () => t("deploy.autoPlace"), run: () => report(autoPlacePlayers) }]
+      : []),
+    { label: () => t("deploy.discard"), run: confirmDiscard },
+    ...prefItems(),
+  ]);
+}
+
 export function deployKey(e: KeyboardEvent): boolean {
   const d = app.deploy!;
+  const m = app.modal;
+  if (m?.kind === "menu") return menuKey(e, m);
   if (e.key === "Escape") {
-    confirmDiscard();
+    openDeployMenu();
     return true;
   }
   if (d.edges[0] === null) {
@@ -518,7 +536,11 @@ export function deployKey(e: KeyboardEvent): boolean {
   }
   const units = deployUnits(app.loadout);
   if (e.key === "F10") beginBattle();
-  else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+  else if (e.key === "Backspace") {
+    // pick the selected Player unit back up
+    const u = units[d.cursor];
+    if (u && u.persona === null) delete d.placements[u.id];
+  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
     const n = units.length;
     d.cursor = (d.cursor + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
     d.focusUnit = true;

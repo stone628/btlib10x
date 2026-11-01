@@ -582,8 +582,9 @@
       }
     }
     rows.forEach((row, i) => {
+      // [data-no-hover] on the menu: the pointer never moves its cursor
       row.addEventListener("mousemove", () => {
-        if (kind !== "list" && ok(i) && active !== i) set(i);
+        if (kind !== "list" && !el.hasAttribute("data-no-hover") && ok(i) && active !== i) set(i);
       });
       row.addEventListener("click", () => {
         if (ok(i)) {

@@ -25,11 +25,11 @@ covers what Instant Action adds or does differently.
 - **Title** — *New battle* opens New Battle empty (no units, map or
   engagement, a fresh seed); *Random battle* builds a random loadout and
   opens it in New Battle for review (it never starts the battle).
-- **New Battle** — edit the loadout; Launch (F10) goes to Deployment, Esc
-  returns to the title.
+- **New Battle** — edit the loadout; Launch (F10) goes to Deployment,
+  Backspace returns to the title, Esc opens its menu.
 - **Deployment** — roll-off for home edges, then placement; Done (F10)
-  creates the battle. Esc (Discard) asks first, then returns to the title
-  with the New Battle setup kept.
+  creates the battle. Discard (button, or the Esc menu) asks first, then
+  returns to the title with the New Battle setup kept.
 - **Battle** — movement and attack prompts until the engagement mode's
   stopper ends it. Withdraw (battle menu, confirm) drops the battle and
   returns to New Battle.
@@ -160,16 +160,18 @@ in the terminal). Each choice shows its MP budget after any posture cost.
 
 - Choosing Walk / Run / Jump / a stand-up or prone move shows every
   reachable landing (`reachableLandings`) on the map, with the cheapest MP
-  cost per hex. Clicking the facing wedge of a landing hex picks that hex and
-  facing; a hex with a single landing is picked by any click, otherwise a
-  popup lists the facings reachable there with MP and any charge / DFA.
+  cost per hex. A click (or A on the reticle) picks a landing hex and the
+  facing wedge under the pointer, else the reachable facing nearest it; a
+  further click on that hex steps to the next reachable facing clockwise
+  (see Controls).
 - **Charge / DFA** are declared as in the terminal: a Walk / Run (charge) or
   Jump (DFA) landing on an enemy hex stops in the hex before it; the landing
   says so. Only legal declarations are offered.
-- Done (D or F10) commits once a stationary choice is made or a landing is
+- Done (F10) commits once a stationary choice is made or a landing is
   picked: the posture change first, then the move, as the terminal's `done`
   (`executePostureMove`; a failed stand discards the move). A shut-down or
-  unconscious unit's Done passes. Esc clears the draft.
+  unconscious unit's Done passes. Backspace clears the landing; choosing
+  another mode drops it too.
 
 ### Attack orders
 
@@ -177,14 +179,15 @@ in the terminal). Each choice shows its MP budget after any posture cost.
   current twist; the best one is preselected. Tab / Shift+Tab cycle them, or
   click a target unit on the map. One target per activation, as in the
   terminal (TW p. 108 multi-target fire stays engine-only).
-- **Twist** — Front / Left / Right (T cycles; terminal `torso`). Changing it
+- **Twist** — Front / Left / Right (← → turn toward that side, or click the
+  row to cycle; terminal `torso`). Changing it
   drops weapon checks the new twist cannot fire.
 - **Weapons** — one row per weapon with TN, hit chance, damage and heat;
   weapons that cannot fire show their reason (jammed, destroyed, out of
   range, no arc, no LOS, no ammo, auto-miss, prone, sensors out, club held,
   leg in cover). Checking a weapon validates the whole declaration with the
   engine, so illegal combinations (e.g. a prone unit mixing prop arms) are
-  refused. A checks every weapon the declaration allows, N clears.
+  refused.
 - **Physical attacks** — punch (each arm), kick (each leg), club and strike
   (per physical weapon) against every adjacent targetable unit, with TN and
   damage, when the engine validates them for the current twist. One type per
@@ -192,7 +195,7 @@ in the terminal). Each choice shows its MP budget after any posture cost.
 - **Clubs** — Pick up (limb, tree, girder, when legal) excludes every other
   attack that turn (TW p. 146); Drop the club clears the weapon and physical
   checks.
-- Done (D, F10 or Enter) runs `declareAttacks`; an empty draft passes.
+- Done (F10) runs `declareAttacks`; an empty draft passes.
   Resolution is simultaneous once the phase's last unit has declared, and the
   log fills with the results.
 
@@ -224,7 +227,7 @@ Persona units are played by a copy of the terminal's persona player
 applied through the same controller calls a Player uses, so atomic commits
 apply. A persona command that fails is logged and the unit passes, so the
 battle never stalls. Persona pace (New Battle, or the battle menu):
-**instant**, **step** (default; Space plays the next persona activation) or
+**instant**, **step** (default; Enter / Space plays the next persona activation) or
 **timed** (about 0.6 s per activation). The choice is kept in localStorage
 (`bt10x.instant.pace`).
 
@@ -276,30 +279,68 @@ Battle with the same loadout (sides, map, mode) to change; the debrief cannot
 be reopened. *New battle* on the title starts from an empty loadout instead.
 
 **Debrief menu** (Esc) holds the debrief's actions, which have no shortcut
-keys: Close, Rematch, Edit battle setup, Back to title. ↑ ↓ pick,
-Enter or Space run, Esc close.
+keys: Rematch, Edit battle setup, Back to title. ↑ ↓ pick,
+Enter or Space run, Esc or Backspace close.
 
 ## Controls
 
-Mouse first; everything except picking a hex also works from the keyboard.
+One scheme for keyboard, Xbox pad and mouse (`web/instant/input.ts`). Enter /
+Space select or go on and can be undone; F10 (or Shift+Enter / Shift+Space)
+commits and cannot; Backspace cancels or steps back; Esc closes the open
+dialog, else opens the screen's menu; `[` / `]` step tabs or groups. The pad
+is polled through the Gamepad API (standard mapping); its buttons are sent as
+these keys to the focused element, so kit popups and dialogs take them too.
+
+| key | pad | mouse | does |
+|---|---|---|---|
+| ↑ ↓ ← → | D-pad | – | move the cursor; ← → also twist (attack) and turn (deployment) |
+| Enter, Space | A | left click | select / toggle / next (reversible) |
+| F10, Shift+Enter, Shift+Space | Y | Launch / Proceed / Done | commit (no going back) |
+| Backspace | B | Cancel | cancel, back one step; Esc in a kit dialog or popup |
+| Esc | Menu | `Esc` hint | close the dialog, else open / close the menu |
+| `[` / `]` | LB / RB | sheet tabs, tab labels | previous / next tab or group |
+| Tab / Shift+Tab | X | target row | next / previous target or field |
+| PgUp / PgDn | LT / RT | wheel | page a list or scroll; on a map screen, zoom |
+| L | View | LOGS tab | toggle logs |
+| Shift+arrows | left stick | middle drag | pan the map under the centre reticle |
+| – | right stick | left drag, indicator wheel | turn / tilt the map |
+| – | L3 | indicator left click | snap to the nearest 60°; on a step, +60° |
+| – | R3 | indicator middle click | fit the map |
+
+Commit buttons (Launch, Proceed, Done) take F10 or a click only: Enter on a
+focused one does nothing. Hover never moves a cursor. Right click does nothing
+on the map. In a text box only Enter, Esc, ↑ ↓ and Tab act; Shift+Space types a
+space there; pad B leaves the box (a pad cannot type).
 
 | scope | keys |
 |---|---|
-| Title | ↑ ↓ select, Enter run |
-| New Battle | Tab / Shift+Tab move focus (kept inside an open dialog), Enter / Space press, ↑ ↓ open a dropdown, F10 launch, Esc close dialog / title |
-| Choose 'Mech | `/` search, ↑ ↓ PgUp PgDn Home End move, Enter use, T tech, K pack, E era, S sort, Esc cancel |
-| Deployment (edge) | ↑ → ↓ ← pick North / East / South / West, F10 proceed, Esc discard |
-| Deployment (units) | ↑ ↓ select unit (centres the map on it), ← → turn a Player unit, F10 done, Esc discard |
-| Battle, any prompt | Esc battle menu, `[` / `]` left / right record sheet, L log, Space next persona activation (step pace) |
-| Movement | ↑ ↓ choice, Enter / Space choose (again: commit), D / F10 done |
-| Attack | Tab / Shift+Tab target, T twist, ↑ ↓ row, Space toggle row, A all, N none, X jump to physical / club rows, D / F10 / Enter done |
+| Title | ↑ ↓ select, Enter run, Esc menu (language) |
+| New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Backspace title, Esc menu (Launch, title, language) |
+| Choose 'Mech | ↑ ↓ PgUp PgDn move, Enter / Space use, Tab to the filters and search, Esc / Backspace cancel |
+| Deployment (edge) | ↑ → ↓ ← pick North / East / South / West, F10 proceed, Esc menu (Discard) |
+| Deployment (units) | ↑ ↓ select unit (centres the map on it), ← → turn a Player unit, Backspace pick it up, F10 done, Esc menu (Change edge, Auto place, Discard) |
+| Battle, any prompt | Esc battle menu, `[` / `]` left / right record sheet, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
+| Movement | ↑ ↓ choice, Enter / Space choose the mode (another mode drops the landing), Backspace clear the landing, F10 done |
+| Attack | Tab / Shift+Tab target, ← → twist, ↑ ↓ row, Enter / Space toggle row, F10 done |
 | Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (↑ ↓ pick, Enter / Space run) |
+| Menus, dialogs | ↑ ↓ / Tab move, Enter / Space run, Esc / Backspace close; a message closes on Enter, Space, Esc or Backspace. A dialog opened from a control gives the focus back to it on closing. The Esc menus end with Language, under a separator |
+
+**Picking a hex.** A click on a banded hex (a landing, a deployment hex)
+takes the available facing triangle under the pointer, else the available
+facing nearest the pointer; a further click on the hex where a facing is
+already chosen steps to the next available facing clockwise. No facing popup
+opens on the map; the hovered hex lights the triangle a click would take.
+With the pad (or Shift+arrows) a reticle marks the centre of the clear map
+area; the left stick pans the map under it, and A there is that same click at
+the reticle's point. The hex under the reticle is highlighted and tips its
+piles. A D-pad press or plain arrow hands A back to the orders panel; any
+mouse movement hides the reticle.
 
 **Map view** (setup preview, deployment, battle, debrief): drag to rotate,
 wheel to zoom about the cursor, middle-drag to pan; on the north indicator,
-left click north-up, middle click fit, right click turn +60° (Shift −60°),
-wheel tilt (5°–90°). Hovering a hex shows its coordinates; in battle and on
-the debrief map, a hex holding severed limbs or dropped clubs tips what lies
+left click snaps to the nearest 60° (again: +60°), middle click fits, wheel
+tilts (5°–90°). Hovering a hex shows its coordinates; in battle and on the
+debrief map, a hex holding severed limbs or dropped clubs tips what lies
 there.
 
 **Font size** is the player's (10–40 px, header A− / A+ / Fit, kept in
@@ -320,8 +361,8 @@ header switch re-renders every screen. Engine error text stays English.
 | `map`, `add`, `set`, `rm`, `seed`, `status` (setup) | New Battle options and dialogs; Deployment for position and facing |
 | `start` | Launch → Deployment → Done |
 | `pp <id> <persona>`, `pp setup` | Control per unit, Random battle |
-| `pp go`, `pp trace`, `pp why` | Personas act automatically (Space in step pace); no reasoning display |
-| `mode …`, `place`, `done`, `cancel` | movement choices, map pick + facing popup, Done, Esc |
+| `pp go`, `pp trace`, `pp why` | Personas act automatically (Enter / Space in step pace); no reasoning display |
+| `mode …`, `place`, `done`, `cancel` | movement choices, map pick + facing, Done, Backspace |
 | `torso`, `fire`, `candidate` | twist, weapon rows, target cycling |
 | `punch`, `kick`, `club`, `strike`, `pickup`, `drop` | physical and club rows |
 | `policy`, `heat`, `sheet` | policy dialog, record sheets and hover hints |

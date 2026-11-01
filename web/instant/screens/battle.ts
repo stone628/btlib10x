@@ -16,6 +16,7 @@ import type { MoveChoice } from "../battle/controller";
 import { tallies } from "../battle/victory";
 import { battleBanners, holdAi, pumpAi, stopAi } from "../flow";
 import { locName, t } from "../i18n";
+import { bracket, isLogsKey } from "../input";
 import { AI_PACES, type AttackRow, app, kitModal, rerender, setAiPace } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
@@ -32,6 +33,7 @@ import {
 } from "./battle.hud";
 import { SHEET_W } from "./battle.sheet";
 import { at, blank, cells, fit, h, kit, mapSlot, modal, row, span, statusbar } from "./common";
+import { closesMessage } from "./menu";
 import { pileTipFor } from "./piles";
 import { policyWindow } from "./setup";
 
@@ -39,6 +41,8 @@ const { MARK: M, ARROW: A } = UI_THEME;
 
 const ATTACK_W = 45;
 const TWISTS: Twist[] = ["front", "leftSide", "rightSide"];
+/** Twists from left to right, for ← →. */
+const SIDEWAYS: Twist[] = ["leftSide", "front", "rightSide"];
 /** Modes with no hex or facing to pick: they live under the Hold dropdown. */
 const STATIONARY = new Set<MoveChoice>([
   "standStill",
@@ -51,7 +55,6 @@ const STATIONARY = new Set<MoveChoice>([
   "abandon",
 ]);
 type StatusKey = readonly [string, string, (() => void)?];
-const FACING_ORDER = ["n", "ne", "se", "s", "sw", "nw"] as const;
 
 function setError(e: unknown): void {
   app.error = e instanceof Error ? e.message : String(e);
@@ -508,12 +511,14 @@ function orders(): Orders {
   return out(attackOrders(ATTACK_W), ATTACK_W, true, t("orders.attackTitle"));
 }
 
-const MOVE_KEYS: StatusKey[] = [["Mouse", "key.clickHex"]];
+const MOVE_KEYS: StatusKey[] = [
+  ["Mouse", "key.clickHex"],
+  ["Bksp", "key.clear"],
+];
 const ATTACK_KEYS: StatusKey[] = [
   ["Tab", "key.target"],
-  ["T", "key.twist"],
-  ["Spc", "key.weapon"],
-  ["A/N", "key.allNone"],
+  ["←→", "key.twist"],
+  ["Enter", "key.weapon"],
 ];
 
 export function battleScreen(): TuiNode {
@@ -628,16 +633,17 @@ export function battleOverlays(): void {
     ui.framePending = false;
     v.frame(actor.position, target.position, clearArea(v.canvas));
   }
-  v.onPick = (hex, ev, facing) => onMapPick(hex, ev, facing);
+  v.onPick = (hex, facing) => onMapPick(hex, facing);
 }
 
 const keyOf = (h: { col: number; row: number }) => `${h.col},${h.row}`;
 
 /**
- * A map click: a movement landing first, then an attack target; any other
- * hex holding a unit opens that unit's record sheet.
+ * A map click (or A on the reticle): a movement landing first, then an attack
+ * target; any other hex holding a unit opens that unit's record sheet. On a
+ * landing hex the map view has already picked the facing (`pickFacing`).
  */
-function onMapPick(hex: { col: number; row: number }, ev: MouseEvent, facing: Facing | null): void {
+function onMapPick(hex: { col: number; row: number }, facing: Facing | null): void {
   const b = app.battle;
   if (!b) return;
   const unit = Object.values(b.state.units).find(
@@ -656,21 +662,11 @@ function onMapPick(hex: { col: number; row: number }, ev: MouseEvent, facing: Fa
       showSheet();
       return;
     }
-    // a facing triangle picks that landing; an unavailable one does nothing
-    if (facing !== null) {
-      const l = here.find((x) => x.facing === facing);
-      if (l) {
-        act(() => b.chooseLanding(l));
-        rerender();
-      }
-      return;
-    }
-    if (here.length === 1) {
-      act(() => b.chooseLanding(here[0]!));
+    const l = here.find((x) => x.facing === facing) ?? (here.length === 1 ? here[0] : undefined);
+    if (l) {
+      act(() => b.chooseLanding(l));
       rerender();
-      return;
     }
-    openFacingMenu(here, ev);
     return;
   }
   if (b.attack && unit && b.fireSuggestion()?.targets.some((x) => x.targetId === unit.id)) {
@@ -678,38 +674,6 @@ function onMapPick(hex: { col: number; row: number }, ev: MouseEvent, facing: Fa
     return;
   }
   showSheet();
-}
-
-function openFacingMenu(here: RevealedLanding[], ev: MouseEvent): void {
-  const b = app.battle!;
-  const sorted = [...here].sort(
-    (a, c) => FACING_ORDER.indexOf(a.facing) - FACING_ORDER.indexOf(c.facing),
-  );
-  const anchor = document.createElement("div");
-  anchor.style.cssText = `position:fixed;left:${ev.clientX}px;top:${ev.clientY}px;width:1px;height:1px`;
-  document.body.appendChild(anchor);
-  kitModal.open = true;
-  const arrows = A.facing;
-  const angle = app.mapView?.angle ?? 0;
-  void kit()
-    .popupMenu(
-      anchor,
-      sorted.map((l) => {
-        const dir = (FACING_ORDER.indexOf(l.facing) * 60 - angle + 360) % 360;
-        return {
-          label: `${arrows[Math.round(dir / 60) % 6]} ${fit(l.facing.toUpperCase(), 3)} ${landingMp(l)} MP${l.melee ? ` ${l.melee.kind}` : ""}`,
-        };
-      }),
-    )
-    .then((r) => {
-      anchor.remove();
-      kitModal.open = false;
-      if (r && "index" in r) {
-        const l = sorted[r.index];
-        if (l) act(() => b.chooseLanding(l));
-      }
-      rerender();
-    });
 }
 
 // ------------------------------------------------------------ battle windows
@@ -790,33 +754,38 @@ export function battleKey(e: KeyboardEvent): boolean {
     if (m.kind === "battleMenu") {
       if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % MENU.length;
       else if (e.key === "ArrowUp") m.cursor = (m.cursor + MENU.length - 1) % MENU.length;
-      else if (e.key === "Enter") runMenu(m.cursor);
-      else if (e.key === "Escape") closeMenu();
+      else if (e.key === "Enter" || e.key === " ") runMenu(m.cursor);
+      else if (e.key === "Escape" || e.key === "Backspace") closeMenu();
       else return false;
       return true;
     }
-    // The policy dialog's kit controls keep their keys; Escape cancels it.
+    // The policy dialog's kit controls keep their keys; Esc / Backspace cancel it.
     if (m.kind === "policy") {
-      if (e.key !== "Escape") return false;
+      if (e.key !== "Escape" && e.key !== "Backspace") return false;
       app.modal = null;
       return true;
     }
+    if (!closesMessage(e)) return false;
     app.modal = null;
     return true;
   }
+  const select = e.key === "Enter" || e.key === " ";
+  // A press just as control comes back from a persona is the end of a step burst.
+  if (select && (e.repeat || performance.now() - app.playerSince < PLAYER_GRACE_MS)) return true;
   if (e.key === "Escape") openMenu();
-  // [ and ] open and close the left and right record sheets; on a gamepad
-  // these will be the left and right shoulder buttons.
-  else if (e.key === "[") toggleSheet(0);
-  else if (e.key === "]") toggleSheet(1);
-  else if (e.code === "KeyL") setLogs(!app.battleUi.logs);
-  else if (e.key === " " && b.actorPersona !== null) pumpAi(true);
+  // [ and ] (LB / RB) open and close the left and right record sheets.
+  else if (bracket(e)) toggleSheet(bracket(e) < 0 ? 0 : 1);
+  else if (isLogsKey(e)) setLogs(!app.battleUi.logs);
+  else if (select && b.actorPersona !== null) pumpAi(true);
   else if (b.actorPersona !== null) return false;
   else if (b.phase === "movement") return moveKey(e);
   else if (b.phase === "attack") return attackKey(e);
   else return false;
   return true;
 }
+
+/** Enter / Space ignored this long after a persona hands control to the Player. */
+const PLAYER_GRACE_MS = 300;
 
 function moveKey(e: KeyboardEvent): boolean {
   const b = app.battle!;
@@ -825,10 +794,12 @@ function moveKey(e: KeyboardEvent): boolean {
   else if (e.key === "ArrowUp")
     app.orderCursor = (app.orderCursor + choices.length - 1) % choices.length;
   else if (e.key === "Enter" || e.key === " ") {
+    // choosing a mode never commits; another mode drops the chosen landing
     const c = choices[app.orderCursor];
     if (c && b.move?.choice !== c) act(() => b.chooseMove(c));
-    else if (moveReady()) commit();
-  } else if ((e.key === "F10" || e.code === "KeyD") && moveReady()) commit();
+  } else if (e.key === "Backspace") {
+    if (b.move?.landing) act(() => b.clearLanding());
+  } else if (e.key === "F10" && moveReady()) commit();
   else return false;
   return true;
 }
@@ -836,20 +807,21 @@ function moveKey(e: KeyboardEvent): boolean {
 function attackKey(e: KeyboardEvent): boolean {
   const b = app.battle!;
   const rows = attackRows();
+  // ← → twist toward that side, stopping at the full twist
+  const twist = (d: number) => {
+    const i = SIDEWAYS.indexOf(b.attack!.twist) + d;
+    const to = SIDEWAYS[Math.max(0, Math.min(2, i))]!;
+    if (to !== b.attack!.twist) act(() => b.setTwist(to));
+  };
   if (e.key === "Tab") cycleTarget(e.shiftKey ? -1 : 1);
-  else if (e.code === "KeyT")
-    act(() => b.setTwist(TWISTS[(TWISTS.indexOf(b.attack!.twist) + 1) % 3]!));
+  else if (e.key === "ArrowRight") twist(1);
+  else if (e.key === "ArrowLeft") twist(-1);
   else if (e.key === "ArrowDown")
     app.orderCursor = rows.length ? (app.orderCursor + 1) % rows.length : 0;
   else if (e.key === "ArrowUp")
     app.orderCursor = rows.length ? (app.orderCursor + rows.length - 1) % rows.length : 0;
-  else if (e.key === " ") toggleRow(app.orderCursor);
-  else if (e.code === "KeyA") act(() => b.checkAll(true));
-  else if (e.code === "KeyN") act(() => b.clearAttack());
-  else if (e.code === "KeyX") {
-    const i = rows.findIndex((r) => r.kind !== "weapon");
-    if (i >= 0) app.orderCursor = i;
-  } else if (e.key === "F10" || e.code === "KeyD" || e.key === "Enter") commit();
+  else if (e.key === "Enter" || e.key === " ") toggleRow(app.orderCursor);
+  else if (e.key === "F10") commit();
   else return false;
   return true;
 }

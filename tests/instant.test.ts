@@ -28,6 +28,8 @@ import {
   setupRng,
 } from "../web/instant/battle/deploy";
 import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
+import { commitAlias } from "../web/instant/input";
+import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
 import {
   engineTip,
@@ -38,6 +40,7 @@ import {
   sensorTip,
 } from "../web/instant/screens/battle.hints";
 import { debriefKey } from "../web/instant/screens/debrief";
+import { closesMessage, menuKey, openMenu } from "../web/instant/screens/menu";
 import { pileTip } from "../web/instant/screens/piles";
 import {
   addedSlot,
@@ -208,18 +211,29 @@ describe("Instant Action debrief record", () => {
 
 describe("Instant Action debrief keys", () => {
   const key = (k: string, code = "") => debriefKey({ key: k, code } as KeyboardEvent);
+  const next = () => key("]", "BracketRight");
+  const prev = () => key("[", "BracketLeft");
 
-  it("steps the sections with [ and ], wrapping; Tab no longer does", () => {
+  it("steps the sections with [ and ] (by key code), wrapping; Tab no longer does", () => {
     app.modal = null;
     app.tab = 0;
-    expect(key("]")).toBe(true);
+    expect(next()).toBe(true);
     expect(app.tab).toBe(1);
-    expect(key("[")).toBe(true);
-    expect(key("[")).toBe(true);
+    expect(prev()).toBe(true);
+    expect(prev()).toBe(true);
     expect(app.tab).toBe(6);
-    expect(key("]")).toBe(true);
+    expect(next()).toBe(true);
     expect(app.tab).toBe(0);
     expect(key("Tab")).toBe(false);
+  });
+
+  it("closes the menu with Esc or Backspace", () => {
+    for (const k of ["Escape", "Backspace"]) {
+      app.screen = "debrief";
+      app.modal = { kind: "debriefMenu", cursor: 0 };
+      expect(key(k)).toBe(true);
+      expect(app.modal).toBeNull();
+    }
   });
 
   it("has no shortcut keys for Rematch or Edit battle setup", () => {
@@ -243,6 +257,82 @@ describe("Instant Action debrief keys", () => {
       expect(app.modal).toBeNull();
       expect(app.screen).toBe("title");
     }
+  });
+});
+
+describe("Instant Action input scheme", () => {
+  const ev = (key: string, shiftKey = false) => ({ key, code: "", shiftKey }) as KeyboardEvent;
+
+  it("reads Shift+Enter and Shift+Space as F10, and nothing else", () => {
+    expect(commitAlias(ev("Enter", true)).key).toBe("F10");
+    expect(commitAlias(ev(" ", true)).key).toBe("F10");
+    const plain = ev("Enter");
+    expect(commitAlias(plain)).toBe(plain);
+    const tab = ev("Tab", true);
+    expect(commitAlias(tab)).toBe(tab);
+  });
+
+  it("closes a message on A or B keys only", () => {
+    for (const k of ["Enter", " ", "Escape", "Backspace"]) expect(closesMessage(ev(k))).toBe(true);
+    for (const k of ["a", "ArrowDown", "F10", "Tab"]) expect(closesMessage(ev(k))).toBe(false);
+  });
+
+  it("runs an Esc menu with arrows and Enter / Space, closes it with Esc / Backspace", () => {
+    let runs = 0;
+    openMenu("M", [
+      { label: () => "Stay", run: () => {} },
+      { label: () => "Go", run: () => runs++ },
+    ]);
+    const m = () => app.modal as Extract<typeof app.modal, { kind: "menu" }>;
+    expect(m().items).toHaveLength(2); // no Close entry: Esc / Backspace close
+    expect(menuKey(ev("ArrowDown"), m())).toBe(true);
+    expect(m().cursor).toBe(1);
+    expect(menuKey(ev(" "), m())).toBe(true);
+    expect(runs).toBe(1);
+    expect(app.modal).toBeNull();
+    for (const k of ["Escape", "Backspace"]) {
+      openMenu("M", []);
+      expect(menuKey(ev(k), m())).toBe(true);
+      expect(app.modal).toBeNull();
+    }
+    openMenu("M", []);
+    expect(menuKey(ev("a"), m())).toBe(false);
+    app.modal = null;
+  });
+
+  describe("pick facing on a banded hex", () => {
+    // a flat-top hex of circumradius 10 at the origin, corners at j·60° (y down)
+    const poly = Array.from(
+      { length: 6 },
+      (_, j) => [10 * Math.cos((j * Math.PI) / 3), 10 * Math.sin((j * Math.PI) / 3)] as const,
+    );
+    const all: Facing[] = ["n", "ne", "se", "s", "sw", "nw"];
+    const N: [number, number] = [0, -7];
+    const SE: [number, number] = [6, 3.5];
+
+    it("takes the available triangle under the point", () => {
+      expect(resolveFacing(poly, N, all, null)).toBe("n");
+      expect(resolveFacing(poly, SE, all, null)).toBe("se");
+    });
+
+    it("off an available triangle, takes the nearest available facing", () => {
+      expect(resolveFacing(poly, N, ["ne", "s"], null)).toBe("ne");
+      expect(resolveFacing(poly, [0, 7], ["ne", "sw"], null)).toBe("sw");
+      // equally near ne and nw: clockwise from the triangle under the point wins
+      expect(resolveFacing(poly, N, ["ne", "nw"], null)).toBe("ne");
+      // a banner point outside the hex still goes by angle
+      expect(resolveFacing(poly, [0, -40], ["s", "nw"], null)).toBe("nw");
+    });
+
+    it("steps clockwise from the facing already chosen on the hex", () => {
+      expect(resolveFacing(poly, N, all, "n")).toBe("ne");
+      expect(resolveFacing(poly, N, ["n", "s"], "s")).toBe("n");
+      expect(resolveFacing(poly, N, ["se"], "se")).toBe("se");
+    });
+
+    it("has no facing without an available one", () => {
+      expect(resolveFacing(poly, N, [], null)).toBeNull();
+    });
   });
 });
 

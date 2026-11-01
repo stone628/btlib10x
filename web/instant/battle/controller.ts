@@ -334,6 +334,11 @@ export class BattleController {
     draft.landing = landing;
   }
 
+  /** Drop the chosen landing, keeping the mode. */
+  clearLanding(): void {
+    this.requireMove().draft.landing = null;
+  }
+
   clearMove(): void {
     const { draft } = this.requireMove();
     draft.choice = null;

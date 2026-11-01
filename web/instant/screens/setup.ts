@@ -14,6 +14,7 @@ import {
 import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../ai/persona.data";
 import { launch, mapSource } from "../flow";
 import { locName, t } from "../i18n";
+import { bracket } from "../input";
 import { createRng } from "../rng";
 import {
   addedSlot,
@@ -38,13 +39,13 @@ import { AI_PACES, app, type Modal, rerender, setAiPace } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { blank, fit, h, mapSlot, modal, row, statusbar } from "./common";
+import { closesMessage, menuKey, menuWindow, openMenu, prefItems } from "./menu";
 
 const { GRID: G, MARK: M, ARROW: A } = UI_THEME;
 
 const AMMO = ["exposed", "core", "spread", "leastFirst"] as const;
 const AMS = ["expected", "firstHit", "priority", "off"] as const;
 const ERAS = [3025, 3050, 3075, 3150];
-const CLASSES: WeightClass[] = ["light", "medium", "heavy", "assault"];
 const SKILLS = [0, 1, 2, 3, 4, 5, 6, 7];
 const HIT_MAXES = Array.from(
   { length: PILOT_HIT_MAX - PILOT_HIT_MIN + 1 },
@@ -146,14 +147,15 @@ export function setupScreen(): TuiNode {
             : [H.el("div", { style: { height: "calc(13 * var(--ch))" } }, mapSlot())]),
         ),
         H.el("div", {}),
-        H.el("div", { key: "cfg" }, ...configRows()),
+        H.el("div", { key: "cfg", class: "ia-setup-cfg" }, ...configRows()),
       ),
     ),
     statusbar(
       [
-        ["Tab", "key.next"],
+        ["[ ]", "key.group"],
         ["Enter", "key.open"],
-        ["Esc", "key.title", () => (app.screen = "title")],
+        ["Bksp", "key.title", () => (app.screen = "title")],
+        ["Esc", "key.menu", openSetupMenu],
         ["F10", "key.launch", () => doLaunch()],
       ],
       app.error && !problem ? `! ${app.error}` : "",
@@ -338,7 +340,11 @@ function configRows(): TuiNode[] {
     line(
       "c13",
       " ".repeat((CFG - 17) >> 1),
-      button("launch", fit(t("setup.launch"), 13, "center"), () => doLaunch(), true),
+      // F10 or a click only: Enter / Space on the focused button does nothing
+      h().btn(
+        { key: "launch", primary: true, attrs: { "data-commit": "" }, onClick: () => doLaunch() },
+        fit(t("setup.launch"), 13, "center"),
+      ),
     ),
   );
   return out;
@@ -890,28 +896,15 @@ function mechKey(e: KeyboardEvent, m: Extract<Modal, { kind: "mech" }>): boolean
     m.cursor = Math.max(0, Math.min(list.length - 1, to));
     m.reveal = true;
   };
-  if (e.key === "Escape") app.modal = null;
-  else if (e.key === "/") {
-    document.querySelector<HTMLInputElement>("#app .ia-modal input")?.focus();
-  } else if (e.key === "ArrowDown") move(m.cursor + 1);
+  if (e.key === "Escape" || e.key === "Backspace") app.modal = null;
+  else if (e.key === "ArrowDown") move(m.cursor + 1);
   else if (e.key === "ArrowUp") move(m.cursor - 1);
   else if (e.key === "PageDown") move(m.cursor + 18);
   else if (e.key === "PageUp") move(m.cursor - 18);
-  else if (e.key === "Home") move(0);
-  else if (e.key === "End") move(list.length - 1);
-  else if (e.key === "Enter") {
+  else if (e.key === "Enter" || e.key === " ") {
     const sel = list[m.cursor];
     if (sel) chooseMech(m, sel.model);
-  } else if (/^Digit[1-4]$/.test(e.code)) {
-    const c = CLASSES[Number(e.code.slice(5)) - 1]!;
-    const f = m.filter;
-    f.classes = f.classes.includes(c) ? f.classes.filter((x) => x !== c) : [...f.classes, c];
-    refilter(m);
-  } else if (e.code === "KeyT") cycleTech(m);
-  else if (e.code === "KeyK") cyclePack(m);
-  else if (e.code === "KeyE") cycleEra(m);
-  else if (e.code === "KeyS") cycleSort(m);
-  else return false;
+  } else return false;
   return true;
 }
 
@@ -925,6 +918,8 @@ function modalNode(m: Modal): TuiNode | null {
       return inputWindow(m);
     case "policy":
       return policyWindow(m);
+    case "menu":
+      return menuWindow(m);
     case "message":
       return modal(
         { cols: 60, title: m.title },
@@ -950,9 +945,11 @@ export function setupKey(e: KeyboardEvent): boolean {
   const m = app.modal;
   if (m) {
     if (m.kind === "message") {
+      if (!closesMessage(e)) return false;
       app.modal = null;
       return true;
     }
+    if (m.kind === "menu") return menuKey(e, m);
     if (e.key === "Tab") {
       // Keep Tab inside the dialog.
       const els = modalFocusables();
@@ -963,7 +960,7 @@ export function setupKey(e: KeyboardEvent): boolean {
       return true;
     }
     if (m.kind === "mech") return mechKey(e, m);
-    if (e.key === "Escape") {
+    if (e.key === "Escape" || e.key === "Backspace") {
       app.modal = null;
       return true;
     }
@@ -973,15 +970,93 @@ export function setupKey(e: KeyboardEvent): boolean {
     }
     return false;
   }
-  if (e.key === "F10") {
-    doLaunch();
+  if (e.key === "F10") doLaunch();
+  else if (e.key === "Backspace") app.screen = "title";
+  else if (e.key === "Escape") openSetupMenu();
+  else if (bracket(e)) stepGroup(bracket(e));
+  else return false;
+  return true;
+}
+
+function openSetupMenu(): void {
+  openMenu(t("setupMenu.title"), [
+    { label: () => t("key.launch"), run: doLaunch },
+    { label: () => t("setupMenu.toTitle"), run: () => (app.screen = "title") },
+    ...prefItems(),
+  ]);
+}
+
+/** The three control groups [ ] jump between: Side 1, Side 2, battle settings. */
+const GROUPS = [".ia-side1", ".ia-side2", ".ia-setup-cfg"];
+
+function controls(within: ParentNode): HTMLElement[] {
+  return Array.from(within.querySelectorAll<HTMLElement>("button:not(:disabled)")).filter(
+    (el) => el.offsetParent !== null && el.tabIndex >= 0,
+  );
+}
+
+function stepGroup(dir: number): void {
+  const groups = GROUPS.map((g) => document.querySelector<HTMLElement>(`#app ${g}`));
+  const at = groups.findIndex((g) => g?.contains(document.activeElement));
+  const n = groups.length;
+  // from outside every group, ] lands on the first and [ on the last
+  const from = at >= 0 ? at : dir > 0 ? -1 : n;
+  for (let k = 1; k <= n; k++) {
+    const g = groups[(((from + dir * k) % n) + n) % n];
+    const first = g ? controls(g)[0] : undefined;
+    if (first) {
+      first.focus();
+      return;
+    }
+  }
+}
+
+/**
+ * New Battle arrows, ahead of the kit's own keys (capture phase): every arrow
+ * moves the focus to the nearest control that way, a dropdown included (Enter
+ * opens it to change the value). True when taken.
+ */
+export function setupArrow(e: KeyboardEvent): boolean {
+  if (app.modal || e.shiftKey || !e.key.startsWith("Arrow")) return false;
+  const root = document.querySelector<HTMLElement>("#app .ia-root");
+  if (!root) return false;
+  const from = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const all = controls(root);
+  if (!from || !all.includes(from)) {
+    all[0]?.focus();
     return true;
   }
-  if (e.key === "Escape") {
-    app.screen = "title";
-    return true;
+  const next = nearest(from, all, e.key);
+  next?.focus();
+  return true;
+}
+
+/** The control nearest `from` in an arrow's direction (up / down keep to the next row). */
+function nearest(from: HTMLElement, all: HTMLElement[], arrow: string): HTMLElement | null {
+  const c = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, h: r.height };
+  };
+  const o = c(from);
+  const [dx, dy] = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[
+    arrow
+  ] as [number, number];
+  let best: HTMLElement | null = null;
+  let score = Infinity;
+  for (const el of all) {
+    if (el === from) continue;
+    const p = c(el);
+    const along = (p.x - o.x) * dx + (p.y - o.y) * dy;
+    const across = Math.abs(dx ? p.y - o.y : p.x - o.x);
+    if (along <= 1 || (dx && across > o.h / 2)) continue;
+    // up / down: the nearest row first, then the nearest control in it
+    const sc = dx ? along + across : along * 10 + across;
+    if (sc < score) {
+      score = sc;
+      best = el;
+    }
   }
-  return false;
+  return best;
 }
 
 /** After each setup render: focus a newly opened dialog, keep the list cursor in view. */

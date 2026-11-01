@@ -23,6 +23,7 @@ import type { BattleController } from "../battle/controller";
 import { type BattleResult, unitLoss } from "../battle/victory";
 import { battleBanners, battleMapSource, rematch } from "../flow";
 import { locName, t } from "../i18n";
+import { bracket } from "../input";
 import type { Banner } from "../map/view";
 import { app, kitModal, rerender } from "../state";
 import { UI_THEME } from "../theme";
@@ -42,6 +43,7 @@ import {
   statusbar,
   tabBar,
 } from "./common";
+import { closesMessage } from "./menu";
 import { pileTipFor } from "./piles";
 
 const { GRID: G, MARK: M, ARROW: A, BAR: B, FRAME: F } = UI_THEME;
@@ -916,7 +918,6 @@ export function debriefOverlays(): void {
 
 /** Esc menu: the debrief's actions, which have no keys of their own. */
 const MENU: readonly { label: string; run: () => void }[] = [
-  { label: "debriefMenu.close", run: () => {} },
   { label: "debriefMenu.rematch", run: () => confirmRematch() },
   { label: "debriefMenu.setup", run: () => confirmSetup() },
   { label: "debriefMenu.toTitle", run: () => (app.screen = "title") },
@@ -1029,18 +1030,19 @@ export function debriefKey(e: KeyboardEvent): boolean {
     if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % MENU.length;
     else if (e.key === "ArrowUp") m.cursor = (m.cursor + MENU.length - 1) % MENU.length;
     else if (e.key === "Enter" || e.key === " ") runMenu(m.cursor);
-    else if (e.key === "Escape") app.modal = null;
+    else if (e.key === "Escape" || e.key === "Backspace") app.modal = null;
     else return false;
     return true;
   }
   if (m) {
+    if (!closesMessage(e)) return false;
     app.modal = null;
     return true;
   }
   const n = Object.keys(app.battle?.state.units ?? {}).length;
   const page = e.key === "PageDown" ? 1 : e.key === "PageUp" ? -1 : 0;
   const body = page ? document.querySelector<HTMLElement>("#app .ia-debrief-body") : null;
-  if (e.key === "[" || e.key === "]") stepTab(e.key === "]" ? 1 : -1);
+  if (bracket(e)) stepTab(bracket(e));
   else if (e.key === "ArrowDown" && n > 0) app.debriefUnit = (app.debriefUnit + 1) % n;
   else if (e.key === "ArrowUp" && n > 0) app.debriefUnit = (app.debriefUnit + n - 1) % n;
   else if (body) body.scrollTop += page * body.clientHeight * 0.8;

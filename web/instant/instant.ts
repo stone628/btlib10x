@@ -6,6 +6,7 @@
 import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
 import { ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
+import { commitAlias, initInput, mapKey } from "./input";
 import {
   fitFontSize,
   fontSize,
@@ -20,8 +21,14 @@ import { queueAfterRender } from "./screens/battle.hud";
 import { h, kit, row } from "./screens/common";
 import { debriefKey, debriefOverlays, debriefScreen } from "./screens/debrief";
 import { deployAfterRender, deployKey, deployOverlays, deployScreen } from "./screens/deploy";
-import { setupAfterRender, setupKey, setupMapPreview, setupScreen } from "./screens/setup";
-import { titleAfterRender, titleScreen } from "./screens/title";
+import {
+  setupAfterRender,
+  setupArrow,
+  setupKey,
+  setupMapPreview,
+  setupScreen,
+} from "./screens/setup";
+import { titleAfterRender, titleKey, titleScreen } from "./screens/title";
 import { emptyLoadout } from "./setup/loadout";
 import { app, kitModal, setRerender } from "./state";
 import type { TuiNode, TuiScene } from "./tui";
@@ -54,7 +61,27 @@ function rootView(): TuiNode {
 }
 
 /** After each render: put the persistent map canvas into its slot and paint it. */
+/** Last focused control outside a dialog, and the one that opened the open dialog. */
+let lastFocus: HTMLElement | null = null;
+let opener: HTMLElement | null = null;
+let hadModal = false;
+
+/** A dialog that opened from a control gives the focus back to it when it closes. */
+function restoreFocus(): void {
+  const has = app.modal !== null;
+  if (has && !hadModal) {
+    const el = document.activeElement;
+    opener =
+      el instanceof HTMLElement && el.closest("#app") && !el.closest(".ia-modal") ? el : lastFocus;
+  } else if (!has && hadModal) {
+    if (opener?.isConnected) opener.focus();
+    opener = null;
+  }
+  hadModal = has;
+}
+
 function afterRender(): void {
+  restoreFocus();
   // Logs stick to their newest line unless the reader scrolled up.
   document.querySelectorAll<HTMLElement>("#app .ia-logscroll").forEach((el) => {
     if (el.dataset.pinned !== "false") el.scrollTop = el.scrollHeight;
@@ -92,27 +119,47 @@ function rerender(): void {
   void scene.update({ tick: ++tick }).then(afterRender);
 }
 
-function onKey(e: KeyboardEvent): void {
+function onKey(raw: KeyboardEvent): void {
   if (app.screen === "loading") return;
+  if (raw.target instanceof HTMLInputElement) return; // text boxes keep their keys
+  const target = raw.target instanceof Element ? raw.target : null;
+  // Backspace (B) is Esc in a kit dialog or popup.
+  if (raw.key === "Backspace" && (kitModal.open || target?.closest(".tui-popup"))) {
+    raw.preventDefault();
+    (target ?? document).dispatchEvent(
+      new KeyboardEvent("keydown", { key: "Escape", code: "Escape", bubbles: true }),
+    );
+    return;
+  }
   if (kitModal.open) return; // a kit popup or dialog owns the keys
-  if (e.target instanceof HTMLInputElement) return;
-  // Kit controls own their keys: popups, menus, and Enter / Space / arrows
-  // on a focused button or select (the browser presses it, the kit opens it).
-  const target = e.target instanceof Element ? e.target : null;
-  const nav = ["Enter", " ", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key);
   if (target?.closest(".tui-popup")) return;
+  const e = commitAlias(raw);
+  if (e !== raw) raw.preventDefault(); // Shift+Enter never presses a focused button
+  if (mapKey(e)) {
+    raw.preventDefault();
+    rerender();
+    return;
+  }
+  // Kit controls own their keys: menus, and Enter / Space / arrows on a focused
+  // button or select (the browser presses it, the kit opens it), except a
+  // commit button, which takes only F10 or a click, and an open Esc menu.
+  const nav = ["Enter", " ", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key);
   // Deployment keeps ↑ ↓ for its unit list while one of its buttons has the focus.
   const unitKeys = app.screen === "deploy" && (e.key === "ArrowUp" || e.key === "ArrowDown");
-  if (nav && !unitKeys && target?.matches('button, [data-tui="menu"]')) return;
+  if (
+    nav &&
+    !unitKeys &&
+    app.modal?.kind !== "menu" &&
+    target?.matches('button, [data-tui="menu"]')
+  ) {
+    if ((e.key === "Enter" || e.key === " ") && target.closest("[data-commit]"))
+      raw.preventDefault();
+    return;
+  }
   let handled = false;
-  if (app.screen === "title") {
-    if (app.modal) {
-      app.modal = null;
-      handled = true;
-    }
-  } else if (app.screen === "setup") {
-    handled = setupKey(e);
-  } else if (app.screen === "deploy") {
+  if (app.screen === "title") handled = titleKey(e);
+  else if (app.screen === "setup") handled = setupKey(e);
+  else if (app.screen === "deploy") {
     try {
       handled = deployKey(e);
       app.error = null;
@@ -125,10 +172,20 @@ function onKey(e: KeyboardEvent): void {
     handled = debriefKey(e);
     if ((app.screen as string) === "battle") pumpAi();
   }
-  if (handled) {
-    e.preventDefault();
-    rerender();
-  }
+  // Backspace never leaves the page
+  if (handled || raw.key === "Backspace") raw.preventDefault();
+  if (handled) rerender();
+}
+
+/** New Battle arrows go ahead of the kit's select keys (capture phase). */
+function onArrowCapture(e: KeyboardEvent): void {
+  if (app.screen !== "setup" || kitModal.open) return;
+  if (e.target instanceof HTMLInputElement || (e.target as Element | null)?.closest?.(".tui-popup"))
+    return;
+  if (!setupArrow(e)) return;
+  e.preventDefault();
+  e.stopPropagation();
+  rerender();
 }
 
 function fetchText(file: string): Promise<string> {
@@ -211,7 +268,13 @@ async function boot(): Promise<void> {
     TUI.closePopup();
     TUI.hideTip();
   });
+  document.addEventListener("focusin", (e) => {
+    const el = e.target;
+    if (el instanceof HTMLElement && el.closest("#app") && !el.closest(".ia-modal")) lastFocus = el;
+  });
+  document.addEventListener("keydown", onArrowCapture, true);
   document.addEventListener("keydown", onKey);
+  initInput();
   document.addEventListener("click", () => setTimeout(rerender, 0));
   try {
     loadCatalog(await fetchText("btlib10x.jsonl"));
