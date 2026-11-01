@@ -7,6 +7,7 @@ export const en = {
   "font.larger": "Larger text",
   "font.fit": "Fit",
   "font.fit.tip": "Largest size that fits the window",
+  "motd.close": "Close MOTD",
   yes: "Yes",
   no: "No",
   on: "on",

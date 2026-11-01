@@ -32,6 +32,11 @@ export function initLocale(): LocaleId {
   const fromUrl = normalizeLocale(new URLSearchParams(location.search).get("lang"));
   current = fromUrl ?? normalizeLocale(stored) ?? "en";
   document.documentElement.lang = current;
+  // The TUI kit stamps its own locale ("en") on <html lang> at DOMContentLoaded,
+  // which comes after this module ran: stamp ours again once it has.
+  document.addEventListener("DOMContentLoaded", () => {
+    document.documentElement.lang = current;
+  });
   return current;
 }
 

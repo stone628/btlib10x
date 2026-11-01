@@ -1,0 +1,13 @@
+<center><div class="banner">Welcome to bt10x instant action!</div></center>
+<div lang="ko">bt10x terminal을 콘솔 게임 UI로 플레이 할 수 있다면 어떨까 하는 생각에서 만들어 보았습니다.
+텍스트 및 박스 기반 UI는 여전히 의도적으로 선택한 것이 맞고,
+제한된 환경에서 최대한 많은 정보를 제공하려고 노력했습니다.
+
+더 큰 게임의 일부분으로 쓰기 위해서 만들긴 했는데, 그 날이 언제 올지는 잘 모르겠네요. 
+</div>
+<div lang="en">This started from a question: what if bt10x terminal could be played through a console-game UI?
+The text-and-box UI is still a deliberate choice,
+and I tried to show as much information as the limited space allows.
+
+It was made to become part of a bigger game, though I can't say when that day will come.
+</div>

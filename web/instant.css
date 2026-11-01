@@ -163,6 +163,105 @@
   font-weight: bold;
   white-space: nowrap;
 }
+/* MOTD button and dialog, as on the terminal page (web/terminal.css). */
+#motd-open {
+  display: flex;
+  align-items: center;
+  flex: none;
+  gap: 6px;
+  height: calc(var(--topbar-h) - 10px);
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+/* Unread marker: MOTD changed since this browser last opened it. */
+#motd-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--c-yellow);
+}
+#motd-dot[hidden] {
+  display: none;
+}
+/* A modal <dialog> in the browser top layer, anchored under the header
+   button. Only its body scrolls. */
+#motd {
+  --motd-top: calc(env(safe-area-inset-top) + var(--topbar-h) + 8px);
+  position: fixed;
+  /* --motd-right lines the right edge up with the MOTD button, which sits
+     left of #home-link; instant.ts sets it on open. */
+  inset: var(--motd-top) var(--motd-right, calc(12px + env(safe-area-inset-right))) auto auto;
+  margin: 0;
+  padding: 0;
+  width: min(520px, calc(100vw - 24px));
+  max-width: none;
+  overflow: hidden;
+  max-height: min(60vh, calc(100vh - var(--motd-top) - env(safe-area-inset-bottom) - 8px));
+  background: var(--c-bg);
+  border: 1px solid var(--c-line);
+  border-radius: 4px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  color: var(--c-text);
+  font-size: 12px;
+}
+@supports (height: 100dvh) {
+  #motd {
+    max-height: min(60dvh, calc(100dvh - var(--motd-top) - env(safe-area-inset-bottom) - 8px));
+  }
+}
+#motd[open] {
+  display: flex;
+  flex-direction: column;
+}
+#motd::backdrop {
+  background: rgba(4, 6, 4, 0.55);
+}
+#motd-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 4px 4px 10px;
+  border-bottom: 1px solid var(--c-line);
+}
+#motd-title {
+  color: var(--c-green);
+  font-weight: bold;
+}
+#motd-close {
+  width: 28px;
+  height: 28px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: inherit;
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+#motd-close:hover {
+  color: var(--c-white);
+  border-color: var(--c-line);
+}
+#motd-close:focus-visible {
+  outline: none;
+  border-color: var(--c-yellow);
+}
+#motd-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 10px 12px 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+#motd-body .banner {
+  color: var(--c-green);
+  font-weight: bold;
+}
 #legal {
   padding: 4px calc(12px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom))
     calc(12px + env(safe-area-inset-left));
@@ -171,11 +270,43 @@
   :root {
     --topbar-h: 44px;
   }
+  #motd-close {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+  #motd-head {
+    padding: 0 0 0 12px;
+  }
+}
+/* Phone: the MOTD becomes a sheet from under the header to above the home bar. */
+@media (max-width: 480px) {
+  #motd {
+    inset: var(--motd-top) calc(8px + env(safe-area-inset-right))
+      calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+    width: auto;
+    height: auto;
+    max-height: none;
+    font-size: 13px;
+  }
 }
 /* narrow headers: the title gives way to the controls */
 @media (max-width: 560px) {
   #topbar-title {
     display: none;
+  }
+}
+/* phone: tighter header buttons, so 한국어 stays on one line beside MOTD */
+@media (max-width: 400px) {
+  #topbar {
+    gap: 8px;
+  }
+  #lang button {
+    white-space: nowrap;
+  }
+  #motd-open,
+  #home-link {
+    padding: 0 6px;
   }
 }
 

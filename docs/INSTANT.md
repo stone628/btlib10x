@@ -400,7 +400,7 @@ header switch re-renders every screen. Engine error text stays English.
 | `board`, `log` | the map is always shown; the log |
 | `salvage`, `rematch`, `reset` | Debrief Salvage, Rematch, New battle |
 | `info mech`, `info map` | Choose 'Mech, map dropdown with preview |
-| `lang`, `ver` | header language switch, version in the header |
+| `lang`, `ver` | header language switch, version in the header; the header MOTD button opens `web/instant/MOTD.txt` as on the terminal page |
 | `rollback`, replay block, `autoplay`, `info weapon`, `table` | not included (a battle with no Player units stands in for `autoplay`) |
 
 ## Architecture

@@ -10,6 +10,7 @@ export const ko: Catalog = {
   "font.larger": "글자 크게",
   "font.fit": "맞춤",
   "font.fit.tip": "창에 맞는 가장 큰 크기",
+  "motd.close": "MOTD 닫기",
   yes: "예",
   no: "아니요",
   on: "켬",

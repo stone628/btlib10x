@@ -52,6 +52,7 @@ const instantCtx = await esbuild.context({
   format: "esm",
   target: "es2022",
   external: ["btlib10x"],
+  loader: { ".txt": "text" },
   logLevel: "info",
 });
 

@@ -7,6 +7,7 @@ import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib1
 import { applyScreenView, ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
 import { commitAlias, initInput, mapKey, stepFocus } from "./input";
+import motdText from "./MOTD.txt";
 import {
   fitFontSize,
   fontSize,
@@ -137,6 +138,14 @@ function rerender(): void {
 }
 
 function onKey(raw: KeyboardEvent): void {
+  if (motdDialog?.open) {
+    // the MOTD owns the keys; the pad's B (Backspace) and a synthetic Esc close it
+    if (raw.key === "Backspace" || raw.key === "Escape") {
+      raw.preventDefault();
+      motdDialog.close();
+    }
+    return;
+  }
   if (app.screen === "loading") return;
   if (raw.target instanceof HTMLInputElement) return; // text boxes keep their keys
   const target = raw.target instanceof Element ? raw.target : null;
@@ -201,7 +210,8 @@ function onKey(raw: KeyboardEvent): void {
 
 /** New Battle and deployment arrows go ahead of the kit's select keys (capture phase). */
 function onArrowCapture(e: KeyboardEvent): void {
-  if ((app.screen !== "setup" && app.screen !== "deploy") || kitModal.open) return;
+  if ((app.screen !== "setup" && app.screen !== "deploy") || kitModal.open || motdDialog?.open)
+    return;
   if (e.target instanceof HTMLInputElement || (e.target as Element | null)?.closest?.(".tui-popup"))
     return;
   if (!(app.screen === "setup" ? setupArrow(e) : deployArrow(e))) return;
@@ -246,6 +256,85 @@ function syncFontButtons(): void {
   });
 }
 
+// MOTD, as on the terminal page: the header button opens a modal <dialog>; ✕,
+// Esc (pad B) or a click on the backdrop closes it and gives the focus back to
+// the app. A dot on the button marks text this browser has not opened yet
+// (hash kept in localStorage, every access guarded).
+const MOTD_SEEN_KEY = "bt10x.ia.motd.seen";
+const motdDialog = document.getElementById("motd") as HTMLDialogElement | null;
+
+function motdHash(text: string): string {
+  let h = 0;
+  for (let i = 0; i < text.length; i++) h = (Math.imul(h, 31) + text.charCodeAt(i)) | 0;
+  return (h >>> 0).toString(36);
+}
+
+function initMotd(): void {
+  const open = document.getElementById("motd-open") as HTMLButtonElement | null;
+  const close = document.getElementById("motd-close") as HTMLButtonElement | null;
+  const dot = document.getElementById("motd-dot");
+  const body = document.getElementById("motd-body");
+  if (body) body.innerHTML = motdText;
+  const version = motdHash(motdText);
+  let seen: string | null = null;
+  try {
+    seen = localStorage.getItem(MOTD_SEEN_KEY);
+  } catch {
+    // storage unavailable: the MOTD just always counts as unread
+  }
+  if (dot) dot.hidden = seen === version;
+  if (!motdDialog || !open) return;
+  const dialog = motdDialog;
+  open.addEventListener("click", () => {
+    if (dialog.open) return;
+    close?.setAttribute("aria-label", t("motd.close"));
+    // Right-align under the button (the home link sits to its right), but
+    // never so far left that the panel runs off screen.
+    const panelWidth = Math.min(520, window.innerWidth - 24);
+    const right = Math.min(
+      window.innerWidth - open.getBoundingClientRect().right,
+      window.innerWidth - 12 - panelWidth,
+    );
+    dialog.style.setProperty("--motd-right", `${Math.max(0, right)}px`);
+    closeKitOverlays();
+    dialog.showModal();
+    open.setAttribute("aria-expanded", "true");
+    if (dot) dot.hidden = true;
+    try {
+      localStorage.setItem(MOTD_SEEN_KEY, version);
+    } catch {
+      // storage unavailable: the dot comes back next visit
+    }
+  });
+  close?.addEventListener("click", () => dialog.close());
+  // A click whose target is the dialog itself but lands outside its box hit
+  // the ::backdrop.
+  dialog.addEventListener("click", (e) => {
+    if (e.target !== dialog) return;
+    const r = dialog.getBoundingClientRect();
+    const inside =
+      e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+    if (!inside) dialog.close();
+  });
+  dialog.addEventListener("close", () => {
+    open.setAttribute("aria-expanded", "false");
+    // the button must not keep the focus (Enter would open it again); the
+    // browser hands it back after this event, so move it on a tick later
+    setTimeout(() => {
+      open.blur();
+      if (lastFocus?.isConnected) lastFocus.focus();
+      rerender();
+    }, 0);
+  });
+}
+
+/** A kit popup or tip left open under the MOTD would sit on top of it. */
+function closeKitOverlays(): void {
+  const TUI = kit();
+  TUI.closePopup();
+  TUI.hideTip();
+}
+
 function initHeader(): void {
   const version = document.getElementById("topbar-version");
   if (version) version.textContent = `v${VERSION}`;
@@ -257,6 +346,7 @@ function initHeader(): void {
     });
   });
   syncLangButtons();
+  initMotd();
   document.querySelectorAll<HTMLButtonElement>("#fontsize button").forEach((b) => {
     b.addEventListener("click", () => {
       const step = b.dataset.fs;
