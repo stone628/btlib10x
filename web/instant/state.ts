@@ -57,6 +57,8 @@ export type Modal =
       cursor: number;
       /** Bring the cursor row into view after the next render (keyboard moves). */
       reveal: boolean;
+      /** Give the cursor row the focus after the next render (opening, list keys). */
+      focusList: boolean;
     }
   | {
       kind: "input";

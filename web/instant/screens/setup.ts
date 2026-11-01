@@ -570,6 +570,7 @@ function mechModal(side: 0 | 1, index: number): Modal {
       list.findIndex((m) => m.model === model),
     ),
     reveal: true,
+    focusList: true,
   };
 }
 
@@ -584,32 +585,30 @@ function refilter(m: Extract<Modal, { kind: "mech" }>): void {
   m.reveal = true;
 }
 
+const CLASSES: readonly (WeightClass | null)[] = [null, "light", "medium", "heavy", "assault"];
+const TECHS = ["any", "is", "clan"] as const;
+const PACKS = ["any", "base", "sw"] as const;
+const SORTS = ["ton", "name", "bv", "intro"] as const;
+/**
+ * Search Options: Name / Class label and control widths; the dropdown widths
+ * of the other rows (a dropdown's width holds its value, a lead cell, ▼ and
+ * one cell of slack: sub-pixel widths otherwise cut the last letter).
+ */
+const OPT_LABEL = 7;
+const OPT_CTL = 14;
+const TECH_CTL = 7;
+const ERA_CTL = 8;
+const SORT_CTL = 10;
+
 function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
   const H = h();
   const f = m.filter;
   const list = filterMechs(f);
   const total = filterMechs(defaultFilter()).length;
   m.cursor = Math.min(m.cursor, Math.max(0, list.length - 1));
-  const chip = (c: WeightClass, i: number): (TuiNode | string)[] => {
-    const label = `${t(`wclass.${c}`)}(${i + 1})`;
-    return [
-      H.check(
-        {
-          key: `cls-${c}`,
-          checked: f.classes.includes(c),
-          onChange: () => {
-            toggleClass(m, c);
-            rerender();
-          },
-        },
-        label,
-      ),
-      " ".repeat(Math.max(1, 9 - kitLen(label))),
-    ];
-  };
   const search = H.input({
     key: "search",
-    cols: 17,
+    cols: OPT_CTL + 2,
     placeholder: t("mech.search"),
     value: f.text,
     attrs: { spellcheck: "false", autocomplete: "off" },
@@ -620,30 +619,98 @@ function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
     },
     onKeydown: (e: Event) => {
       const ke = e as KeyboardEvent;
-      if (ke.key === "Escape") (ke.target as HTMLElement).blur();
-      else if (ke.key === "ArrowDown" || ke.key === "ArrowUp" || ke.key === "Enter") mechKey(ke, m);
+      if (ke.key === "Escape") app.modal = null;
+      else if (ke.key === "Enter") m.focusList = true;
+      else if (ke.key === "Tab") cycleModalFocus(ke.shiftKey ? -1 : 1);
+      else if (ke.key === "ArrowDown" || ke.key === "ArrowUp") mechArrow(ke.key, m);
       else return;
       ke.preventDefault();
       rerender();
     },
   });
-  const flat = (key: string, text: string, run: () => void) =>
-    H.btn({ key, variant: "bare", onClick: run }, text);
-  const sortText = `${t("mech.sort")}(S):${t(`sort.${f.sort}`)}`;
+  // a filter dropdown: changing it starts the list over at the top
+  const filterSelect = <T>(
+    key: string,
+    cols: number,
+    values: readonly T[],
+    value: T,
+    label: (v: T) => string,
+    set: (v: T) => void,
+  ) =>
+    select(key, cols, values, value, label, (v) => {
+      set(v);
+      refilter(m);
+    });
+  // a label padded to `cols` cells, else one cell after it
+  const label = (key: string, cols = 0) => {
+    const text = t(key);
+    return fit(text, Math.max(cols, kitLen(text) + 1));
+  };
+  const any = t("tech.any");
+  const sortLabel = label("mech.sort");
+  const sortCols = kitLen(sortLabel) + SORT_CTL;
   const options = H.box(
-    { key: "opts", cols: 50, rows: 6, pad: 0, title: t("mech.options") },
-    line("o1", "/ ", search, "  ", ...chip("light", 0), ...chip("medium", 1)),
-    line("o2", " ".repeat(21), ...chip("heavy", 2), ...chip("assault", 3)),
+    { key: "opts", cols: 50, rows: 5, pad: 0, title: t("mech.options") },
     line(
-      "o3",
-      flat("tech", `${t("mech.tech")}(T):${t(`tech.${f.tech}`)}`, () => cycleTech(m)),
-      flat("pack", `${t("mech.pack")}(K):${f.pack}`, () => cyclePack(m)),
-      flat("era", `${t("mech.era")}(E):≤${f.introMax}`, () => cycleEra(m)),
+      "o1",
+      label("mech.name", OPT_LABEL),
+      search,
+      "  ",
+      label("mech.class", OPT_LABEL),
+      filterSelect(
+        "class",
+        OPT_CTL,
+        CLASSES,
+        f.classes.length === 1 ? f.classes[0]! : null,
+        (c) => (c === null ? any : t(`wclass.${c}`)),
+        (c) => (f.classes = c === null ? [] : [c]),
+      ),
     ),
     line(
-      "o4",
-      flat("sort", sortText, () => cycleSort(m)),
-      fit(t("mech.matched", { n: list.length, total }), 48 - kitLen(sortText) - 2, "right"),
+      "o2",
+      label("mech.tech"),
+      filterSelect(
+        "tech",
+        TECH_CTL,
+        TECHS,
+        f.tech,
+        (x) => t(`tech.${x}`),
+        (x) => (f.tech = x),
+      ),
+      "  ",
+      label("mech.pack"),
+      filterSelect(
+        "pack",
+        TECH_CTL,
+        PACKS,
+        f.pack,
+        (x) => (x === "any" ? any : x),
+        (x) => (f.pack = x),
+      ),
+      "  ",
+      label("mech.era"),
+      filterSelect(
+        "era",
+        ERA_CTL,
+        ERAS,
+        f.introMax,
+        (y) => `≤${y}`,
+        (y) => (f.introMax = y),
+      ),
+    ),
+    line(
+      "o3",
+      sortLabel,
+      filterSelect(
+        "sort",
+        SORT_CTL,
+        SORTS,
+        f.sort,
+        (x) => t(`sort.${x}`),
+        (x) => (f.sort = x),
+      ),
+      // the count keeps its own cells: a focused dropdown never pushes it
+      fit(t("mech.matched", { n: list.length, total }), 48 - sortCols, "right"),
     ),
   );
   const rows = list.map((e, i) =>
@@ -652,7 +719,8 @@ function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
       {
         key: e.model,
         class: `ia-row${i === m.cursor ? " sel" : ""}`,
-        attrs: { "data-click": "" },
+        // Roving focus: only the cursor row is a Tab stop; ↑ ↓ move it.
+        attrs: { "data-click": "", "data-mechrow": "", tabindex: i === m.cursor ? "0" : "-1" },
         onClick: () => {
           m.cursor = i;
         },
@@ -667,7 +735,7 @@ function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
     ),
   );
   const listBox = H.scroll(
-    { key: "list", cols: 50, rows: 20, pad: 0, title: listHeader(), class: "ia-mechlist" },
+    { key: "list", cols: 50, rows: 18, pad: 0, title: listHeader(), class: "ia-mechlist" },
     ...(rows.length ? rows : [row(` ${t("mech.none")}`, { key: "none", cls: "ia-dim" })]),
   );
   const sel = list[m.cursor];
@@ -687,6 +755,7 @@ function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
         {
           key: "use",
           disabled: !sel,
+          attrs: { "data-use": "" },
           onClick: () => {
             if (sel) chooseMech(m, sel.model);
           },
@@ -697,7 +766,7 @@ function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
   ];
   const slot = app.loadout.sides[m.side][m.index];
   return modal(
-    { cols: 96, rows: 28, pad: 0, title: t("mech.title", { id: slot?.id ?? "" }) },
+    { cols: 96, rows: 25, pad: 0, title: t("mech.title", { id: slot?.id ?? "" }) },
     H.el(
       "div",
       {
@@ -712,12 +781,6 @@ function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
       H.el("div", { key: "right" }, ...right),
     ),
   );
-}
-
-function toggleClass(m: Extract<Modal, { kind: "mech" }>, c: WeightClass): void {
-  const f = m.filter;
-  f.classes = f.classes.includes(c) ? f.classes.filter((x) => x !== c) : [...f.classes, c];
-  refilter(m);
 }
 
 function kitLen(s: string): number {
@@ -770,7 +833,7 @@ function selectedBox(model: string | null): TuiNode {
   const lines: TuiNode[] = [];
   if (model === null) {
     lines.push(row(` ${t("mech.none")}`, { key: "none", cls: "ia-dim" }));
-    return H.box({ key: "sel", cols: 43, rows: 23, pad: 0, title: t("mech.selected") }, ...lines);
+    return H.box({ key: "sel", cols: 43, rows: 20, pad: 0, title: t("mech.selected") }, ...lines);
   }
   const def = mechDef(model);
   const cls = def.weightClass.toLowerCase();
@@ -825,85 +888,63 @@ function selectedBox(model: string | null): TuiNode {
     ),
   );
   lines.push(...armorDiagram(model));
-  return H.box({ key: "sel", cols: 43, rows: 23, pad: 0, title: t("mech.selected") }, ...lines);
+  return H.box({ key: "sel", cols: 43, rows: 20, pad: 0, title: t("mech.selected") }, ...lines);
 }
 
-/** Paper-doll armor: I internal, A armor, F / R torso front / rear. */
+/**
+ * Paper-doll armor, seven rows: I internal, A armor, F / R torso front /
+ * rear, HS heat dissipation. Each location takes a 7-cell column (arms
+ * outside, torsos and legs between); head and legs share the centre / side
+ * torso columns.
+ */
 function armorDiagram(model: string): TuiNode[] {
   const def = mechDef(model);
-  const W = 26;
-  const grid = Array.from({ length: 10 }, () => Array.from({ length: W }, () => " "));
+  const W = 39;
+  const grid = Array.from({ length: 7 }, () => Array.from({ length: W }, () => " "));
   const put = (r: number, x: number, s: string) => {
     for (let i = 0; i < s.length; i++) if (x + i < W) grid[r]![x + i] = s[i]!;
   };
-  const cell = (r: number, x: number, s: string) => put(r, x, s.padStart(4));
-  const I = (l: Location) => `${def.internalStructure[l]}I`;
-  const A = (l: Location) => `${def.armor[l]}A`;
-  const F = (l: Location) => `${def.armor[l]}F`;
-  const R = (l: "centerTorso" | "leftTorso" | "rightTorso") => `${def.armorRear[l]}R`;
-  const tag = (l: Location) => `[${SHORT[l]}]`;
-  put(0, 11, tag("head"));
-  put(0, 22, "[HS]");
-  cell(1, 11, I("head"));
-  cell(1, 22, `-${heatDissipationMax(def)}`);
-  cell(2, 11, A("head"));
-  put(3, 6, tag("rightTorso"));
-  put(3, 11, tag("centerTorso"));
-  put(3, 16, tag("leftTorso"));
-  put(4, 1, tag("rightArm"));
-  put(4, 22, tag("leftArm"));
+  /** `s` centred in the 7-cell column at `x`. */
+  const cell = (r: number, x: number, s: string) => put(r, x + Math.max(0, (7 - s.length) >> 1), s);
+  const pair = (a: number, x: string, b: number, y: string) =>
+    `${String(a).padStart(2)}${x}/${String(b).padStart(2)}${y}`;
+  const tag = (l: Location) => `[ ${SHORT[l][0]} ${SHORT[l][1]} ]`;
+  const IA = (l: Location) => pair(def.internalStructure[l], "I", def.armor[l], "A");
+  const RA = 0;
+  const RT = 8;
+  const CT = 16;
+  const LT = 24;
+  const LA = 32;
+  cell(0, CT, tag("head"));
+  put(0, W - 4, "[HS]");
+  cell(1, CT, IA("head"));
+  const hs = `-${heatDissipationMax(def)}`;
+  put(1, W - hs.length, hs);
   for (const [x, l] of [
-    [6, "rightTorso"],
-    [11, "centerTorso"],
-    [16, "leftTorso"],
+    [RT, "rightTorso"],
+    [CT, "centerTorso"],
+    [LT, "leftTorso"],
   ] as const) {
-    cell(4, x, I(l));
-    cell(5, x, F(l));
-    cell(6, x, R(l));
+    cell(2, x, tag(l));
+    cell(3, x, `${def.internalStructure[l]}I`);
+    cell(4, x, pair(def.armor[l], "F", def.armorRear[l], "R"));
   }
   for (const [x, l] of [
-    [1, "rightArm"],
-    [22, "leftArm"],
+    [RA, "rightArm"],
+    [LA, "leftArm"],
   ] as const) {
-    cell(5, x, I(l));
-    cell(6, x, A(l));
+    cell(3, x, tag(l));
+    cell(4, x, IA(l));
   }
-  put(7, 6, tag("rightLeg"));
-  put(7, 16, tag("leftLeg"));
   for (const [x, l] of [
-    [6, "rightLeg"],
-    [16, "leftLeg"],
+    [RT, "rightLeg"],
+    [LT, "leftLeg"],
   ] as const) {
-    cell(8, x, I(l));
-    cell(9, x, A(l));
+    cell(5, x, tag(l));
+    cell(6, x, IA(l));
   }
   const off = " ".repeat((41 - W) >> 1);
   return grid.map((r, i) => row(fit(off + r.join(""), 41), { key: `a${i}` }));
-}
-
-function cycleTech(m: Extract<Modal, { kind: "mech" }>): void {
-  const f = m.filter;
-  f.tech = f.tech === "any" ? "is" : f.tech === "is" ? "clan" : "any";
-  refilter(m);
-}
-
-function cyclePack(m: Extract<Modal, { kind: "mech" }>): void {
-  const f = m.filter;
-  f.pack = f.pack === "any" ? "base" : f.pack === "base" ? "sw" : "any";
-  refilter(m);
-}
-
-function cycleEra(m: Extract<Modal, { kind: "mech" }>): void {
-  const f = m.filter;
-  f.introMax = ERAS[(ERAS.indexOf(f.introMax) + 1) % ERAS.length]!;
-  refilter(m);
-}
-
-function cycleSort(m: Extract<Modal, { kind: "mech" }>): void {
-  const sorts = ["ton", "name", "bv", "intro"] as const;
-  const f = m.filter;
-  f.sort = sorts[(sorts.indexOf(f.sort) + 1) % sorts.length]!;
-  refilter(m);
 }
 
 function mechKey(e: KeyboardEvent, m: Extract<Modal, { kind: "mech" }>): boolean {
@@ -911,17 +952,58 @@ function mechKey(e: KeyboardEvent, m: Extract<Modal, { kind: "mech" }>): boolean
   const move = (to: number) => {
     m.cursor = Math.max(0, Math.min(list.length - 1, to));
     m.reveal = true;
+    m.focusList = true;
   };
   if (e.key === "Escape" || e.key === "Backspace") app.modal = null;
-  else if (e.key === "ArrowDown") move(m.cursor + 1);
-  else if (e.key === "ArrowUp") move(m.cursor - 1);
-  else if (e.key === "PageDown") move(m.cursor + 18);
-  else if (e.key === "PageUp") move(m.cursor - 18);
+  else if (e.key.startsWith("Arrow")) mechArrow(e.key, m);
+  else if (e.key === "PageDown") move(m.cursor + 16);
+  else if (e.key === "PageUp") move(m.cursor - 16);
   else if (e.key === "Enter" || e.key === " ") {
     const sel = list[m.cursor];
     if (sel) chooseMech(m, sel.model);
   } else return false;
   return true;
+}
+
+/** The Choose 'Mech list's cursor row (its one Tab stop), if the list has rows. */
+function mechRow(win: ParentNode): HTMLElement | null {
+  return win.querySelector<HTMLElement>('[data-mechrow][tabindex="0"]');
+}
+
+/**
+ * Choose 'Mech arrows, as on the deployment unit list: on the list (or with
+ * nothing focused) ↑ ↓ move the cursor, and ↑ past the first row, ↓ past the
+ * last or ← → leave it for the nearest control that way (→ with none there:
+ * Use). On a control (dropdown, search, button) every arrow moves to the
+ * nearest control, the list's cursor row included (← with none there: the
+ * list).
+ */
+function mechArrow(key: string, m: Extract<Modal, { kind: "mech" }>): void {
+  const win = document.querySelector<HTMLElement>("#app .ia-modal");
+  if (!win) return;
+  const el = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const onList = !el || !win.contains(el) || el.hasAttribute("data-mechrow");
+  const vertical = key === "ArrowDown" || key === "ArrowUp";
+  const step = key === "ArrowDown" ? 1 : -1;
+  const list = filterMechs(m.filter);
+  if (onList && vertical && m.cursor + step >= 0 && m.cursor + step < list.length) {
+    m.cursor += step;
+    m.reveal = true;
+    m.focusList = true;
+    return;
+  }
+  const rowEl = mechRow(win);
+  const all = [...modalFocusables()];
+  const from = onList ? rowEl : el;
+  if (!from) {
+    all[0]?.focus();
+    return;
+  }
+  const next = nearest(from, all, key);
+  if (next) next.focus();
+  else if (onList && key === "ArrowRight")
+    win.querySelector<HTMLElement>("button[data-use]:not(:disabled)")?.focus();
+  else if (!onList && key === "ArrowLeft" && rowEl) rowEl.focus();
 }
 
 // ------------------------------------------------------------ modals, keys
@@ -952,9 +1034,18 @@ function modalNode(m: Modal): TuiNode | null {
 function modalFocusables(): HTMLElement[] {
   return Array.from(
     document.querySelectorAll<HTMLElement>(
-      "#app .ia-modal button:not(:disabled), #app .ia-modal input:not([type=hidden])",
+      "#app .ia-modal button:not(:disabled), #app .ia-modal input:not([type=hidden]), #app .ia-modal [data-mechrow][tabindex='0']",
     ),
   ).filter((el) => el.offsetParent !== null);
+}
+
+/** Tab / Shift+Tab: the next / previous control of the open dialog, wrapping (Tab keeps inside it). */
+function cycleModalFocus(dir: number): void {
+  const els = modalFocusables();
+  if (els.length === 0) return;
+  const i = els.indexOf(document.activeElement as HTMLElement);
+  const next = i < 0 ? 0 : (i + (dir < 0 ? els.length - 1 : 1)) % els.length;
+  els[next]!.focus();
 }
 
 export function setupKey(e: KeyboardEvent): boolean {
@@ -967,12 +1058,7 @@ export function setupKey(e: KeyboardEvent): boolean {
     }
     if (m.kind === "menu") return menuKey(e, m);
     if (e.key === "Tab") {
-      // Keep Tab inside the dialog.
-      const els = modalFocusables();
-      if (els.length === 0) return true;
-      const i = els.indexOf(document.activeElement as HTMLElement);
-      const next = i < 0 ? 0 : (i + (e.shiftKey ? els.length - 1 : 1)) % els.length;
-      els[next]!.focus();
+      cycleModalFocus(e.shiftKey ? -1 : 1);
       return true;
     }
     if (m.kind === "mech") return mechKey(e, m);
@@ -1050,10 +1136,15 @@ function stepGroup(dir: number): void {
 /**
  * New Battle arrows, ahead of the kit's own keys (capture phase): every arrow
  * moves the focus to the nearest control that way, a dropdown included (Enter
- * opens it to change the value). True when taken.
+ * opens it to change the value); in Choose 'Mech, `mechArrow`. True when taken.
  */
 export function setupArrow(e: KeyboardEvent): boolean {
-  if (app.modal || e.shiftKey || !e.key.startsWith("Arrow")) return false;
+  if (e.shiftKey || !e.key.startsWith("Arrow")) return false;
+  if (app.modal?.kind === "mech") {
+    mechArrow(e.key, app.modal);
+    return true;
+  }
+  if (app.modal) return false;
   const root = document.querySelector<HTMLElement>("#app .ia-root");
   if (!root) return false;
   const from = document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -1084,6 +1175,12 @@ export function setupAfterRender(): void {
       inp.focus();
       inp.select();
     } else if (m?.kind !== "mech") modalFocusables()[0]?.focus();
+  }
+  if (m?.kind === "mech" && m.focusList && win) {
+    m.focusList = false;
+    // an empty list leaves the focus on the first control (the search)
+    const target = mechRow(win) ?? modalFocusables()[0];
+    target?.focus({ preventScroll: true });
   }
   if (m?.kind === "mech" && m.reveal) {
     m.reveal = false;

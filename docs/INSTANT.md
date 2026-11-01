@@ -99,12 +99,26 @@ units share an id, or the map or engagement is not chosen.
 ### Choose 'Mech
 
 The terminal's `info mech` filters as controls over the catalog manifest:
-a name search (model, chassis, Clan name), weight classes (any mix of
-light / medium / heavy / assault), tech base (any, IS, Clan), pack (any,
+a name search (model, chassis, Clan name) and dropdowns for weight class
+(any, light, medium, heavy, assault), tech base (any, IS, Clan), pack (any,
 base, sw), an era cap (intro year ≤ N, default 3150) and sort (tonnage,
-name, BV, intro). The selected 'Mech's summary shows class, tonnage, tech
-base, intro year, BV, walk / run / jump, its weapons (location, ammo of the
-shared pool, heat, damage) and armor / internal structure per location.
+name, BV, intro), with tech / pack / era on one row and the matched / total
+count beside sort.
+The selected 'Mech's summary shows class, tonnage, tech base, intro year,
+BV, walk / run / jump, its weapons (location, ammo of the shared pool) and a
+seven-row paper doll of internal structure and armor:
+
+```
+                [ H D ]            [HS]
+                 3I/ 9A             -11
+        [ R T ] [ C T ] [ L T ]
+[ R A ]   15I     22I     15I   [ L A ]
+11I/13A 14F/ 5R 16F/ 5R 14F/ 5R 11I/13A
+        [ R L ]         [ L L ]
+        15I/13A         15I/13A
+```
+
+(I internal, A armor, F / R torso front / rear, HS heat dissipation.)
 
 ### Random battle
 
@@ -334,7 +348,7 @@ space there; pad B leaves the box (a pad cannot type).
 |---|---|
 | Title | ↑ ↓ select, Enter run, Esc menu (language) |
 | New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Esc menu (Launch, Discard, language) |
-| Choose 'Mech | ↑ ↓ PgUp PgDn move, Enter / Space use, Tab to the filters and search, Esc / Backspace cancel |
+| Choose 'Mech | opens on the list (its cursor row is the one Tab stop); list: ↑ ↓ PgUp PgDn move, Enter / Space use, ↑ past the first row to the filters, → to Use; on a dropdown, the search or a button, arrows move to the nearest control (the list's cursor row too; Enter opens a dropdown); in the search ↑ ↓ leave it, Enter goes to the list; Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, language) |
 | Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
 | Battle, a sheet focused | arrows move to the nearest hint target that way (header, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
