@@ -117,8 +117,6 @@ export function launch(): void {
     edges: [null, null],
     placements: {},
     cursor: Math.max(0, cursor),
-    hoverEdge: null,
-    pickedEdge: null,
     focusUnit: false,
   };
   app.screen = "deploy";

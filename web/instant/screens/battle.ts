@@ -527,6 +527,8 @@ export function battleScreen(): TuiNode {
   const phase = b.phase === "attack" ? "attack" : "movement";
   focusMover();
   const o = orders();
+  // a persona waits for Enter (A) or a click on NEXT
+  const stepping = b.actorPersona !== null && app.aiPace === "step" && b.result === null;
   app.battleUi.menuBox =
     o.menu.length > 0 ? { cols: Math.min(BODY.cols, o.width + 2), rows: o.menu.length + 2 } : null;
   const map = at(
@@ -544,13 +546,21 @@ export function battleScreen(): TuiNode {
     { class: "ia-root ia-battle" },
     ...battleFrame(
       title(),
-      [map, o.done ? doneButton(() => commit()) : null],
+      [
+        map,
+        o.done
+          ? doneButton(() => commit())
+          : stepping
+            ? doneButton(() => pumpAi(true), "orders.stepButton")
+            : null,
+      ],
       o.menu.length > 0 ? [topMenu(o.menu, o.width, BODY.row, o.title)] : [],
     ),
     statusbar(
       [
         ...(phase === "movement" ? MOVE_KEYS : ATTACK_KEYS),
         ...(o.done ? [["F10", "key.done", () => commit()] as const] : []),
+        ...(stepping ? [["Enter", "key.step", () => pumpAi(true)] as const] : []),
         ["[", "key.sheetLeft", () => toggleSheet(0)],
         ["]", "key.sheetRight", () => toggleSheet(1)],
         ["L", "key.logs", () => toggleLogs()],

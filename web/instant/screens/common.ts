@@ -186,3 +186,38 @@ export function cells(s: string): number {
 export function mapSlot(): TuiNode {
   return h().el("div", { class: "ia-mapslot", key: "mapslot", attrs: { "data-tui-raw": "" } });
 }
+
+/** Enabled, visible controls in a container that take the focus (Tab stops). */
+export function controls(within: ParentNode): HTMLElement[] {
+  return Array.from(within.querySelectorAll<HTMLElement>("button:not(:disabled)")).filter(
+    (el) => el.offsetParent !== null && el.tabIndex >= 0,
+  );
+}
+
+/** The control nearest `from` in an arrow's direction (up / down keep to the next row). */
+export function nearest(from: HTMLElement, all: HTMLElement[], arrow: string): HTMLElement | null {
+  const c = (el: HTMLElement) => {
+    const r = el.getBoundingClientRect();
+    return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, h: r.height };
+  };
+  const o = c(from);
+  const [dx, dy] = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[
+    arrow
+  ] as [number, number];
+  let best: HTMLElement | null = null;
+  let score = Infinity;
+  for (const el of all) {
+    if (el === from) continue;
+    const p = c(el);
+    const along = (p.x - o.x) * dx + (p.y - o.y) * dy;
+    const across = Math.abs(dx ? p.y - o.y : p.x - o.x);
+    if (along <= 1 || (dx && across > o.h / 2)) continue;
+    // up / down: the nearest row first, then the nearest control in it
+    const sc = dx ? along + across : along * 10 + across;
+    if (sc < score) {
+      score = sc;
+      best = el;
+    }
+  }
+  return best;
+}

@@ -19,6 +19,7 @@ import { createRng } from "../rng";
 import {
   addedSlot,
   defaultFilter,
+  emptyLoadout,
   filterMechs,
   idProblem,
   loadoutProblem,
@@ -35,10 +36,10 @@ import {
   TURN_LIMIT_MIN,
   type WeightClass,
 } from "../setup/loadout";
-import { AI_PACES, app, type Modal, rerender, setAiPace } from "../state";
+import { AI_PACES, app, kitModal, type Modal, rerender, setAiPace } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
-import { blank, fit, h, mapSlot, modal, row, statusbar } from "./common";
+import { blank, controls, fit, h, kit, mapSlot, modal, nearest, row, statusbar } from "./common";
 import { closesMessage, menuKey, menuWindow, openMenu, prefItems } from "./menu";
 
 const { GRID: G, MARK: M, ARROW: A } = UI_THEME;
@@ -154,7 +155,6 @@ export function setupScreen(): TuiNode {
       [
         ["[ ]", "key.group"],
         ["Enter", "key.open"],
-        ["Bksp", "key.title", () => (app.screen = "title")],
         ["Esc", "key.menu", openSetupMenu],
         ["F10", "key.launch", () => doLaunch()],
       ],
@@ -227,9 +227,14 @@ function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
     " ",
     field("id", id, 4, () => editId(s)),
     " ",
-    tight("mech", fit(mech, 26, def ? "left" : "center"), () => {
-      app.modal = mechModal(side, i);
-    }),
+    tight(
+      "mech",
+      fit(mech, 26, def ? "left" : "center"),
+      () => {
+        app.modal = mechModal(side, i);
+      },
+      "ia-slot-mech",
+    ),
     " ",
     fit(def ? def.bv : "-", 5, "right"),
     "  ",
@@ -339,7 +344,9 @@ function configRows(): TuiNode[] {
     row(" ", { key: "c12" }),
     line(
       "c13",
-      " ".repeat((CFG - 17) >> 1),
+      " ".repeat((CFG - 17 - discardCols() - 2) >> 1),
+      button("discard", t("deploy.discard"), confirmDiscard),
+      "  ",
       // F10 or a click only: Enter / Space on the focused button does nothing
       h().btn(
         { key: "launch", primary: true, attrs: { "data-commit": "" }, onClick: () => doLaunch() },
@@ -971,7 +978,6 @@ export function setupKey(e: KeyboardEvent): boolean {
     return false;
   }
   if (e.key === "F10") doLaunch();
-  else if (e.key === "Backspace") app.screen = "title";
   else if (e.key === "Escape") openSetupMenu();
   else if (bracket(e)) stepGroup(bracket(e));
   else return false;
@@ -981,19 +987,40 @@ export function setupKey(e: KeyboardEvent): boolean {
 function openSetupMenu(): void {
   openMenu(t("setupMenu.title"), [
     { label: () => t("key.launch"), run: doLaunch },
-    { label: () => t("setupMenu.toTitle"), run: () => (app.screen = "title") },
+    { label: () => t("deploy.discard"), run: confirmDiscard },
     ...prefItems(),
   ]);
 }
 
+/** Width of the Discard button: its label and the kit's "[ " … " ]". */
+function discardCols(): number {
+  return kit().compensatedLength(t("deploy.discard")) + 4;
+}
+
+/** Discard the setup (confirm first) and return to the title. */
+function confirmDiscard(): void {
+  kitModal.open = true;
+  void kit()
+    .dialog({
+      title: t("setup.discardTitle"),
+      text: t("setup.discardText"),
+      buttons: [t("yes"), t("no")],
+      defaultIndex: 1,
+      tone: "warn",
+    })
+    .then((r) => {
+      kitModal.open = false;
+      if (r === t("yes")) {
+        app.loadout = emptyLoadout();
+        app.error = null;
+        app.screen = "title";
+      }
+      rerender();
+    });
+}
+
 /** The three control groups [ ] jump between: Side 1, Side 2, battle settings. */
 const GROUPS = [".ia-side1", ".ia-side2", ".ia-setup-cfg"];
-
-function controls(within: ParentNode): HTMLElement[] {
-  return Array.from(within.querySelectorAll<HTMLElement>("button:not(:disabled)")).filter(
-    (el) => el.offsetParent !== null && el.tabIndex >= 0,
-  );
-}
 
 function stepGroup(dir: number): void {
   const groups = GROUPS.map((g) => document.querySelector<HTMLElement>(`#app ${g}`));
@@ -1031,37 +1058,15 @@ export function setupArrow(e: KeyboardEvent): boolean {
   return true;
 }
 
-/** The control nearest `from` in an arrow's direction (up / down keep to the next row). */
-function nearest(from: HTMLElement, all: HTMLElement[], arrow: string): HTMLElement | null {
-  const c = (el: HTMLElement) => {
-    const r = el.getBoundingClientRect();
-    return { x: (r.left + r.right) / 2, y: (r.top + r.bottom) / 2, h: r.height };
-  };
-  const o = c(from);
-  const [dx, dy] = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[
-    arrow
-  ] as [number, number];
-  let best: HTMLElement | null = null;
-  let score = Infinity;
-  for (const el of all) {
-    if (el === from) continue;
-    const p = c(el);
-    const along = (p.x - o.x) * dx + (p.y - o.y) * dy;
-    const across = Math.abs(dx ? p.y - o.y : p.x - o.x);
-    if (along <= 1 || (dx && across > o.h / 2)) continue;
-    // up / down: the nearest row first, then the nearest control in it
-    const sc = dx ? along + across : along * 10 + across;
-    if (sc < score) {
-      score = sc;
-      best = el;
-    }
-  }
-  return best;
-}
-
 /** After each setup render: focus a newly opened dialog, keep the list cursor in view. */
 export function setupAfterRender(): void {
   const m = app.modal;
+  // nothing focused (the screen just opened): start on the first 'Mech, else the first control
+  if (!m && (document.activeElement === document.body || !document.activeElement)) {
+    const root = document.querySelector<HTMLElement>("#app .ia-root");
+    const start = root?.querySelector<HTMLElement>(".ia-slot-mech") ?? (root && controls(root)[0]);
+    start?.focus();
+  }
   const win = document.querySelector<HTMLElement>("#app .ia-modal");
   if (win && !win.dataset.focused) {
     win.dataset.focused = "1";

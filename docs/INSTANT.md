@@ -26,7 +26,8 @@ covers what Instant Action adds or does differently.
   engagement, a fresh seed); *Random battle* builds a random loadout and
   opens it in New Battle for review (it never starts the battle).
 - **New Battle** — edit the loadout; Launch (F10) goes to Deployment,
-  Backspace returns to the title, Esc opens its menu.
+  Discard (button, or the Esc menu) asks first, then clears the setup and
+  returns to the title.
 - **Deployment** — roll-off for home edges, then placement; Done (F10)
   creates the battle. Discard (button, or the Esc menu) asks first, then
   returns to the title with the New Battle setup kept.
@@ -120,16 +121,18 @@ entry. It stops on New Battle; Launch starts it.
 | Units start off the map and enter along the home edge; the entry hex is the first hex of movement | The engine has no off-map units: every unit is placed on a home-edge hex before turn 1, facing into the map. **House rule:** that first placement is free; movement starts from it |
 | Leaving by the home edge is a retreat (p. 257) | Not modeled; Withdraw ends the whole battle instead |
 
-- If the roll-off winner's side has a Player unit, the player chooses the
-  edge (compass buttons, arrow keys, or clicking an edge hex; Proceed / F10
-  confirms). A winner without one picks at random at once.
-- Every unit is then auto-placed: spread evenly along its edge, nudged
+- Deployment is one screen. If the roll-off winner's side has a Player unit,
+  the side pane shows a *Home edge* dropdown that starts on *Not selected*;
+  Done stays disabled (F10 says to choose an edge) until one is picked. A
+  winner without one picks at random at once and the pane shows its choice.
+- Picking or changing the edge sets both sides (the loser takes the opposite
+  one) and auto-places every unit again, hand placements included; *Not
+  selected* clears them and hides the unit list. Every unit is auto-placed: spread evenly along its edge, nudged
   toward woods and rough and away from deep water, one 'Mech per hex.
 - Only Player units can be moved or turned; persona units keep their
   auto-placed hex and facing. A Player unit may take any free hex on its own
   home edge, in any of the six facings. *Auto-place* re-places every Player
-  unit; *Change edge* (Player winner only) clears edges and placements and
-  reopens the choice.
+  unit.
 - Done (F10) builds the units (`buildUnitInit` with the slot's skills,
   MaxHit and policy), creates the battle and rolls initiative for turn 1.
 
@@ -227,7 +230,8 @@ Persona units are played by a copy of the terminal's persona player
 applied through the same controller calls a Player uses, so atomic commits
 apply. A persona command that fails is logged and the unit passes, so the
 battle never stalls. Persona pace (New Battle, or the battle menu):
-**instant**, **step** (default; Enter / Space plays the next persona activation) or
+**instant**, **step** (default; Enter / Space / A, or the NEXT button in the
+DONE button's place, plays the next persona activation) or
 **timed** (about 0.6 s per activation). The choice is kept in localStorage
 (`bt10x.instant.pace`).
 
@@ -295,7 +299,7 @@ these keys to the focused element, so kit popups and dialogs take them too.
 |---|---|---|---|
 | ↑ ↓ ← → | D-pad | – | move the cursor; ← → also twist (attack) and turn (deployment) |
 | Enter, Space | A | left click | select / toggle / next (reversible) |
-| F10, Shift+Enter, Shift+Space | Y | Launch / Proceed / Done | commit (no going back) |
+| F10, Shift+Enter, Shift+Space | Y | Launch / Done | commit (no going back) |
 | Backspace | B | Cancel | cancel, back one step; Esc in a kit dialog or popup |
 | Esc | Menu | `Esc` hint | close the dialog, else open / close the menu |
 | `[` / `]` | LB / RB | sheet tabs, tab labels | previous / next tab or group |
@@ -307,7 +311,7 @@ these keys to the focused element, so kit popups and dialogs take them too.
 | – | L3 | indicator left click | snap to the nearest 60°; on a step, +60° |
 | – | R3 | indicator middle click | fit the map |
 
-Commit buttons (Launch, Proceed, Done) take F10 or a click only: Enter on a
+Commit buttons (Launch, Done) take F10 or a click only: Enter on a
 focused one does nothing. Hover never moves a cursor. Right click does nothing
 on the map. In a text box only Enter, Esc, ↑ ↓ and Tab act; Shift+Space types a
 space there; pad B leaves the box (a pad cannot type).
@@ -315,15 +319,14 @@ space there; pad B leaves the box (a pad cannot type).
 | scope | keys |
 |---|---|
 | Title | ↑ ↓ select, Enter run, Esc menu (language) |
-| New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Backspace title, Esc menu (Launch, title, language) |
+| New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Esc menu (Launch, Discard, language) |
 | Choose 'Mech | ↑ ↓ PgUp PgDn move, Enter / Space use, Tab to the filters and search, Esc / Backspace cancel |
-| Deployment (edge) | ↑ → ↓ ← pick North / East / South / West, F10 proceed, Esc menu (Discard) |
-| Deployment (units) | ↑ ↓ select unit (centres the map on it), ← → turn a Player unit, Backspace pick it up, F10 done, Esc menu (Change edge, Auto place, Discard) |
+| Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, language) |
 | Battle, any prompt | Esc battle menu, `[` / `]` left / right record sheet, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
 | Movement | ↑ ↓ choice, Enter / Space choose the mode (another mode drops the landing), Backspace clear the landing, F10 done |
 | Attack | Tab / Shift+Tab target, ← → twist, ↑ ↓ row, Enter / Space toggle row, F10 done |
 | Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (↑ ↓ pick, Enter / Space run) |
-| Menus, dialogs | ↑ ↓ / Tab move, Enter / Space run, Esc / Backspace close; a message closes on Enter, Space, Esc or Backspace. A dialog opened from a control gives the focus back to it on closing. The Esc menus end with Language, under a separator |
+| Menus, dialogs | opening one takes the focus off the control behind it; ↑ ↓ / Tab move, Enter / Space run, Esc / Backspace close; a message closes on Enter, Space, Esc or Backspace. A dialog opened from a control gives the focus back to it on closing. The Esc menus end with Language, under a separator |
 
 **Picking a hex.** A click on a banded hex (a landing, a deployment hex)
 takes the available facing triangle under the pointer, else the available

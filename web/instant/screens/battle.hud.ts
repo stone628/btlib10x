@@ -487,16 +487,16 @@ function bottomBorder(): TuiNode[] {
   ];
 }
 
-/** DONE F10: a kit boxed button at the bottom centre, above the LOGS tab. */
-export function doneButton(onDone: () => void): TuiNode {
+/**
+ * DONE F10 (or, while a persona waits in step pace, NEXT Enter): a kit boxed
+ * button at the bottom centre, above the LOGS tab.
+ */
+export function doneButton(onDone: () => void, label = "orders.doneButton"): TuiNode {
   return at(
     42,
     26,
-    { class: "ia-done", key: "done" },
-    h().button(
-      { border: "rounded", cols: 16, key: "donebtn", onClick: () => onDone() },
-      t("orders.doneButton"),
-    ),
+    { class: "ia-done", key: label },
+    h().button({ border: "rounded", cols: 16, key: "donebtn", onClick: () => onDone() }, t(label)),
   );
 }
 

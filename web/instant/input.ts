@@ -135,11 +135,20 @@ function press(key: string, code: string, repeat: boolean): void {
   if (!el.dispatchEvent(ev)) return;
   if (key === "Enter" && el.matches("button:not([data-commit]), [role=button], [role=tab]"))
     el.click();
-  else if (key === "Tab") {
-    const all = focusables();
-    const i = all.indexOf(el);
-    all[(i + 1) % Math.max(1, all.length)]?.focus();
-  }
+  else if (key === "Tab") stepFocus(1);
+}
+
+/**
+ * Tab / Shift+Tab (X) that no screen took: move the focus through the open
+ * dialog's controls, else the app's, wrapping round, so it never leaves for
+ * the page header.
+ */
+export function stepFocus(dir: number): void {
+  const all = focusables();
+  if (all.length === 0) return;
+  const i = all.indexOf(document.activeElement as HTMLElement);
+  const from = i < 0 ? (dir > 0 ? -1 : 0) : i;
+  all[(((from + dir) % all.length) + all.length) % all.length]!.focus();
 }
 
 let held: boolean[] = [];

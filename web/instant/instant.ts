@@ -6,7 +6,7 @@
 import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
 import { ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
-import { commitAlias, initInput, mapKey } from "./input";
+import { commitAlias, initInput, mapKey, stepFocus } from "./input";
 import {
   fitFontSize,
   fontSize,
@@ -20,7 +20,13 @@ import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
 import { queueAfterRender } from "./screens/battle.hud";
 import { h, kit, row } from "./screens/common";
 import { debriefKey, debriefOverlays, debriefScreen } from "./screens/debrief";
-import { deployAfterRender, deployKey, deployOverlays, deployScreen } from "./screens/deploy";
+import {
+  deployAfterRender,
+  deployArrow,
+  deployKey,
+  deployOverlays,
+  deployScreen,
+} from "./screens/deploy";
 import {
   setupAfterRender,
   setupArrow,
@@ -68,11 +74,15 @@ let hadModal = false;
 
 /** A dialog that opened from a control gives the focus back to it when it closes. */
 function restoreFocus(): void {
+  // a kit dialog opened from a menu holds the focus; give it back once it closes
+  if (kitModal.open) return;
   const has = app.modal !== null;
   if (has && !hadModal) {
     const el = document.activeElement;
-    opener =
-      el instanceof HTMLElement && el.closest("#app") && !el.closest(".ia-modal") ? el : lastFocus;
+    const outside = el instanceof HTMLElement && el.closest("#app") && !el.closest(".ia-modal");
+    opener = outside ? el : lastFocus;
+    // the control left behind (a dropdown, a button) must not take the menu's keys
+    if (outside) el.blur();
   } else if (!has && hadModal) {
     if (opener?.isConnected) opener.focus();
     opener = null;
@@ -172,17 +182,22 @@ function onKey(raw: KeyboardEvent): void {
     handled = debriefKey(e);
     if ((app.screen as string) === "battle") pumpAi();
   }
+  if (!handled && raw.key === "Tab") {
+    stepFocus(raw.shiftKey ? -1 : 1);
+    raw.preventDefault();
+    return;
+  }
   // Backspace never leaves the page
   if (handled || raw.key === "Backspace") raw.preventDefault();
   if (handled) rerender();
 }
 
-/** New Battle arrows go ahead of the kit's select keys (capture phase). */
+/** New Battle and deployment arrows go ahead of the kit's select keys (capture phase). */
 function onArrowCapture(e: KeyboardEvent): void {
-  if (app.screen !== "setup" || kitModal.open) return;
+  if ((app.screen !== "setup" && app.screen !== "deploy") || kitModal.open) return;
   if (e.target instanceof HTMLInputElement || (e.target as Element | null)?.closest?.(".tui-popup"))
     return;
-  if (!setupArrow(e)) return;
+  if (!(app.screen === "setup" ? setupArrow(e) : deployArrow(e))) return;
   e.preventDefault();
   e.stopPropagation();
   rerender();

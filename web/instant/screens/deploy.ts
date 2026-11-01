@@ -1,8 +1,9 @@
 /**
- * Screen 2: deployment (TW p. 256 roll-off, home edges, placement). The map
- * takes clicks (choose an edge, place or select a unit, turn the selected
- * one); the side pane holds kit buttons. Persona units are placed by the
- * engine and cannot be moved or turned.
+ * Screen 2: deployment (TW p. 256 roll-off, home edges, placement), one
+ * screen: a Player roll-off winner picks the home edge from a dropdown (no
+ * edge yet holds Done back), every unit is auto-placed on it, and the map
+ * takes clicks (place or select a unit, turn the selected one). Persona
+ * units are placed by the engine and cannot be moved or turned.
  */
 import type { Facing, HexCoord } from "btlib10x";
 import { PERSONAS } from "../ai/persona.data";
@@ -16,7 +17,6 @@ import {
   type DeployUnit,
   deployBanners,
   deployUnits,
-  onEdge,
   placeUnit,
   playerChoosesEdge,
   turnUnit,
@@ -26,7 +26,7 @@ import type { BandHex } from "../map/view";
 import { app, kitModal, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
-import { fit, h, kit, mapSlot, row, statusbar } from "./common";
+import { controls, fit, h, kit, mapSlot, nearest, row, statusbar } from "./common";
 import { menuKey, menuWindow, openMenu, prefItems } from "./menu";
 
 const { ARROW: A } = UI_THEME;
@@ -65,38 +65,30 @@ function report(run: () => void): void {
 export function deployScreen(): TuiNode {
   const H = h();
   const d = app.deploy!;
-  const choosing = d.edges[0] === null;
-  const side = choosing ? edgeRows() : unitRows();
+  const unset = d.edges[0] === null;
   return H.el(
     "div",
     { class: "ia-root" },
     H.split(
       { cols: 100, rows: 31, border: "double", sizes: `1fr ${PANE}`, fixed: true },
       H.pane({ title: t("deploy.title", { map: app.loadout.map ?? "" }), pad: 0 }, mapSlot()),
-      H.pane(t("deploy.side"), ...side),
+      H.pane(t("deploy.side"), ...paneRows()),
     ),
     statusbar(
-      choosing
-        ? [
-            [`${A.up}${A.right}${A.down}${A.left}`, "key.edge"],
-            ["Enter", "key.select"],
-            ["Esc", "key.menu", openDeployMenu],
-            ["F10", "key.proceed", proceed],
-          ]
-        : [
-            [`${A.up}${A.down}`, "key.unit"],
-            [`${A.left}${A.right}`, "key.facing"],
-            ["Bksp", "key.unplace"],
-            ["Esc", "key.menu", openDeployMenu],
-            ["F10", "key.done", done],
-          ],
-      app.error ? `! ${app.error}` : t(choosing ? "deploy.mouseChoose" : "deploy.mouse"),
+      [
+        [`${A.up}${A.down}`, "key.unit"],
+        [`${A.left}${A.right}`, "key.facing"],
+        ["Bksp", "key.unplace"],
+        ["Esc", "key.menu", openDeployMenu],
+        ["F10", "key.done", done],
+      ],
+      app.error ? `! ${app.error}` : t(unset ? "deploy.pickEdge" : "deploy.mouse"),
     ),
     app.modal?.kind === "menu" ? menuWindow(app.modal) : null,
   );
 }
 
-/** Roll-off lines shared by both steps. */
+/** Roll-off lines. */
 function rollRows(): TuiNode[] {
   const d = app.deploy!;
   const rolls = d.roll.rolls;
@@ -125,86 +117,15 @@ function footRows(): TuiNode[] {
   ];
 }
 
-// ------------------------------------------------------------ step 1: edge
-
-function edgeButton(e: Edge): TuiNode {
-  const d = app.deploy!;
-  return h().btn(
-    {
-      key: `edge-${e}`,
-      attrs: { "data-edge": e },
-      primary: d.pickedEdge === e,
-      onClick: () => {
-        d.pickedEdge = e;
-        rerender();
-      },
-      on: {
-        mouseenter: () => {
-          d.hoverEdge = e;
-          rerender();
-        },
-        mouseleave: () => {
-          if (d.hoverEdge === e) d.hoverEdge = null;
-          rerender();
-        },
-        focus: () => {
-          d.hoverEdge = e;
-          rerender();
-        },
-      },
-    },
-    fit(t(`edge.${e}`), 7, "center"),
-  );
-}
-
-function pickEdge(e: Edge): void {
-  const d = app.deploy!;
-  d.hoverEdge = null;
-  d.pickedEdge = null;
-  chooseEdge(e);
-}
-
-/** Proceed (F10): take the selected edge. */
-function proceed(): void {
-  const e = app.deploy!.pickedEdge;
-  if (e) report(() => pickEdge(e));
-}
-
-function edgeRows(): TuiNode[] {
-  const d = app.deploy!;
-  const winner = d.roll.winner;
-  // Button "[ North ]" is 11 cells; the compass is three of them wide.
-  const mid = " ".repeat((W - 11) >> 1);
-  const side = " ".repeat((W - 27) >> 1);
-  const top: TuiNode[] = [
-    ...rollRows(),
-    row(fit(t("deploy.choose", { side: winner }), W), {
-      key: "who",
-      cls: winner === 1 ? "ia-team1" : "ia-team2",
-    }),
-    row(" ", { key: "b0" }),
-    line("n", "", mid, edgeButton("north")),
-    line("we", "", side, edgeButton("west"), "     ", edgeButton("east")),
-    line("s", "", mid, edgeButton("south")),
-    row(" ", { key: "b1" }),
-    row(fit(t("deploy.opposite", { side: 3 - winner }), W), { key: "opp", cls: "ia-dim" }),
-    row(fit(t("deploy.hoverEdge"), W), { key: "hov", cls: "ia-dim" }),
-  ];
-  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow("proceed")]);
-}
-
-/**
- * Bottom buttons: Discard (Esc), then the F10 button: Proceed with the
- * selected edge while choosing, Done once the edges are set.
- */
-function exitRow(next: "proceed" | "done"): TuiNode {
+/** Bottom buttons: Discard, then Done (F10), held back until the home edges are set. */
+function exitRow(): TuiNode {
   const H = h();
   const len = (s: string) => kit().compensatedLength(s);
   const discard = t("deploy.discard");
-  const nextLabel = `${t(next === "done" ? "deploy.done" : "deploy.proceed")}  F10`;
+  const nextLabel = `${t("deploy.done")}  F10`;
   // a kit button adds four cells: "[ " and " ]"
   const width = len(discard) + 4 + 2 + len(nextLabel) + 4;
-  const ready = next === "done" || app.deploy!.pickedEdge !== null;
+  const ready = app.deploy!.edges[0] !== null;
   return line(
     "exit",
     "",
@@ -213,29 +134,57 @@ function exitRow(next: "proceed" | "done"): TuiNode {
     "  ",
     H.btn(
       {
-        key: next,
+        key: "done",
         primary: ready,
         disabled: !ready,
         // F10 or a click only: Enter / Space on the focused button does nothing
         attrs: { "data-commit": "" },
-        onClick: next === "done" ? done : proceed,
+        onClick: done,
       },
       nextLabel,
     ),
   );
 }
 
-// ------------------------------------------------------------ step 2: units
+// ------------------------------------------------------------ edges and units
 
 function edgesRow(): TuiNode {
   const d = app.deploy!;
-  const half = (s: 0 | 1) =>
-    h().el(
+  const half = (s: 0 | 1) => {
+    const e = d.edges[s];
+    return h().el(
       "span",
       { class: s === 0 ? "ia-team1" : "ia-team2" },
-      fit(`${t(s === 0 ? "setup.side1" : "setup.side2")}  ${t(`edge.${d.edges[s]}`)}`, W >> 1),
+      fit(`${t(s === 0 ? "setup.side1" : "setup.side2")}  ${e ? t(`edge.${e}`) : "--"}`, W >> 1),
     );
+  };
   return line("edges", "", half(0), half(1));
+}
+
+/** The winner's home edge: a dropdown for a Player winner ("Not selected" first). */
+function edgeSelect(): TuiNode {
+  const d = app.deploy!;
+  const winner = d.roll.winner;
+  const values = [null, ...EDGES] as const;
+  const at = values.indexOf(d.edges[winner - 1] ?? null);
+  return line(
+    "edge",
+    "ia-deploy-edge",
+    fit(t("deploy.homeEdge"), 12),
+    h().select({
+      key: "edgesel",
+      cols: 16,
+      value: String(at),
+      options: values.map((e, i) => ({
+        value: String(i),
+        label: e === null ? t("deploy.noEdge") : t(`edge.${e}`),
+      })),
+      onChange: (ev: Event) => {
+        const e = values[Number((ev.target as HTMLSelectElement).value)];
+        report(() => setEdge(e ?? null));
+      },
+    }),
+  );
 }
 
 function unitRow(u: DeployUnit, i: number): TuiNode {
@@ -295,11 +244,12 @@ function unitRow(u: DeployUnit, i: number): TuiNode {
   );
 }
 
-function unitRows(): TuiNode[] {
+function paneRows(): TuiNode[] {
   const d = app.deploy!;
   const H = h();
   const units = deployUnits(app.loadout);
   const winner = d.roll.winner;
+  const chooser = playerChoosesEdge();
   const head =
     "  " +
     fit(t("deploy.colUnit"), 6) +
@@ -308,27 +258,22 @@ function unitRows(): TuiNode[] {
     t("setup.control");
   const top: TuiNode[] = [
     ...rollRows(),
-    row(fit(t("deploy.chose", { side: winner }), W), { key: "who" }),
+    row(fit(t(chooser ? "deploy.won" : "deploy.chose", { side: winner }), W), {
+      key: "who",
+      cls: winner === 1 ? "ia-team1" : "ia-team2",
+    }),
+    ...(chooser ? [edgeSelect()] : []),
     edgesRow(),
   ];
-  if (playerChoosesEdge())
+  // the unit list only once there is a home edge to stand on
+  if (d.edges[0] !== null)
     top.push(
-      line(
-        "chg",
-        "",
-        H.btn(
-          { key: "chg", onClick: () => report(changeEdge) },
-          fit(t("deploy.changeEdge"), 14, "center"),
-        ),
-      ),
+      row(" ", { key: "b0" }),
+      row(fit(t("deploy.units"), W), { key: "units", cls: "ia-bright" }),
+      row(fit(head, W), { key: "head", cls: "ia-dim" }),
+      ...units.map(unitRow),
     );
-  top.push(
-    row(" ", { key: "b0" }),
-    row(fit(t("deploy.units"), W), { key: "units", cls: "ia-bright" }),
-    row(fit(head, W), { key: "head", cls: "ia-dim" }),
-    ...units.map(unitRow),
-  );
-  if (units.some((u) => u.persona === null))
+  if (d.edges[0] !== null && units.some((u) => u.persona === null))
     top.push(
       row(" ", { key: "b1" }),
       line(
@@ -340,13 +285,25 @@ function unitRows(): TuiNode[] {
         ),
       ),
     );
-  return pad(top, [...footRows(), row(" ", { key: "b2" }), exitRow("done")]);
+  return pad(top, [...footRows(), exitRow(), row(" ", { key: "b2" })]);
 }
 
 // ------------------------------------------------------------ actions
 
+/** Done (F10): only once the home edges are set. */
 function done(): void {
+  if (app.deploy!.edges[0] === null) {
+    app.error = t("deploy.pickEdge");
+    rerender();
+    return;
+  }
   report(beginBattle);
+}
+
+/** The winner's home edge (null: none yet); every unit is auto-placed again. */
+function setEdge(e: Edge | null): void {
+  changeEdge();
+  if (e) chooseEdge(e);
 }
 
 /** Discard the battle and go back to the title (the loadout stays saved). */
@@ -417,14 +374,7 @@ function openFacingMenu(u: DeployUnit, anchor: HTMLElement): Promise<void> {
  */
 function pickHex(hex: HexCoord, facing: Facing | null): void {
   const d = app.deploy!;
-  const map = currentMap();
-  if (d.edges[0] === null) {
-    if (!playerChoosesEdge()) return;
-    const edge = EDGES.find((e) => onEdge(map, e, hex));
-    if (!edge) throw new Error(t("err.notEdge"));
-    d.pickedEdge = edge;
-    return;
-  }
+  if (d.edges[0] === null) return; // no home edge yet: nothing to place
   const units = deployUnits(app.loadout);
   const at = units.findIndex((u) => {
     const p = d.placements[u.id];
@@ -444,7 +394,7 @@ function pickHex(hex: HexCoord, facing: Facing | null): void {
   if (u) placeUnit(u.id, hex, facing);
 }
 
-/** Map overlays: the hovered edge while choosing, else the selected unit's free edge hexes. */
+/** Map overlays: the selected unit's free home-edge hexes. */
 export function deployOverlays(): void {
   const v = app.mapView;
   const d = app.deploy;
@@ -452,12 +402,7 @@ export function deployOverlays(): void {
   const map = currentMap();
   const zone = new Map<string, BandHex>();
   let chosen: { hex: string; facing: Facing } | null = null;
-  if (d.edges[0] === null) {
-    const shown = d.hoverEdge ?? d.pickedEdge;
-    if (shown)
-      for (const hx of edgeHexes(map, shown))
-        zone.set(`${hx.col},${hx.row}`, { team: d.roll.winner, facings: FACINGS });
-  } else {
+  {
     const u = deployUnits(app.loadout)[d.cursor];
     const edge = u ? d.edges[u.side] : null;
     if (u && edge && u.persona === null) {
@@ -481,33 +426,27 @@ export function deployOverlays(): void {
   v.onPick = (hex, facing) => report(() => pickHex(hex, facing));
 }
 
-/** After a render: move the focus to the selected unit's button when asked (one cursor). */
+/** After a render: move the focus to the selected unit's button when asked, or when nothing has it. */
 export function deployAfterRender(): void {
   const d = app.deploy;
-  if (!d?.focusUnit) return;
+  if (!d) return;
+  // nothing focused yet (the screen just opened): start on the edge dropdown
+  // while no edge is set, else on the selected unit
+  const idle = !app.modal && (document.activeElement === document.body || !document.activeElement);
+  if (idle && d.edges[0] === null && playerChoosesEdge()) {
+    document.querySelector<HTMLElement>("#app .ia-deploy-edge .tui-select")?.focus();
+    return;
+  }
+  if (!d.focusUnit && !idle) return;
   d.focusUnit = false;
   const u = deployUnits(app.loadout)[d.cursor];
   if (u) document.querySelector<HTMLElement>(`#app [data-unit="${CSS.escape(u.id)}"]`)?.focus();
 }
 
-const ARROW_EDGE: Partial<Record<string, Edge>> = {
-  ArrowUp: "north",
-  ArrowRight: "east",
-  ArrowDown: "south",
-  ArrowLeft: "west",
-};
-
-/** Esc menu: the step's side actions and Discard. */
+/** Esc menu: Done, Discard, then the language. */
 function openDeployMenu(): void {
-  const d = app.deploy!;
-  const units = d.edges[0] !== null;
   openMenu(t("deployMenu.title"), [
-    ...(units && playerChoosesEdge()
-      ? [{ label: () => t("deploy.changeEdge"), run: () => report(changeEdge) }]
-      : []),
-    ...(units && deployUnits(app.loadout).some((u) => u.persona === null)
-      ? [{ label: () => t("deploy.autoPlace"), run: () => report(autoPlacePlayers) }]
-      : []),
+    { label: () => t("deploy.done"), run: done },
     { label: () => t("deploy.discard"), run: confirmDiscard },
     ...prefItems(),
   ]);
@@ -521,33 +460,57 @@ export function deployKey(e: KeyboardEvent): boolean {
     openDeployMenu();
     return true;
   }
-  if (d.edges[0] === null) {
-    // Arrows select an edge outright (↑ north, → east, ↓ south, ← west);
-    // Proceed (F10) takes it.
-    if (e.key === "F10") {
-      proceed();
-      return true;
-    }
-    const edge = ARROW_EDGE[e.key];
-    if (!edge) return false;
-    d.pickedEdge = edge;
-    document.querySelector<HTMLElement>(`#app [data-edge="${edge}"]`)?.focus();
-    return true;
-  }
   const units = deployUnits(app.loadout);
-  if (e.key === "F10") beginBattle();
+  if (e.key === "F10") done();
   else if (e.key === "Backspace") {
     // pick the selected Player unit back up
     const u = units[d.cursor];
     if (u && u.persona === null) delete d.placements[u.id];
-  } else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-    const n = units.length;
-    d.cursor = (d.cursor + (e.key === "ArrowDown" ? 1 : n - 1)) % n;
+  } else if (e.key.startsWith("Arrow")) unitArrow(e.key, units);
+  else return false;
+  return true;
+}
+
+/**
+ * Arrows on the edge dropdown, ahead of the kit's own keys (capture phase):
+ * they move to the nearest control as everywhere else; Enter opens it.
+ */
+export function deployArrow(e: KeyboardEvent): boolean {
+  if (app.modal || e.shiftKey || !e.key.startsWith("Arrow")) return false;
+  if (!(e.target as Element | null)?.closest?.(".ia-deploy-edge")) return false;
+  unitArrow(e.key, deployUnits(app.loadout));
+  return true;
+}
+
+/**
+ * Deployment arrows. On the unit list (or with nothing focused) ↑ ↓ select a
+ * unit and ← → turn it; ↑ past the first unit or ↓ past the last leaves the
+ * list for the nearest button that way. On a button, every arrow moves to the
+ * nearest control, the selected unit's list entry included.
+ */
+function unitArrow(key: string, units: readonly DeployUnit[]): void {
+  const d = app.deploy!;
+  const el = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  // the list: a unit or its facing button, or nothing focused
+  const onList =
+    !el || el === document.body || !!el.closest(".ia-row")?.querySelector("[data-unit]");
+  const vertical = key === "ArrowDown" || key === "ArrowUp";
+  const step = key === "ArrowDown" ? 1 : -1;
+  if (onList && vertical && d.cursor + step >= 0 && d.cursor + step < units.length) {
+    d.cursor += step;
     d.focusUnit = true;
     centerOnCursor();
-  } else if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+    return;
+  }
+  if (onList && !vertical) {
     const u = units[d.cursor];
-    if (u) turnUnit(u.id, e.key === "ArrowRight" ? 1 : -1);
-  } else return false;
-  return true;
+    if (u) turnUnit(u.id, key === "ArrowRight" ? 1 : -1);
+    return;
+  }
+  const root = document.querySelector<HTMLElement>("#app .ia-root");
+  const from =
+    el && el !== document.body
+      ? el
+      : document.querySelector<HTMLElement>('#app [data-unit][tabindex="0"]');
+  if (root && from) nearest(from, controls(root), key)?.focus();
 }
