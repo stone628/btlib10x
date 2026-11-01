@@ -4,7 +4,7 @@
  * (`btlib10x`) and the TUI kit (`window.TUI`).
  */
 import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
-import { ensureMapView, pumpAi } from "./flow";
+import { applyScreenView, ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
 import { commitAlias, initInput, mapKey, stepFocus } from "./input";
 import {
@@ -114,6 +114,7 @@ function afterRender(): void {
     return;
   }
   const view = ensureMapView();
+  applyScreenView(view);
   if (view.canvas.parentElement !== slot) {
     slot.replaceChildren(view.canvas);
     view.clearHover();
@@ -124,7 +125,9 @@ function afterRender(): void {
   } else if (app.screen === "deploy") deployOverlays();
   else if (app.screen === "setup") setupMapPreview();
   else if (app.screen === "debrief") debriefOverlays();
-  if (!view.tipFor) view.hideTip();
+  // a menu or dialog hides the hex tip (it would sit on top); the reticle's comes back after
+  if (!view.tipFor || app.modal || kitModal.open) view.hideTip();
+  else if (view.reticle) view.showReticle();
   view.render();
 }
 

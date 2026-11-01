@@ -323,7 +323,6 @@ function confirmDiscard(): void {
         app.screen = "title";
         app.deploy = null;
         app.error = null;
-        app.mapView?.reset(); // drop the deployment pan and zoom
       }
       rerender();
     });

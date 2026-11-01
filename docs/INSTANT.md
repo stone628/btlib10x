@@ -321,7 +321,7 @@ these keys to the focused element, so kit popups and dialogs take them too.
 | PgUp / PgDn | LT / RT | wheel | page a list or scroll; on a map screen, zoom; with the battle log open, page it |
 | L | View | LOGS tab | toggle logs |
 | Shift+arrows | left stick | middle drag | pan the map under the centre reticle |
-| – | right stick | left drag, indicator wheel | turn / tilt the map |
+| Shift+PgUp / Shift+PgDn | right stick | left drag, indicator wheel | turn the map counter-clockwise / clockwise (keys: like Shift+arrows, it speeds up while held); the stick and wheel also tilt |
 | – | L3 | indicator left click | snap to the nearest 60°; on a step, +60° |
 | Home | R3 | indicator middle click | frame the map: in battle the units the prompt is about, again the whole map; elsewhere the whole map |
 
@@ -354,14 +354,19 @@ the reticle's point (not while a persona waits in step pace: A plays it).
 Shift+arrows move like a platform game hero: no jump on the press; the
 reticle sets off at 40 px/s and speeds up, slowly at first, to the stick's
 700 px/s over 1 s, so a tap moves it a few pixels; let go, it skids to a
-stop in 0.15 s; two arrows go diagonally. The hex under the reticle is highlighted and tips its
+stop in 0.15 s; two arrows go diagonally. Shift+PgUp / Shift+PgDn turn the map the same way: 8°/s at first, up to the
+stick's 120°/s over 1 s, slowing to a stop in 0.15 s. The hex under the reticle is highlighted and tips its
 piles. A D-pad press or plain arrow hands A back to the orders panel; any
 mouse movement hides the reticle.
 
 **Map view** (setup preview, deployment, battle, debrief): drag to rotate,
 wheel to zoom about the cursor, middle-drag to pan; on the north indicator,
 left click snaps to the nearest 60° (again: +60°), middle click fits, wheel
-tilts (5°–90°). Hovering a hex shows its coordinates; in battle and on the
+tilts (5°–90°). Each screen may set an initial view (`SCREEN_VIEWS` in
+`web/instant/flow.ts`: rotation, tilt, fit), applied when it first shows the
+map after another screen did: New Battle, deployment and the debrief start
+fitted at 45° rotation, 25° tilt; battle has none and keeps the view as deployment left it.
+Hovering a hex shows its coordinates; in battle and on the
 debrief map, a hex holding severed limbs or dropped clubs tips what lies
 there.
 

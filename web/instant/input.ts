@@ -7,8 +7,8 @@
  * directly: the left one pans under the centre reticle, the right one turns
  * and tilts. Also here: the keyboard aliases and map keys shared by all
  * screens (Shift+Enter / Shift+Space = F10, Shift+arrows pan under the
- * reticle, PgUp / PgDn zoom a map screen or scroll the battle log, Home
- * frames the map).
+ * reticle, Shift+PgUp / Shift+PgDn turn the map, PgUp / PgDn zoom a map
+ * screen or scroll the battle log, Home frames the map).
  */
 import { app, kitModal } from "./state";
 
@@ -108,8 +108,9 @@ const STEPS: Readonly<Record<string, readonly [number, number]>> = {
  * Map keys taken before the screen's own: Shift+arrows pan under the reticle
  * (`holdArrow`), a plain arrow hands A back to the screen (the reticle
  * hides), A on a showing reticle is a click there (not while a persona waits
- * in step pace), PgUp / PgDn zoom (with the battle log open, scroll it), Home
- * frames the map. True when taken.
+ * in step pace), Shift+PgUp / Shift+PgDn turn the map (`holdTurn`), PgUp /
+ * PgDn zoom (with the battle log open, scroll it), Home frames the map. True
+ * when taken.
  */
 export function mapKey(e: KeyboardEvent): boolean {
   const v = activeMap();
@@ -122,6 +123,10 @@ export function mapKey(e: KeyboardEvent): boolean {
   if (step) {
     v.hideReticle();
     return false;
+  }
+  if ((e.key === "PageUp" || e.key === "PageDown") && e.shiftKey) {
+    holdTurn(e.key, e.key === "PageUp" ? 1 : -1);
+    return true;
   }
   if (e.key === "PageUp" || e.key === "PageDown") {
     const log =
@@ -271,8 +276,8 @@ function start(): void {
 
 /**
  * Listen for a pad; any mouse movement hides the reticle again. A typed key
- * or the mouse ends pad labels in the status bar; a released arrow or Shift
- * ends a Shift+arrow pan.
+ * or the mouse ends pad labels in the status bar; a released arrow, PgUp /
+ * PgDn or Shift ends a Shift+arrow pan or a Shift+PgUp / PgDn turn.
  */
 export function initInput(): void {
   window.addEventListener("gamepadconnected", start);
@@ -290,10 +295,18 @@ export function initInput(): void {
     true,
   );
   document.addEventListener("keyup", (e) => {
-    if (e.key === "Shift") arrows.clear();
-    else arrows.delete(e.key);
+    if (e.key === "Shift") {
+      arrows.clear();
+      turns.clear();
+    } else {
+      arrows.delete(e.key);
+      turns.delete(e.key);
+    }
   });
-  window.addEventListener("blur", () => arrows.clear());
+  window.addEventListener("blur", () => {
+    arrows.clear();
+    turns.clear();
+  });
 }
 
 // ------------------------------------------------------------ Shift+arrow pan
@@ -358,4 +371,52 @@ function panFrame(now: number): void {
     v.panBy(panDir[0] * panSpeed * dt, panDir[1] * panSpeed * dt);
   }
   requestAnimationFrame(panFrame);
+}
+
+// ------------------------------------------------------------ Shift+PgUp / PgDn turn
+
+/**
+ * Shift+PgUp turns the map counter-clockwise, Shift+PgDn clockwise, with the
+ * pan's feel: it sets off at TURN_START and speeds up to the stick's top
+ * speed over PAN_RAMP, so a tap turns it a degree or two; let go, it slows to
+ * a stop over PAN_STOP. Both held cancel out.
+ */
+const TURN_START = 8;
+const turns = new Map<string, number>();
+let turnSince = 0;
+let turnLast = 0;
+let turnSpeed = 0;
+let turnDir = 0;
+let turnLoop = false;
+
+function holdTurn(key: string, dir: number): void {
+  if (turns.has(key)) return; // key repeat: the turn loop already runs
+  if (!activeMap()) return;
+  if (turns.size === 0) turnSince = performance.now();
+  turns.set(key, dir);
+  if (turnLoop) return;
+  turnLoop = true;
+  turnLast = 0;
+  requestAnimationFrame(turnFrame);
+}
+
+function turnFrame(now: number): void {
+  const v = activeMap();
+  const dt = turnLast ? Math.min(0.1, (now - turnLast) / 1000) : 0;
+  turnLast = now;
+  let dir = 0;
+  for (const d of turns.values()) dir += d;
+  if (dir !== 0) {
+    turnDir = dir;
+    const ramp = Math.min(1, (now - turnSince) / PAN_RAMP);
+    turnSpeed = TURN_START + (TURN_SPEED - TURN_START) * ramp * ramp;
+  } else turnSpeed = Math.max(0, turnSpeed - (TURN_SPEED * dt) / PAN_STOP);
+  if (!v || (turns.size === 0 && turnSpeed === 0)) {
+    turnLoop = false;
+    turnSpeed = 0;
+    if (!v) turns.clear();
+    return;
+  }
+  if (turnSpeed > 0 && dt > 0) v.turn(turnDir * turnSpeed * dt);
+  requestAnimationFrame(turnFrame);
 }

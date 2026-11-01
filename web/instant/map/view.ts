@@ -20,6 +20,16 @@ export interface MapSource {
   levelAt(hex: HexCoord): number;
 }
 
+/** A screen's initial view (`MapView.setView`); a part left out keeps the current one. */
+export interface MapViewInit {
+  /** Rotation, degrees. */
+  readonly turn?: number;
+  /** Tilt, degrees (5–90; 90 is top-down). */
+  readonly tilt?: number;
+  /** Fit the whole map to the canvas, dropping zoom and pan. */
+  readonly fit?: boolean;
+}
+
 /** A unit drawn as an upright glyph banner. */
 export interface Banner {
   readonly id: string;
@@ -660,12 +670,18 @@ export class MapView {
     this.render();
   }
 
-  reset(): void {
-    this.panX = 0;
-    this.panY = 0;
-    this.angle = 0;
-    this.fs = null;
-    this.tilt = TILT_INIT;
+  /**
+   * Set a screen's initial view: each given part replaces the current one
+   * (`fit`: the whole map, centred, at the angle and tilt); the rest stay.
+   */
+  setView(init: MapViewInit): void {
+    if (init.turn !== undefined) this.angle = ((init.turn % 360) + 360) % 360;
+    if (init.tilt !== undefined) this.tilt = Math.max(TILT_MIN, Math.min(TILT_MAX, init.tilt));
+    if (init.fit) {
+      this.panX = 0;
+      this.panY = 0;
+      this.fs = null;
+    }
     this.render();
   }
 

@@ -25,7 +25,7 @@ import {
   setupRng,
 } from "./battle/deploy";
 import { t } from "./i18n";
-import type { Banner, MapSource } from "./map/view";
+import type { Banner, MapSource, MapViewInit } from "./map/view";
 import { MapView } from "./map/view";
 import {
   emptyLoadout,
@@ -35,7 +35,7 @@ import {
   newSeed,
   randomLoadout,
 } from "./setup/loadout";
-import { app, newBattleUi, type Placement, rerender } from "./state";
+import { app, newBattleUi, type Placement, rerender, type ScreenId } from "./state";
 
 import { UI_THEME } from "./theme";
 
@@ -95,6 +95,27 @@ export function mapSource(map: MapDef): MapSource {
   };
 }
 
+/**
+ * Each screen's initial map view, applied when a screen first shows the map
+ * after another screen did (`applyScreenView`); a screen without one keeps
+ * the view as it was left.
+ */
+const SCREEN_VIEWS: Partial<Record<ScreenId, MapViewInit>> = {
+  setup: { turn: 45, tilt: 25, fit: true },
+  deploy: { turn: 45, tilt: 25, fit: true },
+  debrief: { turn: 45, tilt: 25, fit: true },
+};
+/** The screen the map view last showed on. */
+let viewScreen: ScreenId | null = null;
+
+/** The map is showing on the current screen: set its initial view if the screen changed. */
+export function applyScreenView(view: MapView): void {
+  if (viewScreen === app.screen) return;
+  viewScreen = app.screen;
+  const init = SCREEN_VIEWS[app.screen];
+  if (init) view.setView(init);
+}
+
 export function ensureMapView(): MapView {
   if (app.mapView === null) {
     const canvas = document.createElement("canvas");
@@ -125,7 +146,6 @@ export function launch(): void {
   if (!sideHasPlayer(l, winner)) chooseEdge(EDGES[rng.d6() % 4]!);
   const view = ensureMapView();
   view.setMap(mapSource(currentMap()));
-  view.reset();
 }
 
 export function chooseEdge(edge: Edge): void {
@@ -266,7 +286,6 @@ export function beginBattle(): void {
   const view = ensureMapView();
   const battle = app.battle;
   view.setMap(battleMapSource(battle));
-  view.reset();
   pumpAi();
 }
 
