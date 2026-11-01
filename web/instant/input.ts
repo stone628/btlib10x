@@ -6,8 +6,9 @@
  * popup and dialog takes them as typed keys. Its sticks drive the map view
  * directly: the left one pans under the centre reticle, the right one turns
  * and tilts. Also here: the keyboard aliases and map keys shared by all
- * screens (Shift+Enter / Shift+Space = F10, Shift+arrows move the reticle,
- * PgUp / PgDn zoom a map screen).
+ * screens (Shift+Enter / Shift+Space = F10, Shift+arrows pan under the
+ * reticle, PgUp / PgDn zoom a map screen or scroll the battle log, Home
+ * frames the map).
  */
 import { app, kitModal } from "./state";
 
@@ -41,6 +42,28 @@ const DEADZONE = 0.2;
 const PAN_SPEED = 700;
 const TURN_SPEED = 120;
 const TILT_SPEED = 60;
+
+/** A persona waits in step pace: A (Enter) plays its activation, even on the reticle. */
+function stepping(): boolean {
+  const b = app.battle;
+  return (
+    app.screen === "battle" && !!b && b.actorPersona !== null && app.aiPace === "step" && !b.result
+  );
+}
+
+/**
+ * Home (R3): the screen's own framing (battle: the units the prompt is
+ * about), and the whole map on the next press; a pan starts over.
+ */
+function frameOrFit(v: NonNullable<ReturnType<typeof activeMap>>): void {
+  if (v.reframe && !v.framed) {
+    v.reframe();
+    v.framed = true;
+  } else {
+    v.fit();
+    v.framed = false;
+  }
+}
 
 /** The map under the sticks and map keys: battle, deployment, debrief Map tab. */
 export function activeMap() {
@@ -82,16 +105,18 @@ const STEPS: Readonly<Record<string, readonly [number, number]>> = {
 };
 
 /**
- * Map keys taken before the screen's own: Shift+arrows step the reticle, a
- * plain arrow hands A back to the screen (the reticle hides), A on a showing
- * reticle is a click there, PgUp / PgDn zoom. True when taken.
+ * Map keys taken before the screen's own: Shift+arrows pan under the reticle
+ * (`holdArrow`), a plain arrow hands A back to the screen (the reticle
+ * hides), A on a showing reticle is a click there (not while a persona waits
+ * in step pace), PgUp / PgDn zoom (with the battle log open, scroll it), Home
+ * frames the map. True when taken.
  */
 export function mapKey(e: KeyboardEvent): boolean {
   const v = activeMap();
   if (!v) return false;
   const step = STEPS[e.key];
   if (step && e.shiftKey) {
-    v.stepReticle(step[0], step[1]);
+    holdArrow(e.key, step);
     return true;
   }
   if (step) {
@@ -99,10 +124,23 @@ export function mapKey(e: KeyboardEvent): boolean {
     return false;
   }
   if (e.key === "PageUp" || e.key === "PageDown") {
-    v.zoom(e.key === "PageUp" ? 2 : -2);
+    const log =
+      app.screen === "battle" && app.battleUi.logs
+        ? document.querySelector<HTMLElement>("#app .ia-logscroll")
+        : null;
+    const dir = e.key === "PageUp" ? -1 : 1;
+    if (log) {
+      log.scrollTop += dir * Math.round(log.clientHeight * 0.9);
+      // the render after this key must not snap the log back to its end
+      log.dataset.pinned = String(log.scrollTop + log.clientHeight >= log.scrollHeight - 4);
+    } else v.zoom(-2 * dir);
     return true;
   }
-  if (v.reticle && (e.key === "Enter" || e.key === " ")) {
+  if (e.key === "Home") {
+    frameOrFit(v);
+    return true;
+  }
+  if (v.reticle && (e.key === "Enter" || e.key === " ") && !stepping()) {
     // the debrief map only looks: A there does nothing
     if (app.screen !== "debrief") v.pickReticle();
     return true;
@@ -184,10 +222,11 @@ function poll(now: number): void {
 }
 
 function fire(i: number, repeat: boolean): void {
+  app.padInput = true;
   if (i === L3 || i === R3) {
     const v = activeMap();
     if (i === L3) v?.snapTurn();
-    else v?.fit();
+    else if (v) frameOrFit(v);
     return;
   }
   const k = BUTTON_KEYS[i];
@@ -230,11 +269,93 @@ function start(): void {
   requestAnimationFrame(poll);
 }
 
-/** Listen for a pad; any mouse movement hides the reticle again. */
+/**
+ * Listen for a pad; any mouse movement hides the reticle again. A typed key
+ * or the mouse ends pad labels in the status bar; a released arrow or Shift
+ * ends a Shift+arrow pan.
+ */
 export function initInput(): void {
   window.addEventListener("gamepadconnected", start);
   if (Array.from(navigator.getGamepads?.() ?? []).some((p) => p?.connected)) start();
   document.addEventListener("mousemove", (e) => {
-    if (e.movementX || e.movementY) app.mapView?.hideReticle();
+    if (!e.movementX && !e.movementY) return;
+    app.mapView?.hideReticle();
+    app.padInput = false;
   });
+  document.addEventListener(
+    "keydown",
+    (e) => {
+      if (e.isTrusted) app.padInput = false;
+    },
+    true,
+  );
+  document.addEventListener("keyup", (e) => {
+    if (e.key === "Shift") arrows.clear();
+    else arrows.delete(e.key);
+  });
+  window.addEventListener("blur", () => arrows.clear());
+}
+
+// ------------------------------------------------------------ Shift+arrow pan
+
+/**
+ * Shift+arrows run the reticle like a platform game hero: no jump on the
+ * press, it sets off at PAN_START and speeds up (slowly at first, then
+ * faster) to the stick's top speed over PAN_RAMP, so a tap moves it a few
+ * pixels; let go, it skids to a stop over PAN_STOP. Two arrows held go
+ * diagonally. Driven by keydown / keyup on animation frames, not by key
+ * repeat.
+ */
+const PAN_START = 40;
+const PAN_RAMP = 1000;
+const PAN_STOP = 0.15;
+const arrows = new Map<string, readonly [number, number]>();
+let heldSince = 0;
+let panLast = 0;
+let panSpeed = 0;
+let panDir: readonly [number, number] = [0, 0];
+let panLoop = false;
+
+function holdArrow(key: string, step: readonly [number, number]): void {
+  if (arrows.has(key)) return; // key repeat: the pan loop already runs
+  const v = activeMap();
+  if (!v) return;
+  if (arrows.size === 0) {
+    v.showReticle();
+    heldSince = performance.now();
+  }
+  arrows.set(key, step);
+  if (panLoop) return;
+  panLoop = true;
+  panLast = 0;
+  requestAnimationFrame(panFrame);
+}
+
+function panFrame(now: number): void {
+  const v = activeMap();
+  const dt = panLast ? Math.min(0.1, (now - panLast) / 1000) : 0;
+  panLast = now;
+  let dx = 0;
+  let dy = 0;
+  for (const [x, y] of arrows.values()) {
+    dx += x;
+    dy += y;
+  }
+  const len = Math.hypot(dx, dy);
+  if (len > 0) {
+    panDir = [dx / len, dy / len];
+    const ramp = Math.min(1, (now - heldSince) / PAN_RAMP);
+    panSpeed = PAN_START + (PAN_SPEED - PAN_START) * ramp * ramp;
+  } else panSpeed = Math.max(0, panSpeed - (PAN_SPEED * dt) / PAN_STOP);
+  if (!v || (len === 0 && panSpeed === 0)) {
+    panLoop = false;
+    panSpeed = 0;
+    if (!v) arrows.clear();
+    return;
+  }
+  if (panSpeed > 0 && dt > 0) {
+    v.showReticle();
+    v.panBy(panDir[0] * panSpeed * dt, panDir[1] * panSpeed * dt);
+  }
+  requestAnimationFrame(panFrame);
 }

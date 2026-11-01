@@ -31,14 +31,17 @@ import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
 import { commitAlias } from "../web/instant/input";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
+import { battleKey } from "../web/instant/screens/battle";
 import {
   engineTip,
   gyroTip,
+  heatSinkTip,
   heatTip,
   lifeSupportTip,
   pilotTip,
   sensorTip,
 } from "../web/instant/screens/battle.hints";
+import { critTip } from "../web/instant/screens/battle.sheet";
 import { debriefKey } from "../web/instant/screens/debrief";
 import { closesMessage, menuKey, openMenu } from "../web/instant/screens/menu";
 import { pileTip } from "../web/instant/screens/piles";
@@ -52,7 +55,7 @@ import {
   loadoutProblem,
   randomLoadout,
 } from "../web/instant/setup/loadout";
-import { app } from "../web/instant/state";
+import { app, newBattleUi, setAiPace } from "../web/instant/state";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
 
@@ -453,6 +456,107 @@ describe("Instant Action battle controller", () => {
   });
 });
 
+describe("Instant Action battle keys", () => {
+  const key = (k: string, shiftKey = false) =>
+    battleKey({ key: k, code: "", shiftKey } as KeyboardEvent);
+  const setUp = (b: BattleController) => {
+    app.screen = "title"; // keeps persona pumping off the test
+    app.battle = b;
+    app.battleUi = newBattleUi();
+    app.modal = null;
+    app.orderCursor = 0;
+    app.playerSince = -1e9;
+  };
+  const attackBattle = () => {
+    const units: [string, string, 1 | 2, HexCoord, Facing][] = [
+      ["A1", "HBK-4G", 1, { col: 7, row: 9 }, "n"],
+      ["B1", "GRF-1N", 2, { col: 7, row: 6 }, "s"],
+    ];
+    const b = battle({ kind: "destroyAll" }, { A1: null, B1: null }, 7, units);
+    for (let i = 0; i < 4 && b.phase === "movement"; i++) {
+      b.chooseMove("standStill");
+      b.commitMove();
+    }
+    return b;
+  };
+
+  it("cycles the key focus left sheet, orders, right sheet with Tab / Shift+Tab", () => {
+    setUp(battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null }));
+    expect(key("Tab")).toBe(true);
+    expect(app.battleUi.focus).toBe(1);
+    expect(key("Tab")).toBe(true);
+    expect(app.battleUi.focus).toBe(0);
+    expect(key("Tab", true)).toBe(true);
+    expect(app.battleUi.focus).toBe(1);
+    expect(key("Backspace")).toBe(true); // back to the orders
+    expect(app.battleUi.focus).toBe("orders");
+  });
+
+  it("walks the movement bar with ← → and chooses a mode with Enter", () => {
+    const b = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null });
+    setUp(b);
+    expect(key("ArrowRight")).toBe(true);
+    expect(app.orderCursor).toBe(1); // the first mode after the Hold dropdown
+    expect(key("Enter")).toBe(true);
+    expect(b.move!.choice).toBe("walk");
+    expect(key("ArrowLeft")).toBe(true);
+    expect(app.orderCursor).toBe(0);
+  });
+
+  it("puts Twist and Target rows above the weapons: ← → twist there, cycle the target row", () => {
+    const b = attackBattle();
+    setUp(b);
+    expect(b.phase).toBe("attack");
+    const target = b.attack!.targetId;
+    expect(key("ArrowUp")).toBe(true);
+    expect(app.orderCursor).toBe(-1); // Target row
+    expect(key("ArrowRight")).toBe(true);
+    expect(b.attack!.twist).toBe("front"); // cycles the target, not the twist
+    expect(b.attack!.targetId).toBe(target); // only one target
+    expect(key("ArrowUp")).toBe(true);
+    expect(app.orderCursor).toBe(-2); // Twist row
+    expect(key("ArrowLeft")).toBe(true); // Left, Front, Right as shown
+    expect(b.attack!.twist).toBe("leftSide");
+    expect(key("Enter")).toBe(true); // one to the right
+    expect(b.attack!.twist).toBe("front");
+    expect(key("ArrowUp")).toBe(true); // wraps to the last row
+    expect(app.orderCursor).toBeGreaterThanOrEqual(0);
+    expect(key("ArrowRight")).toBe(true);
+    expect(b.attack!.twist).toBe("rightSide");
+  });
+
+  it("checks a weapon with Enter and moves on to the next one that can fire", () => {
+    const b = attackBattle();
+    setUp(b);
+    const fireable = b.fireSuggestion()!.targets[0]!.weapons.map((w) => w.weaponIndex);
+    expect(fireable.length).toBeGreaterThan(1);
+    expect(key("Enter")).toBe(true);
+    expect(app.orderCursor).toBe(1);
+    expect(key(" ")).toBe(true);
+    expect(b.attack!.weapons).toEqual(fireable.slice(0, 2));
+  });
+
+  it("lists Policies for an acting Player unit and Language last; ← → step the pace", () => {
+    const pace = app.aiPace;
+    setUp(battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null }));
+    expect(key("Escape")).toBe(true);
+    expect(app.modal).toEqual({ kind: "battleMenu", cursor: 0 });
+    expect(key("ArrowDown")).toBe(true);
+    const before = app.aiPace;
+    expect(key("ArrowRight")).toBe(true);
+    expect(app.aiPace).not.toBe(before);
+    expect(key("ArrowLeft")).toBe(true);
+    expect(app.aiPace).toBe(before);
+    expect(key("ArrowDown")).toBe(true);
+    expect(key("Enter")).toBe(true); // Policies
+    expect(app.modal?.kind).toBe("policy");
+    expect(key("Escape")).toBe(true); // back to the menu, on Policies
+    expect(app.modal).toEqual({ kind: "battleMenu", cursor: 2 });
+    app.modal = null;
+    setAiPace(pace);
+  });
+});
+
 describe("Instant Action plays the same battle as the terminal", () => {
   // Same logic, own copy: with the same seed, positions and personas the two
   // apps must reach the same end state (only the presentation differs).
@@ -555,6 +659,41 @@ describe("Instant Action import boundary", () => {
 });
 
 describe("Instant Action record sheet hints (TW pp. 42, 125, 159-160)", () => {
+  it("lists heat sinks: engine-held, crit-slot devices white / gray / orange", () => {
+    const u = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null }).state.units
+      .A1!; // HBK-4G: 13 single, CT 11 and two in each leg (sheet order)
+    let tip = heatSinkTip(u);
+    expect(tip.text).toBe(
+      "Heat sinks: 13/13 single\nEngine: 8\nCrit slots: 5/5\nCT#11 RL#5 RL#6 LL#5 LL#6",
+    );
+    expect(tip.runs.map((r) => r[0]).join("")).toBe(tip.text);
+    setSlotDestroyed(u.critSlotsDestroyed, "centerTorso", 10);
+    u.damage.internalStructure.leftLeg = 0;
+    tip = heatSinkTip(u);
+    expect(tip.text.split("\n").slice(0, 3)).toEqual([
+      "Heat sinks: 10/13 single",
+      "Engine: 8",
+      "Crit slots: 2/5",
+    ]);
+    const cls = Object.fromEntries(tip.runs.filter((r) => r[1]).map((r) => [r[0], r[1]]));
+    expect(cls).toEqual({
+      "CT#11": "ia-dim",
+      "LL#5": "ia-lv-orange",
+      "LL#6": "ia-lv-orange",
+      "RL#5": "ia-lv-white",
+      "RL#6": "ia-lv-white",
+    });
+    // the location tips colour their slots the same way (a stand-in kit pads the numbers)
+    const g = globalThis as { window?: unknown };
+    g.window = { TUI: { fit: (v: string, n: number) => String(v).padEnd(n) } };
+    const slotCls = (loc: "centerTorso" | "leftLeg", n: number) =>
+      critTip(u, loc).runs.filter((r) => r[0] !== "\n")[n]![1];
+    expect(slotCls("centerTorso", 11)).toBe("ia-dim");
+    expect(slotCls("centerTorso", 1)).toBe("ia-lv-white");
+    expect(slotCls("leftLeg", 1)).toBe("ia-lv-orange");
+    delete g.window;
+  });
+
   const unit = (): UnitState => {
     const b = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null });
     const u = b.state.units.A1;

@@ -6,11 +6,11 @@
  */
 import { actorQueue, isUnitOnBoard, type UnitState, unitPolicyOf } from "btlib10x";
 import { t } from "../i18n";
-import { app, kitModal, rerender } from "../state";
+import { app, type BattleFocus, kitModal, type Modal, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
 import { recordSheet, SHEET_W } from "./battle.sheet";
-import { at, cells, fit, h, kit, logView, row, span } from "./common";
+import { at, cells, fit, h, hintAttrs, kit, logView, row, span } from "./common";
 
 const { FRAME: F, GRID: G, ROUND: R, MARK: M, ARROW: A } = UI_THEME;
 
@@ -140,8 +140,11 @@ export function toggleSheet(side: 0 | 1): void {
   const ui = app.battleUi;
   setLogs(false);
   const d = ui.sheets[side];
-  if (d.open) d.open = false;
-  else {
+  if (d.open) {
+    d.open = false;
+    if (ui.focus === side) ui.focus = "orders";
+    kit().hideTip();
+  } else {
     const other = ui.sheets[side === 0 ? 1 : 0];
     if (d.unitId === null) {
       const shown = other.open ? other.unitId : null;
@@ -168,10 +171,10 @@ export function openSheetFor(unitId: string): void {
   rerender();
 }
 
-function pickUnit(side: 0 | 1, e: MouseEvent): void {
+/** The sheet header's unit picker, under the header (a click, or Enter on it). */
+function pickUnit(side: 0 | 1, el: HTMLElement | null): void {
   const b = app.battle!;
   const ids = queueEntries().map((x) => x.unit.id);
-  const el = e.currentTarget instanceof HTMLElement ? e.currentTarget : null;
   if (!el) return;
   const d = app.battleUi.sheets[side];
   kitModal.open = true;
@@ -191,8 +194,11 @@ function pickUnit(side: 0 | 1, e: MouseEvent): void {
     });
 }
 
-/** The acting player unit's policy dialog; OK applies the changes to the battle. */
-function openPolicy(id: string): void {
+/**
+ * The acting player unit's policy dialog; OK applies the changes to the
+ * battle. Opened from the battle menu, OK and Cancel go `back` to it.
+ */
+export function openPolicy(id: string, back?: Modal): void {
   const b = app.battle!;
   const u = b.state.units[id];
   if (!u) return;
@@ -208,6 +214,7 @@ function openPolicy(id: string): void {
         app.error = e instanceof Error ? e.message : String(e);
       }
     },
+    ...(back ? { back } : {}),
   };
   rerender();
 }
@@ -233,7 +240,7 @@ function edgeTab(side: 0 | 1): TuiNode {
     {
       class: "ia-tab-edge ia-inset",
       key: `tab${side}`,
-      attrs: { "data-click": "" },
+      attrs: { "data-click": "", "data-side": String(side), ...hintAttrs("tab") },
       onClick: () => toggleSheet(side),
     },
     ...rows.map((r, i) => H.el("div", { class: "ia-row", key: i }, r)),
@@ -263,7 +270,7 @@ function drawer(side: 0 | 1): TuiNode | null {
   recordSheet(
     u,
     side,
-    (e) => pickUnit(side, e),
+    (e) => pickUnit(side, e.currentTarget instanceof HTMLElement ? e.currentTarget : null),
     u.id === b.actorId && b.actorPersona === null ? () => openPolicy(u.id) : null,
   ).forEach((body, i) => {
     const r = DRAWER_ROW + 1 + i;
@@ -286,7 +293,12 @@ function drawer(side: 0 | 1): TuiNode | null {
   return H.el(
     "div",
     { key: `drawer${side}` },
-    at(x0, DRAWER_ROW, { class: "ia-drawer ia-inset", key: "panel" }, ...rows),
+    at(
+      x0,
+      DRAWER_ROW,
+      { class: "ia-drawer ia-inset", key: "panel", attrs: { "data-side": String(side) } },
+      ...rows,
+    ),
     at(
       left ? SHEET_W : DRAWER_RIGHT - 2,
       TAB_ROW,
@@ -301,6 +313,134 @@ function drawer(side: 0 | 1): TuiNode | null {
   );
 }
 
+// ------------------------------------------------------------ key focus
+
+/** Tab / X stops: the left sheet (or its tab), the orders, the right sheet (or its tab). */
+function focusStops(): BattleFocus[] {
+  return app.battleUi.logs ? ["orders"] : [0, "orders", 1];
+}
+
+/** Tab / Shift+Tab (X): the next or previous focus stop, wrapping round. */
+export function cycleFocus(dir: number): void {
+  const ui = app.battleUi;
+  const stops = focusStops();
+  const i = Math.max(0, stops.indexOf(ui.focus));
+  ui.focus = stops[(i + dir + stops.length) % stops.length]!;
+  ui.hint = null;
+  app.mapView?.hideReticle();
+}
+
+/** The focused sheet's element: its open drawer, else its closed tab; null for the orders. */
+function focusScope(): HTMLElement | null {
+  const f = app.battleUi.focus;
+  if (f === "orders") return null;
+  return (
+    document.querySelector<HTMLElement>(`#app .ia-drawer[data-side="${f}"]`) ??
+    document.querySelector<HTMLElement>(`#app .ia-tab-edge[data-side="${f}"]`)
+  );
+}
+
+function hintTargets(scope: HTMLElement): HTMLElement[] {
+  if (scope.dataset.hint) return [scope];
+  return Array.from(scope.querySelectorAll<HTMLElement>("[data-hint]"));
+}
+
+/**
+ * After a render: give the DOM focus to the focused sheet's hint target (its
+ * tooltip opens on focus), or take it off a sheet when the orders have it.
+ */
+export function focusAfterRender(): void {
+  const ui = app.battleUi;
+  if (app.modal || kitModal.open) return;
+  const scope = focusScope();
+  const active = document.activeElement;
+  if (!scope) {
+    if (active instanceof HTMLElement && active.closest("#app [data-hint]")) active.blur();
+    return;
+  }
+  const all = hintTargets(scope);
+  const el = all.find((x) => x.dataset.hint === ui.hint) ?? all[0];
+  if (!el) return;
+  ui.hint = el.dataset.hint ?? null;
+  if (active !== el) el.focus({ preventScroll: true });
+}
+
+const DIRS: Readonly<Record<string, readonly [number, number]>> = {
+  ArrowLeft: [-1, 0],
+  ArrowRight: [1, 0],
+  ArrowUp: [0, -1],
+  ArrowDown: [0, 1],
+};
+
+/**
+ * The hint target an arrow moves to from `from`: ↑ ↓ the row above or below,
+ * nearest across; ← → the next one along the row, past its end the next
+ * row's first (the previous row's last), so ← → read the whole sheet.
+ */
+function nextHint(all: HTMLElement[], from: HTMLElement, dir: readonly [number, number]) {
+  const box = (el: HTMLElement) => el.getBoundingClientRect();
+  const rows: HTMLElement[][] = [];
+  for (const el of [...all].sort((a, b) => box(a).top - box(b).top || box(a).left - box(b).left)) {
+    const last = rows[rows.length - 1];
+    if (last && Math.abs(box(last[0]!).top - box(el).top) < 2) last.push(el);
+    else rows.push([el]);
+  }
+  for (const r of rows) r.sort((a, b) => box(a).left - box(b).left);
+  const ri = rows.findIndex((r) => r.includes(from));
+  if (ri < 0) return null;
+  const mid = (el: HTMLElement) => box(el).left + box(el).width / 2;
+  if (dir[1] !== 0) {
+    const r = rows[ri + dir[1]];
+    if (!r) return null;
+    const x = mid(from);
+    return r.reduce((a, b) => (Math.abs(mid(b) - x) < Math.abs(mid(a) - x) ? b : a));
+  }
+  const r = rows[ri]!;
+  const next = r[r.indexOf(from) + dir[0]];
+  if (next) return next;
+  const other = rows[ri + dir[0]];
+  return other ? other[dir[0] > 0 ? 0 : other.length - 1]! : null;
+}
+
+/**
+ * Keys while a sheet has the focus: arrows walk its hint targets, Enter /
+ * Space run the header (unit picker), the policy button or a closed tab,
+ * Backspace hands the focus back to the orders. Other keys fall through.
+ */
+export function sheetKey(e: KeyboardEvent): boolean {
+  const ui = app.battleUi;
+  const side = ui.focus;
+  if (side === "orders") return false;
+  if (e.key === "Backspace") {
+    ui.focus = "orders";
+    return true;
+  }
+  const scope = focusScope();
+  if (!scope) return false;
+  const all = hintTargets(scope);
+  const cur = all.find((x) => x.dataset.hint === ui.hint) ?? all[0];
+  const dir = DIRS[e.key];
+  if (dir) {
+    const next = cur ? nextHint(all, cur, dir) : null;
+    if (next) ui.hint = next.dataset.hint ?? null;
+    return true;
+  }
+  if (e.key !== "Enter" && e.key !== " ") return false;
+  if (e.repeat) return true;
+  const b = app.battle!;
+  const hint = cur?.dataset.hint;
+  if (hint === "tab") {
+    toggleSheet(side);
+    ui.focus = side;
+    ui.hint = null;
+  } else if (hint === "head") pickUnit(side, cur ?? null);
+  else if (hint === "policy") {
+    const id = ui.sheets[side].unitId;
+    if (id && id === b.actorId && b.actorPersona === null) openPolicy(id);
+  }
+  return true;
+}
+
 // ------------------------------------------------------------ logs
 
 /** Open or close the LOGS drawer: open sheets close with it and come back after. */
@@ -308,6 +448,9 @@ export function setLogs(open: boolean): void {
   const ui = app.battleUi;
   if (open === ui.logs) return;
   ui.logs = open;
+  ui.focus = "orders";
+  // a sheet tip (its target is about to go) must not stay over the log
+  kit().hideTip();
   if (open) {
     ui.logSheets = [ui.sheets[0].open, ui.sheets[1].open];
     for (const d of ui.sheets) d.open = false;
@@ -488,7 +631,7 @@ function bottomBorder(): TuiNode[] {
 }
 
 /**
- * DONE F10 (or, while a persona waits in step pace, NEXT Enter): a kit boxed
+ * DONE F10 (or, while a persona waits in step pace, NEXT PERSONA): a kit boxed
  * button at the bottom centre, above the LOGS tab.
  */
 export function doneButton(onDone: () => void, label = "orders.doneButton"): TuiNode {

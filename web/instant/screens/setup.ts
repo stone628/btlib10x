@@ -470,7 +470,15 @@ function inputWindow(m: Extract<Modal, { kind: "input" }>): TuiNode {
 }
 
 /** [ OK ] [ Cancel ] at the right of a `width`-cell row, after `lead`. */
-function okCancel(width: number, ok: () => void, lead?: TuiNode, leadCols = 0): TuiNode {
+function okCancel(
+  width: number,
+  ok: () => void,
+  lead?: TuiNode,
+  leadCols = 0,
+  cancel: () => void = () => {
+    app.modal = null;
+  },
+): TuiNode {
   const okText = t("btn.ok");
   const cancelText = t("btn.cancel");
   const used = leadCols + kitLen(okText) + 4 + kitLen(cancelText) + 4 + 1;
@@ -480,9 +488,7 @@ function okCancel(width: number, ok: () => void, lead?: TuiNode, leadCols = 0): 
     " ".repeat(Math.max(1, width - used)),
     button("ok", okText, ok),
     " ",
-    button("cancel", cancelText, () => {
-      app.modal = null;
-    }),
+    button("cancel", cancelText, cancel),
   );
 }
 
@@ -534,13 +540,16 @@ export function policyWindow(m: Extract<Modal, { kind: "policy" }>): TuiNode {
     okCancel(
       cols - 4,
       () => {
-        app.modal = null;
+        app.modal = m.back ?? null;
         m.apply({ ...d });
       },
       button("defaults", defaults, () => {
         m.draft = { ...DEFAULT_UNIT_POLICY };
       }),
       kitLen(defaults) + 4,
+      () => {
+        app.modal = m.back ?? null;
+      },
     ),
   );
 }

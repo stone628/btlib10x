@@ -13,13 +13,14 @@ import {
   HEAT_SCALE_MAX,
   type HeatScaleEffects,
   heatScaleEffects,
+  isSlotDestroyed,
   mechDefFor,
   pilotStatus,
   SENSOR_BLIND_HITS,
   shutdownAvoid,
   type UnitState,
 } from "btlib10x";
-import { t } from "../i18n";
+import { locName, t } from "../i18n";
 
 /** Engine heat per turn by engine hits (TW p.125): 5 for one, 10 for two+. */
 const engineHeat = (hits: number): number => (hits <= 0 ? 0 : hits === 1 ? 5 : 10);
@@ -181,4 +182,73 @@ export function heatTip(u: UnitState): string {
   const step = nextStep(now);
   if (step) lines.push(step);
   return lines.join("\n");
+}
+
+/** A coloured tip: plain text for sizing, the same text as `[text, class]` runs. */
+export interface RunTip {
+  text: string;
+  runs: [string, string][];
+}
+
+/** Locations in record-sheet reading order (arms and head, torsos, legs). */
+const SHEET_ORDER = [
+  "rightArm",
+  "head",
+  "leftArm",
+  "rightTorso",
+  "centerTorso",
+  "leftTorso",
+  "rightLeg",
+  "leftLeg",
+] as const;
+
+/** Sink devices per line of the heat sink tip. */
+const SINKS_PER_LINE = 5;
+
+/**
+ * Heat sink hint: operational / total and type, the engine-held sinks, the
+ * crit-slot devices intact / total, then each device as `CT#11` (a double
+ * sink as its slot run, `LT#3-5`): white intact, gray destroyed by a
+ * critical hit, orange lost with its location (as the location crit tips).
+ */
+export function heatSinkTip(u: UnitState): RunTip {
+  const def = mechDefFor(u);
+  const devices: { label: string; cls: string }[] = [];
+  for (const loc of SHEET_ORDER) {
+    const slots = def.critSlots[loc];
+    const lost = u.damage.internalStructure[loc] <= 0;
+    slots.forEach((slot, i) => {
+      if (slot.kind !== "structure") return;
+      let group: number[];
+      if (slot.type === "heatSink") group = [i + 1];
+      else if (slot.type === "doubleHeatSink" && slot.group[0] === i + 1) group = [...slot.group];
+      else return;
+      const hit = group.some((j) => isSlotDestroyed(u.critSlotsDestroyed, loc, j - 1));
+      const first = group[0]!;
+      const last = group[group.length - 1]!;
+      devices.push({
+        label: `${locName(loc)}#${first === last ? first : `${first}-${last}`}`,
+        cls: hit ? "ia-dim" : lost ? "ia-lv-orange" : "ia-lv-white",
+      });
+    });
+  }
+  const intact = devices.filter((d) => d.cls === "ia-lv-white").length;
+  const engine = Math.max(0, def.heatsink.count - devices.length);
+  const head = [
+    t("hint.hs.total", {
+      cur: engine + intact,
+      max: def.heatsink.count,
+      type: t(`hint.hs.${def.heatsink.type}` as "hint.hs.single"),
+    }),
+    t("hint.hs.engine", { n: engine }),
+    t("hint.hs.crits", { cur: intact, max: devices.length }),
+  ].join("\n");
+  const runs: [string, string][] = [[head, ""]];
+  let text = head;
+  devices.forEach((d, i) => {
+    const sep = i % SINKS_PER_LINE === 0 ? "\n" : " ";
+    runs.push([sep, ""], [d.label, d.cls]);
+    text += sep + d.label;
+  });
+  return { text, runs };
 }

@@ -1484,7 +1484,16 @@
     tipEl = div("tui-popup tui-font tui-tip");
     tipEl.setAttribute("role", "tooltip");
     inheritTheme(tipEl, target);
-    tipEl.textContent = lines.join("\n");
+    // data-tip-runs: the same text as styled runs, JSON [[text, class], …]
+    const runs = parseRuns(target.dataset.tipRuns);
+    if (runs) {
+      for (const [text, cls] of runs) {
+        const s = doc.createElement("span");
+        if (cls) s.className = cls;
+        s.textContent = text;
+        tipEl.appendChild(s);
+      }
+    } else tipEl.textContent = lines.join("\n");
     doc.body.appendChild(tipEl);
     box(tipEl, {
       cols: w + 4,
@@ -1492,6 +1501,16 @@
       border: target.dataset.tipBorder || "rounded",
     });
     placeTip(tipEl, target);
+  }
+
+  function parseRuns(json) {
+    if (!json) return null;
+    try {
+      const runs = JSON.parse(json);
+      return Array.isArray(runs) ? runs : null;
+    } catch {
+      return null;
+    }
   }
 
   /* Compass points of a rectangle as fractions of its width and height:
@@ -2147,6 +2166,7 @@
     "tipAnchor",
     "tipXY",
     "tipFrom",
+    "tipRuns",
     "hidden",
     "on",
     ...SLOT_PROPS,
@@ -2276,6 +2296,8 @@
     if (p.tipAnchor !== o.tipAnchor) setData(el, "tipAnchor", p.tipAnchor);
     if (p.tipXY !== o.tipXY) setData(el, "tipXy", p.tipXY);
     if (p.tipFrom !== o.tipFrom) setData(el, "tipFrom", p.tipFrom);
+    if (!deepEq(p.tipRuns, o.tipRuns))
+      setData(el, "tipRuns", p.tipRuns ? JSON.stringify(p.tipRuns) : undefined);
     if (!!p.hidden !== !!o.hidden) el.hidden = !!p.hidden;
   }
   function bindEvents(el, p, sc) {

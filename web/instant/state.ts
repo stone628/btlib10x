@@ -75,6 +75,8 @@ export type Modal =
       draft: UnitPolicy;
       /** Takes the edited policy on OK. */
       apply: (p: UnitPolicy) => void;
+      /** The window OK / Cancel go back to (the battle menu it was opened from); none = close. */
+      back?: Modal;
     }
   | { kind: "battleMenu"; cursor: number }
   | { kind: "debriefMenu"; cursor: number }
@@ -128,7 +130,13 @@ export interface BattleUi {
   menuBox: { cols: number; rows: number } | null;
   /** Counter behind `SheetDrawer.openedAt`. */
   seq: number;
+  /** Key focus (Tab / X): the left sheet or its tab, the orders panel, the right sheet or tab. */
+  focus: BattleFocus;
+  /** Hint target (`data-hint`) the focused sheet's cursor sits on; null = its first. */
+  hint: string | null;
 }
+
+export type BattleFocus = 0 | "orders" | 1;
 
 export function newBattleUi(): BattleUi {
   return {
@@ -145,6 +153,8 @@ export function newBattleUi(): BattleUi {
     framePending: false,
     menuBox: null,
     seq: 0,
+    focus: "orders",
+    hint: null,
   };
 }
 
@@ -170,6 +180,8 @@ export interface App {
   version: string;
   /** When control last passed from a persona to the Player (ms, `performance.now`). */
   playerSince: number;
+  /** The last input came from the pad: the battle status bar shows its buttons. */
+  padInput: boolean;
 }
 
 export const app: App = {
@@ -189,6 +201,7 @@ export const app: App = {
   error: null,
   version: "",
   playerSince: 0,
+  padInput: false,
 };
 
 /** True while a kit popup or dialog owns the keyboard (cleared after it resolves). */

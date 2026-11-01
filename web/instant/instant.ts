@@ -17,7 +17,7 @@ import {
   setFontSize,
 } from "./screen";
 import { battleKey, battleOverlays, battleScreen } from "./screens/battle";
-import { queueAfterRender } from "./screens/battle.hud";
+import { focusAfterRender, queueAfterRender } from "./screens/battle.hud";
 import { h, kit, row } from "./screens/common";
 import { debriefKey, debriefOverlays, debriefScreen } from "./screens/debrief";
 import {
@@ -102,9 +102,13 @@ function afterRender(): void {
   if (app.screen === "setup") setupAfterRender();
   else if (app.screen === "title") titleAfterRender();
   else if (app.screen === "deploy") deployAfterRender();
+  else if (app.screen === "battle") focusAfterRender();
   const slot = document.querySelector<HTMLElement>("#app .ia-mapslot");
-  // Map tooltips only where a screen's overlays set tipFor (battle, debrief Map tab).
-  if (app.mapView) app.mapView.tipFor = null;
+  // Map tooltips and framing only where a screen's overlays set them (battle, debrief Map tab).
+  if (app.mapView) {
+    app.mapView.tipFor = null;
+    app.mapView.reframe = null;
+  }
   if (!slot) {
     app.mapView?.hideTip();
     return;

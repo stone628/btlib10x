@@ -146,6 +146,10 @@ export class MapView {
   onPick: ((hex: HexCoord, facing: Facing | null) => void) | null = null;
   /** Hover text for a hex, shown in the kit tooltip beside it; null = none. */
   tipFor: ((hex: HexCoord) => string | null) | null = null;
+  /** The screen's own framing (Home / R3), set by its overlays; null = fit the whole map. */
+  reframe: (() => void) | null = null;
+  /** The last Home / R3 took the screen's framing: the next one fits the whole map. */
+  framed = false;
   private drawn: Shape[] = [];
   private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
   private world = { cx: 0, cy: 0 };
@@ -361,17 +365,11 @@ export class MapView {
   panBy(dx: number, dy: number): void {
     if (!this.src) return;
     this.unfit();
+    this.framed = false;
     this.panX -= dx;
     this.panY -= dy;
     this.render();
     if (this.reticle) this.hoverPoint(this.reticlePoint());
-  }
-
-  /** Shift+arrow: move the reticle one hex across the screen, showing it. */
-  stepReticle(dx: number, dy: number): void {
-    const v = this.view();
-    this.showReticle();
-    this.panBy(dx * 1.5 * v.R, dy * SQ3 * v.R * v.sq);
   }
 
   /** Hide the hex tooltip, if one shows (other kit tooltips are left alone). */

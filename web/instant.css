@@ -439,6 +439,17 @@
   background: #335533;
   cursor: pointer;
 }
+/* the key cursor on a record sheet (Tab / X gave it the focus): reverse video */
+.ia-drawer [data-hint]:focus,
+.ia-tab-edge[data-hint]:focus {
+  outline: none;
+  background: var(--tui-sel-bg);
+  color: var(--tui-sel-fg);
+}
+.ia-drawer [data-hint]:focus *,
+.ia-tab-edge[data-hint]:focus * {
+  color: inherit;
+}
 
 /* LOGS drawer: drops from under the header strip over the whole body */
 .ia-logdrawer {
@@ -500,6 +511,11 @@
 .ia-menu .sel {
   background: var(--tui-sel-bg);
   color: var(--tui-sel-fg);
+}
+/* orders while a record sheet has the key focus: the cursor as dark as the sheet header */
+.ia-menu.ia-unfocused .sel {
+  background: #335533;
+  color: var(--tui-bright);
 }
 
 /* debrief map: the board fills the tab, the legend rides its bottom row on a translucent band */

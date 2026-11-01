@@ -32,6 +32,8 @@ export interface TuiProps {
   tipXY?: string;
   /** CSS selector of the element `tipXY` is measured from (`data-tip-from`). */
   tipFrom?: string;
+  /** The tip text as styled runs, `[text, class]` (`data-tip-runs`); `tip` still sizes it. */
+  tipRuns?: readonly (readonly [string, string])[];
   hidden?: boolean;
   size?: number | string;
   grow?: number;

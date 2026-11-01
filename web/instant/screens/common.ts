@@ -153,9 +153,18 @@ export interface SpanOpts {
   /** A designated tip point in cells from `tipFrom`'s element (see TuiProps). */
   tipXY?: string;
   tipFrom?: string;
+  /** The tip as coloured runs `[text, class]`; `tip` keeps the plain text. */
+  tipRuns?: readonly (readonly [string, string])[];
   id?: string;
   key?: string | number;
   onClick?: (e: MouseEvent) => void;
+  /** Record-sheet hint target name: arrows reach it once the sheet has the key focus. */
+  hint?: string;
+}
+
+/** Attributes of a hint target: named, focusable by script but not by Tab. */
+export function hintAttrs(name: string): Record<string, string> {
+  return { "data-hint": name, tabindex: "-1" };
 }
 
 /** An inline run of text with its own class, tooltip or click. */
@@ -167,6 +176,7 @@ export function span(text: string, o: SpanOpts = {}): TuiNode {
   if (o.tipAnchor) props.tipAnchor = o.tipAnchor;
   if (o.tipXY) props.tipXY = o.tipXY;
   if (o.tipFrom) props.tipFrom = o.tipFrom;
+  if (o.tipRuns) props.tipRuns = o.tipRuns;
   if (o.id) props.id = o.id;
   if (o.key !== undefined) props.key = o.key;
   if (o.onClick) {
@@ -174,6 +184,7 @@ export function span(text: string, o: SpanOpts = {}): TuiNode {
     props.onClick = (e) => fn(e);
     props.attrs = { "data-click": "" };
   }
+  if (o.hint) props.attrs = { ...props.attrs, ...hintAttrs(o.hint) };
   return h().el("span", props, text);
 }
 

@@ -23,25 +23,30 @@ import type { TuiChild, TuiNode } from "../tui";
 import {
   BODY,
   battleFrame,
+  cycleFocus,
   doneButton,
   focusMover,
+  openPolicy,
   openSheetFor,
   setLogs,
+  sheetKey,
   sheetSideOf,
   toggleLogs,
   toggleSheet,
 } from "./battle.hud";
 import { SHEET_W } from "./battle.sheet";
 import { at, blank, cells, fit, h, kit, mapSlot, modal, row, span, statusbar } from "./common";
-import { closesMessage } from "./menu";
+import { closesMessage, prefItems } from "./menu";
 import { pileTipFor } from "./piles";
 import { policyWindow } from "./setup";
 
-const { MARK: M, ARROW: A } = UI_THEME;
+const { MARK: M, ARROW: A, GRID: G } = UI_THEME;
 
 const ATTACK_W = 45;
-const TWISTS: Twist[] = ["front", "leftSide", "rightSide"];
-/** Twists from left to right, for ← →. */
+/** Attack cursor rows above the weapon list (`app.orderCursor`; 0 is the first weapon row). */
+const TWIST_ROW = -2;
+const TARGET_ROW = -1;
+/** Twists from left to right, as the Twist row shows them and ← → step them. */
 const SIDEWAYS: Twist[] = ["leftSide", "front", "rightSide"];
 /** Modes with no hex or facing to pick: they live under the Hold dropdown. */
 const STATIONARY = new Set<MoveChoice>([
@@ -55,6 +60,8 @@ const STATIONARY = new Set<MoveChoice>([
   "abandon",
 ]);
 type StatusKey = readonly [string, string, (() => void)?];
+/** Id of the Hold dropdown on the mode bar, where Enter opens its menu. */
+const HOLD_ID = "ia-hold";
 
 function setError(e: unknown): void {
   app.error = e instanceof Error ? e.message : String(e);
@@ -82,17 +89,35 @@ function moveReady(): boolean {
   return STATIONARY.has(d.choice) || d.landing !== null;
 }
 
+/** The mode bar, left to right: the Hold dropdown (when any), then the modes that pick a hex. */
+type BarItem = "hold" | MoveChoice;
+
+function barItems(): BarItem[] {
+  const choices = app.battle!.moveChoices();
+  const hold: BarItem[] = choices.some((c) => STATIONARY.has(c)) ? ["hold"] : [];
+  return [...hold, ...choices.filter((c) => !STATIONARY.has(c))];
+}
+
 function pickMove(c: MoveChoice): void {
   const b = app.battle!;
-  app.orderCursor = Math.max(0, b.moveChoices().indexOf(c));
+  app.orderCursor = Math.max(0, barItems().indexOf(STATIONARY.has(c) ? "hold" : c));
   act(() => b.chooseMove(c));
   rerender();
 }
 
-function openHoldMenu(hold: MoveChoice[], e: MouseEvent): void {
-  const el = e.currentTarget instanceof HTMLElement ? e.currentTarget : null;
+/**
+ * The Hold dropdown under its bar item (a click, Enter, or ↑ ↓ on it). The
+ * menu cursor starts on the held choice; `step` ±1 (↓ / ↑) starts it one
+ * after or before it, round the list (nothing held: ↓ the first, ↑ the last).
+ */
+function openHoldMenu(el: HTMLElement | null, step = 0): void {
   if (!el) return;
+  const hold = app.battle!.moveChoices().filter((c) => STATIONARY.has(c));
   const current = app.battle?.move?.choice ?? null;
+  const at = hold.indexOf(current as MoveChoice);
+  const n = hold.length;
+  const active =
+    step === 0 ? Math.max(0, at) : at < 0 ? (step > 0 ? 0 : n - 1) : (at + step + n) % n;
   kitModal.open = true;
   void kit()
     .popupMenu(
@@ -100,7 +125,7 @@ function openHoldMenu(hold: MoveChoice[], e: MouseEvent): void {
       hold.map((c) => ({
         label: `${c === current ? M.on : " "} ${fit(t(`choice.${c}`), 16)}`,
       })),
-      { active: Math.max(0, hold.indexOf(current as MoveChoice)) },
+      { active },
     )
     .then((r) => {
       kitModal.open = false;
@@ -117,7 +142,7 @@ function moveMenu(): { rows: TuiNode[]; width: number } {
   const draft = b.move!;
   const hold = choices.filter((c) => STATIONARY.has(c));
   const modes = choices.filter((c) => !STATIONARY.has(c));
-  const cursor = choices[app.orderCursor];
+  const cursor = barItems()[app.orderCursor];
   const held = draft.choice && STATIONARY.has(draft.choice) ? draft.choice : null;
   const kids: TuiChild[] = [" "];
   let width = 2;
@@ -132,8 +157,10 @@ function moveMenu(): { rows: TuiNode[]; width: number } {
       text,
       span(text, {
         key: "hold",
-        cls: cursor && STATIONARY.has(cursor) ? "sel" : held ? "ia-bright" : "",
-        onClick: (e) => openHoldMenu(hold, e),
+        id: HOLD_ID,
+        cls: cursor === "hold" ? "sel" : held ? "ia-bright" : "",
+        onClick: (e) =>
+          openHoldMenu(e.currentTarget instanceof HTMLElement ? e.currentTarget : null),
       }),
     );
   }
@@ -220,9 +247,16 @@ function attackOrders(width: number): TuiNode[] {
   const def = mechDefFor(unit);
   const sugg = b.fireSuggestion();
   const target = currentTarget();
-  const twist = TWISTS.map(
-    (x) => `${draft.twist === x ? `(${M.on})` : "( )"} ${t(`twist.${x}`)}`,
-  ).join(" ");
+  // Left / Front / Right, each a click target
+  const twistKids: TuiChild[] = [t("orders.twist")];
+  for (const x of SIDEWAYS)
+    twistKids.push(
+      " ",
+      span(`${draft.twist === x ? `(${M.on})` : "( )"} ${t(`twist.${x}`)}`, {
+        key: x,
+        onClick: () => act(() => b.setTwist(x)),
+      }),
+    );
   const tu = target ? b.state.units[target.targetId] : null;
   const targetLine = tu
     ? `${A.prev} ${tu.id} ${tu.model} ${M.sep} ${t("orders.hexes", { n: target!.distance })} ${A.next}`
@@ -230,13 +264,15 @@ function attackOrders(width: number): TuiNode[] {
       ? t("orders.noTargets")
       : t("orders.pickTarget");
   const out: TuiNode[] = [
-    row(fit(`${t("orders.twist")} ${twist}`, width), {
-      key: "twist",
-      onClick: () => act(() => b.setTwist(TWISTS[(TWISTS.indexOf(draft.twist) + 1) % 3]!)),
-    }),
+    h().el(
+      "div",
+      { class: `ia-row${app.orderCursor === TWIST_ROW ? " sel" : ""}`, key: "twist" },
+      ...twistKids,
+    ),
     row(fit(`${t("orders.target")} ${targetLine}`, width), {
       key: "target",
       cls: "ia-bright",
+      sel: app.orderCursor === TARGET_ROW,
       onClick: () => cycleTarget(1),
     }),
     row(
@@ -344,6 +380,17 @@ function attackOrders(width: number): TuiNode[] {
   return out;
 }
 
+/** The Twist row's Enter: one twist to the right (Left, Front, Right), round again. */
+function cycleTwist(): void {
+  const b = app.battle!;
+  act(() => b.setTwist(SIDEWAYS[(SIDEWAYS.indexOf(b.attack!.twist) + 1) % 3]!));
+}
+
+/** A row Enter / Space can check: a weapon that can fire, a physical attack, a club action. */
+function checkable(r: AttackRow): boolean {
+  return r.kind !== "weapon" || r.enabled;
+}
+
 function toggleRow(i: number): void {
   const b = app.battle!;
   const r = attackRows()[i];
@@ -372,7 +419,8 @@ function cycleTarget(dir: number): void {
 function pickTarget(id: string): void {
   const b = app.battle!;
   act(() => b.setTarget(id));
-  app.orderCursor = 0;
+  // the Target row keeps the cursor while ← → cycle; a pick elsewhere goes to the first row
+  if (app.orderCursor !== TARGET_ROW) app.orderCursor = 0;
   showTargetSheet();
   rerender();
 }
@@ -454,7 +502,8 @@ function topMenu(rows: TuiNode[], width: number, top: number, title: string | nu
         cols: Math.min(BODY.cols, width + 2),
         border: "rounded",
         pad: 0,
-        class: "ia-menu",
+        // the key focus is on a record sheet: the cursor dims
+        class: app.battleUi.focus === "orders" ? "ia-menu" : "ia-menu ia-unfocused",
         key: "menu",
         ...(title ? { title } : {}),
       },
@@ -494,13 +543,8 @@ function orders(): Orders {
   });
   if (!u) return out([], 0, false);
   if (b.actorPersona !== null) {
-    const ai = [textRow(t("orders.aiActing", { id: u.id }), "ia-accent", "ai")];
-    if (app.aiPace === "step") ai.push(textRow(t("orders.aiStep"), "ia-dim", "ais"));
-    return out(
-      ai.map((x) => x[0]),
-      Math.max(...ai.map((x) => x[1])),
-      false,
-    );
+    const [ai, w] = textRow(t("orders.aiActing", { id: u.id }), "ia-accent", "ai");
+    return out([ai], w, false);
   }
   if (b.phase === "movement") {
     const m = moveMenu();
@@ -512,14 +556,46 @@ function orders(): Orders {
 }
 
 const MOVE_KEYS: StatusKey[] = [
-  ["Mouse", "key.clickHex"],
+  ["←→", "key.mode"],
+  ["Shift+←→", "key.aim"],
   ["Bksp", "key.clear"],
 ];
 const ATTACK_KEYS: StatusKey[] = [
-  ["Tab", "key.target"],
+  ["↑↓", "key.row"],
   ["←→", "key.twist"],
   ["Enter", "key.weapon"],
 ];
+const SHEET_KEYS: StatusKey[] = [
+  ["←↑↓→", "key.hint"],
+  ["Bksp", "key.back"],
+];
+/** Status bar key names as pad buttons, once the pad was the last input. */
+const PAD_NAMES: Readonly<Record<string, string>> = {
+  Enter: "A",
+  Bksp: "B",
+  Tab: "X",
+  F10: "Y",
+  "[": "LB",
+  "]": "RB",
+  L: "View",
+  Esc: "Menu",
+  "←→": "D←→",
+  "↑↓": "D↑↓",
+  "←↑↓→": "D-pad",
+  "Shift+←→": "LS",
+};
+
+function statusKeys(keys: StatusKey[]): StatusKey[] {
+  if (!app.padInput) return keys;
+  return keys.map(([k, label, run]) => [PAD_NAMES[k] ?? k, label, run] as StatusKey);
+}
+
+/** The orders' key hints for the focused region and the phase. */
+function regionKeys(persona: boolean): StatusKey[] {
+  if (app.battleUi.focus !== "orders") return SHEET_KEYS;
+  if (persona) return [];
+  return app.battle!.phase === "movement" ? MOVE_KEYS : ATTACK_KEYS;
+}
 
 export function battleScreen(): TuiNode {
   const H = h();
@@ -557,10 +633,11 @@ export function battleScreen(): TuiNode {
       o.menu.length > 0 ? [topMenu(o.menu, o.width, BODY.row, o.title)] : [],
     ),
     statusbar(
-      [
-        ...(phase === "movement" ? MOVE_KEYS : ATTACK_KEYS),
+      statusKeys([
+        ...regionKeys(b.actorPersona !== null),
         ...(o.done ? [["F10", "key.done", () => commit()] as const] : []),
         ...(stepping ? [["Enter", "key.step", () => pumpAi(true)] as const] : []),
+        ["Tab", "key.focus", () => cycleFocus(1)],
         ["[", "key.sheetLeft", () => toggleSheet(0)],
         ["]", "key.sheetRight", () => toggleSheet(1)],
         ["L", "key.logs", () => toggleLogs()],
@@ -572,7 +649,7 @@ export function battleScreen(): TuiNode {
             rerender();
           },
         ],
-      ],
+      ]),
       phase === "movement" ? moveHint() : [],
     ),
     app.modal ? battleModal() : null,
@@ -581,9 +658,38 @@ export function battleScreen(): TuiNode {
 
 function commit(): void {
   const b = app.battle!;
+  const d = b.attack;
+  if (b.phase === "attack" && d && !d.weapons.length && !d.physical.length) {
+    if (!d.pickup && !d.dropClub) {
+      confirmPass();
+      return;
+    }
+  }
   act(() => (b.phase === "movement" ? b.commitMove() : b.commitAttack()));
   app.orderCursor = 0;
   pumpAi();
+}
+
+/** Done with nothing checked: ask before the attack passes (No is the default). */
+function confirmPass(): void {
+  kitModal.open = true;
+  void kit()
+    .dialog({
+      title: t("orders.passTitle"),
+      text: t("orders.passConfirm", { id: app.battle?.actorId ?? "" }),
+      buttons: [t("yes"), t("no")],
+      defaultIndex: 1,
+    })
+    .then((r) => {
+      kitModal.open = false;
+      const b = app.battle;
+      if (r === t("yes") && b?.attack) {
+        act(() => b.commitAttack());
+        app.orderCursor = 0;
+        pumpAi();
+      }
+      rerender();
+    });
 }
 
 // ------------------------------------------------------------ map wiring
@@ -644,6 +750,7 @@ export function battleOverlays(): void {
     v.frame(actor.position, target.position, clearArea(v.canvas));
   }
   v.onPick = (hex, facing) => onMapPick(hex, facing);
+  v.reframe = reframe;
 }
 
 const keyOf = (h: { col: number; row: number }) => `${h.col},${h.row}`;
@@ -688,7 +795,43 @@ function onMapPick(hex: { col: number; row: number }, facing: Facing | null): vo
 
 // ------------------------------------------------------------ battle windows
 
-const MENU = ["menu.resume", "menu.pace", "menu.withdraw"];
+interface BattleMenuItem {
+  key: string;
+  label: () => string;
+  run: () => void;
+  sepAbove?: boolean;
+}
+
+/**
+ * Battle menu entries: Resume, Persona pace, Policies (a Player unit
+ * acting), Withdraw, then the language under a separator.
+ */
+function menuItems(): BattleMenuItem[] {
+  const b = app.battle!;
+  const lang = prefItems()[0]!;
+  const items: BattleMenuItem[] = [
+    { key: "resume", label: () => t("menu.resume"), run: () => closeMenu() },
+    {
+      key: "pace",
+      label: () => `${t("menu.pace")}: ${t(`pace.${app.aiPace}`)}`,
+      run: () => stepPace(1),
+    },
+  ];
+  const id = b.actorId;
+  const at = items.length;
+  if (id !== null && b.actorPersona === null && b.result === null)
+    items.push({
+      key: "policy",
+      label: () => t("menu.policy", { id }),
+      // play stays on hold: OK / Cancel come back to this menu
+      run: () => openPolicy(id, { kind: "battleMenu", cursor: at }),
+    });
+  items.push(
+    { key: "withdraw", label: () => t("menu.withdraw"), run: () => withdraw() },
+    { key: "lang", label: lang.label, run: lang.run, sepAbove: true },
+  );
+  return items;
+}
 
 /** Open the battle menu; persona play holds until it closes (`closeMenu`). */
 function openMenu(cursor = 0): void {
@@ -701,17 +844,29 @@ function closeMenu(): void {
   holdAi(false);
 }
 
+/** Persona pace one step along instant / step / timed, either way, round again. */
+function stepPace(d: number): void {
+  const n = AI_PACES.length;
+  setAiPace(AI_PACES[(AI_PACES.indexOf(app.aiPace) + d + n) % n]!);
+}
+
+const MENU_COLS = 40;
+
 function battleModal(): TuiNode | null {
   const m = app.modal!;
   if (m.kind === "battleMenu") {
     return modal(
-      { cols: 40, title: t("menu.title"), footer: t("dialog.footer") },
-      ...MENU.map((k, i) =>
-        row(
-          `${i === m.cursor ? A.cursor : " "} ${t(k)}${k === "menu.pace" ? `: ${t(`pace.${app.aiPace}`)}` : ""}`,
-          { sel: i === m.cursor, key: k, onClick: () => runMenu(i) },
-        ),
-      ),
+      { cols: MENU_COLS, title: t("menu.title"), footer: t("dialog.footer") },
+      ...menuItems().flatMap((it, i) => [
+        ...(it.sepAbove
+          ? [row(G.th.repeat(MENU_COLS - 4), { key: `s${it.key}`, cls: "ia-dim" })]
+          : []),
+        row(`${i === m.cursor ? A.cursor : " "} ${it.label()}`, {
+          sel: i === m.cursor,
+          key: it.key,
+          onClick: () => runMenu(i),
+        }),
+      ]),
     );
   }
   if (m.kind === "policy") return policyWindow(m);
@@ -726,32 +881,46 @@ function battleModal(): TuiNode | null {
 }
 
 function runMenu(i: number): void {
-  const k = MENU[i];
-  if (k === "menu.pace") {
-    setAiPace(AI_PACES[(AI_PACES.indexOf(app.aiPace) + 1) % AI_PACES.length]!);
-    app.modal = { kind: "battleMenu", cursor: i };
-  } else if (k === "menu.withdraw") {
-    // The menu closes but play stays on hold until the confirm is answered.
-    app.modal = null;
-    kitModal.open = true;
-    void kit()
-      .dialog({
-        title: t("menu.withdraw"),
-        text: t("withdraw.confirm"),
-        buttons: [t("yes"), t("no")],
-        defaultIndex: 1,
-        tone: "warn",
-      })
-      .then((r) => {
-        kitModal.open = false;
-        if (r === t("yes")) {
-          stopAi();
-          app.battle = null;
-          app.screen = "setup";
-        } else holdAi(false);
-        rerender();
-      });
-  } else closeMenu();
+  const it = menuItems()[i];
+  // pace and language keep the menu open on their row
+  if (it?.key === "pace" || it?.key === "lang") app.modal = { kind: "battleMenu", cursor: i };
+  it?.run();
+  rerender();
+}
+
+/** Withdraw to setup, after a confirm; play stays on hold until it is answered. */
+function withdraw(): void {
+  app.modal = null;
+  kitModal.open = true;
+  void kit()
+    .dialog({
+      title: t("menu.withdraw"),
+      text: t("withdraw.confirm"),
+      buttons: [t("yes"), t("no")],
+      defaultIndex: 1,
+      tone: "warn",
+    })
+    .then((r) => {
+      kitModal.open = false;
+      if (r === t("yes")) {
+        stopAi();
+        app.battle = null;
+        app.screen = "setup";
+      } else holdAi(false);
+      rerender();
+    });
+}
+
+/**
+ * Home (R3): frame the units the prompt is about, the mover and its enemies
+ * or the shooter and its target, after the next render.
+ */
+function reframe(): void {
+  const b = app.battle;
+  const ui = app.battleUi;
+  if (!b) return;
+  if (b.phase === "attack" && b.attack?.targetId) ui.framePending = true;
+  else ui.centerPending = true;
   rerender();
 }
 
@@ -762,8 +931,12 @@ export function battleKey(e: KeyboardEvent): boolean {
   const m = app.modal;
   if (m) {
     if (m.kind === "battleMenu") {
-      if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % MENU.length;
-      else if (e.key === "ArrowUp") m.cursor = (m.cursor + MENU.length - 1) % MENU.length;
+      const n = menuItems().length;
+      const pace = menuItems()[m.cursor]?.key === "pace";
+      if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % n;
+      else if (e.key === "ArrowUp") m.cursor = (m.cursor + n - 1) % n;
+      else if (pace && (e.key === "ArrowLeft" || e.key === "ArrowRight"))
+        stepPace(e.key === "ArrowLeft" ? -1 : 1);
       else if (e.key === "Enter" || e.key === " ") runMenu(m.cursor);
       else if (e.key === "Escape" || e.key === "Backspace") closeMenu();
       else return false;
@@ -772,7 +945,7 @@ export function battleKey(e: KeyboardEvent): boolean {
     // The policy dialog's kit controls keep their keys; Esc / Backspace cancel it.
     if (m.kind === "policy") {
       if (e.key !== "Escape" && e.key !== "Backspace") return false;
-      app.modal = null;
+      app.modal = m.back ?? null;
       return true;
     }
     if (!closesMessage(e)) return false;
@@ -783,9 +956,12 @@ export function battleKey(e: KeyboardEvent): boolean {
   // A press just as control comes back from a persona is the end of a step burst.
   if (select && (e.repeat || performance.now() - app.playerSince < PLAYER_GRACE_MS)) return true;
   if (e.key === "Escape") openMenu();
+  // Tab / Shift+Tab (X): left sheet, orders, right sheet
+  else if (e.key === "Tab") cycleFocus(e.shiftKey ? -1 : 1);
   // [ and ] (LB / RB) open and close the left and right record sheets.
   else if (bracket(e)) toggleSheet(bracket(e) < 0 ? 0 : 1);
   else if (isLogsKey(e)) setLogs(!app.battleUi.logs);
+  else if (sheetKey(e)) return true;
   else if (select && b.actorPersona !== null) pumpAi(true);
   else if (b.actorPersona !== null) return false;
   else if (b.phase === "movement") return moveKey(e);
@@ -799,14 +975,19 @@ const PLAYER_GRACE_MS = 300;
 
 function moveKey(e: KeyboardEvent): boolean {
   const b = app.battle!;
-  const choices = b.moveChoices();
-  if (e.key === "ArrowDown") app.orderCursor = (app.orderCursor + 1) % choices.length;
-  else if (e.key === "ArrowUp")
-    app.orderCursor = (app.orderCursor + choices.length - 1) % choices.length;
-  else if (e.key === "Enter" || e.key === " ") {
-    // choosing a mode never commits; another mode drops the chosen landing
-    const c = choices[app.orderCursor];
-    if (c && b.move?.choice !== c) act(() => b.chooseMove(c));
+  const items = barItems();
+  const n = Math.max(1, items.length);
+  // ← → run along the bar; ↑ ↓ open Hold one choice after / before the held one
+  if (e.key === "ArrowRight") app.orderCursor = (app.orderCursor + 1) % n;
+  else if (e.key === "ArrowLeft") app.orderCursor = (app.orderCursor + n - 1) % n;
+  else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+    if (items[app.orderCursor] === "hold")
+      openHoldMenu(document.getElementById(HOLD_ID), e.key === "ArrowDown" ? 1 : -1);
+  } else if (e.key === "Enter" || e.key === " ") {
+    // Hold opens its dropdown; choosing a mode never commits, another drops the landing
+    const c = items[app.orderCursor];
+    if (c === "hold") openHoldMenu(document.getElementById(HOLD_ID));
+    else if (c && b.move?.choice !== c) act(() => b.chooseMove(c));
   } else if (e.key === "Backspace") {
     if (b.move?.landing) act(() => b.clearLanding());
   } else if (e.key === "F10" && moveReady()) commit();
@@ -817,21 +998,32 @@ function moveKey(e: KeyboardEvent): boolean {
 function attackKey(e: KeyboardEvent): boolean {
   const b = app.battle!;
   const rows = attackRows();
+  const n = rows.length - TWIST_ROW;
+  const move = (d: number) => {
+    app.orderCursor = ((app.orderCursor - TWIST_ROW + d + n) % n) + TWIST_ROW;
+  };
   // ← → twist toward that side, stopping at the full twist
   const twist = (d: number) => {
     const i = SIDEWAYS.indexOf(b.attack!.twist) + d;
     const to = SIDEWAYS[Math.max(0, Math.min(2, i))]!;
     if (to !== b.attack!.twist) act(() => b.setTwist(to));
   };
-  if (e.key === "Tab") cycleTarget(e.shiftKey ? -1 : 1);
-  else if (e.key === "ArrowRight") twist(1);
-  else if (e.key === "ArrowLeft") twist(-1);
-  else if (e.key === "ArrowDown")
-    app.orderCursor = rows.length ? (app.orderCursor + 1) % rows.length : 0;
-  else if (e.key === "ArrowUp")
-    app.orderCursor = rows.length ? (app.orderCursor + rows.length - 1) % rows.length : 0;
-  else if (e.key === "Enter" || e.key === " ") toggleRow(app.orderCursor);
-  else if (e.key === "F10") commit();
+  const side = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
+  if (side && app.orderCursor === TARGET_ROW) cycleTarget(side);
+  else if (side) twist(side);
+  else if (e.key === "ArrowDown") move(1);
+  else if (e.key === "ArrowUp") move(-1);
+  else if (e.key === "Enter" || e.key === " ") {
+    if (app.orderCursor === TWIST_ROW) cycleTwist();
+    else if (app.orderCursor === TARGET_ROW) cycleTarget(1);
+    else {
+      // check (or uncheck) the row, then go on to the next checkable one: A A A fires a volley
+      const i = app.orderCursor;
+      toggleRow(i);
+      const next = attackRows().findIndex((r, j) => j > i && checkable(r));
+      if (next >= 0) app.orderCursor = next;
+    }
+  } else if (e.key === "F10") commit();
   else return false;
   return true;
 }

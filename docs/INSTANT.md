@@ -179,11 +179,13 @@ in the terminal). Each choice shows its MP budget after any posture cost.
 ### Attack orders
 
 - **Target** — the fireable targets come from `suggestFireTargets` for the
-  current twist; the best one is preselected. Tab / Shift+Tab cycle them, or
-  click a target unit on the map. One target per activation, as in the
+  current twist; the best one is preselected. ← → on the Target row (or
+  Enter there, or a click on it) cycle them, or click a target unit on the
+  map. One target per activation, as in the
   terminal (TW p. 108 multi-target fire stays engine-only).
-- **Twist** — Front / Left / Right (← → turn toward that side, or click the
-  row to cycle; terminal `torso`). Changing it
+- **Twist** — shown Left / Front / Right, Front by default (← → off the
+  Target row turn toward that side; Enter on the Twist row steps one to
+  the right, round again; a click takes that twist; terminal `torso`). Changing it
   drops weapon checks the new twist cannot fire.
 - **Weapons** — one row per weapon with TN, hit chance, damage and heat;
   weapons that cannot fire show their reason (jammed, destroyed, out of
@@ -198,15 +200,17 @@ in the terminal). Each choice shows its MP budget after any posture cost.
 - **Clubs** — Pick up (limb, tree, girder, when legal) excludes every other
   attack that turn (TW p. 146); Drop the club clears the weapon and physical
   checks.
-- Done (F10) runs `declareAttacks`; an empty draft passes.
+- Done (F10) runs `declareAttacks`; with nothing checked it asks first
+  (Pass? Yes / No, No by default), then an empty draft passes.
   Resolution is simultaneous once the phase's last unit has declared, and the
   log fills with the results.
 
 ### Policies
 
 The acting Player unit's policies (ammo, auto-eject, flamer heat, AMS) can be
-changed during its prompt, as the terminal's `policy`; they take effect as
-described there.
+changed during its prompt, as the terminal's `policy`, from the policy
+button on its record sheet or *Policies* in the battle menu (OK, Cancel
+or Esc go back to the menu); they take effect as described there.
 
 ### Information
 
@@ -219,6 +223,13 @@ described there.
   heat, pilot. Hovering the pilot, engine, gyro, sensors, life support or
   heat explains what the current value costs now and what the next step adds,
   with the 2D6 roll and its chance (TW pp. 41–42, 60, 125, 159–160).
+  Hovering HS lists the heat sinks: operational / total and type, the ones
+  the engine holds, the crit-slot ones intact / total, then each crit-slot
+  sink as `CT#11` (a double sink as its slot run). Location and HS tips
+  colour each filled crit slot the same way: white intact, gray (as lost
+  armor) destroyed by a critical hit (a hit taken before the location was
+  lost stays gray), orange lost with its location. An ammo bin's shot count (`24/24`) takes
+  the armor and internal structure level colours instead.
 - **Action order** — the actor queue for the current phase.
 - **Engagement status** — Annihilation shows units left per side, Attrition
   the damage race.
@@ -230,15 +241,18 @@ Persona units are played by a copy of the terminal's persona player
 applied through the same controller calls a Player uses, so atomic commits
 apply. A persona command that fails is logged and the unit passes, so the
 battle never stalls. Persona pace (New Battle, or the battle menu):
-**instant**, **step** (default; Enter / Space / A, or the NEXT button in the
-DONE button's place, plays the next persona activation) or
+**instant**, **step** (default; Enter / Space / A, or the NEXT PERSONA
+button in the DONE button's place, plays the next persona activation, even
+with the reticle showing) or
 **timed** (about 0.6 s per activation). The choice is kept in localStorage
 (`bt10x.instant.pace`).
 
 ### Battle menu
 
-Esc opens it: Resume, Persona pace (cycles instant / step / timed), Withdraw
-to setup (confirm; the battle is discarded). There is no undo. Persona play
+Esc opens it: Resume, Persona pace (Enter or → cycles instant / step /
+timed, ← the other way), Policies (while a Player unit acts), Withdraw to
+setup (confirm; the battle is discarded), then Language under a separator.
+There is no undo. Persona play
 holds while the menu (or its Withdraw confirm) is open and resumes when it
 closes.
 
@@ -303,13 +317,13 @@ these keys to the focused element, so kit popups and dialogs take them too.
 | Backspace | B | Cancel | cancel, back one step; Esc in a kit dialog or popup |
 | Esc | Menu | `Esc` hint | close the dialog, else open / close the menu |
 | `[` / `]` | LB / RB | sheet tabs, tab labels | previous / next tab or group |
-| Tab / Shift+Tab | X | target row | next / previous target or field |
-| PgUp / PgDn | LT / RT | wheel | page a list or scroll; on a map screen, zoom |
+| Tab / Shift+Tab | X | – | next / previous field; in battle, the key focus |
+| PgUp / PgDn | LT / RT | wheel | page a list or scroll; on a map screen, zoom; with the battle log open, page it |
 | L | View | LOGS tab | toggle logs |
 | Shift+arrows | left stick | middle drag | pan the map under the centre reticle |
 | – | right stick | left drag, indicator wheel | turn / tilt the map |
 | – | L3 | indicator left click | snap to the nearest 60°; on a step, +60° |
-| – | R3 | indicator middle click | fit the map |
+| Home | R3 | indicator middle click | frame the map: in battle the units the prompt is about, again the whole map; elsewhere the whole map |
 
 Commit buttons (Launch, Done) take F10 or a click only: Enter on a
 focused one does nothing. Hover never moves a cursor. Right click does nothing
@@ -322,9 +336,10 @@ space there; pad B leaves the box (a pad cannot type).
 | New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Esc menu (Launch, Discard, language) |
 | Choose 'Mech | ↑ ↓ PgUp PgDn move, Enter / Space use, Tab to the filters and search, Esc / Backspace cancel |
 | Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, language) |
-| Battle, any prompt | Esc battle menu, `[` / `]` left / right record sheet, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
-| Movement | ↑ ↓ choice, Enter / Space choose the mode (another mode drops the landing), Backspace clear the landing, F10 done |
-| Attack | Tab / Shift+Tab target, ← → twist, ↑ ↓ row, Enter / Space toggle row, F10 done |
+| Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
+| Battle, a sheet focused | arrows move to the nearest hint target that way (header, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
+| Movement | ← → along the mode bar; on Hold, Enter / Space open its dropdown on the held choice, ↓ / ↑ open it one choice after / before it, round the list (nothing held: ↓ the first, ↑ the last); Enter / Space on a mode choose it (another mode drops the landing); Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
+| Attack | ↑ ↓ Twist row, Target row, then the weapon rows; ← → previous / next target on the Target row, else twist; Enter / Space step the twist, next target, or toggle the row and move on to the next row that can be checked (A A A checks a volley); F10 done (with nothing checked, a Pass? confirm) |
 | Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (↑ ↓ pick, Enter / Space run) |
 | Menus, dialogs | opening one takes the focus off the control behind it; ↑ ↓ / Tab move, Enter / Space run, Esc / Backspace close; a message closes on Enter, Space, Esc or Backspace. A dialog opened from a control gives the focus back to it on closing. The Esc menus end with Language, under a separator |
 
@@ -335,7 +350,11 @@ already chosen steps to the next available facing clockwise. No facing popup
 opens on the map; the hovered hex lights the triangle a click would take.
 With the pad (or Shift+arrows) a reticle marks the centre of the clear map
 area; the left stick pans the map under it, and A there is that same click at
-the reticle's point. The hex under the reticle is highlighted and tips its
+the reticle's point (not while a persona waits in step pace: A plays it).
+Shift+arrows move like a platform game hero: no jump on the press; the
+reticle sets off at 40 px/s and speeds up, slowly at first, to the stick's
+700 px/s over 1 s, so a tap moves it a few pixels; let go, it skids to a
+stop in 0.15 s; two arrows go diagonally. The hex under the reticle is highlighted and tips its
 piles. A D-pad press or plain arrow hands A back to the orders panel; any
 mouse movement hides the reticle.
 
@@ -345,6 +364,10 @@ left click snaps to the nearest 60° (again: +60°), middle click fits, wheel
 tilts (5°–90°). Hovering a hex shows its coordinates; in battle and on the
 debrief map, a hex holding severed limbs or dropped clubs tips what lies
 there.
+
+**Status bar.** The battle status bar names pad buttons (A, B, X, Y, LB,
+RB, View, Menu, D-pad, LS) after pad input, and keys again after a key or a
+mouse move.
 
 **Font size** is the player's (10–40 px, header A− / A+ / Fit, kept in
 localStorage); a window resize never changes it.

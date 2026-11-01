@@ -26,8 +26,17 @@ import {
 import { locName, t } from "../i18n";
 import { UI_THEME } from "../theme";
 import type { TipPoint, TuiNode } from "../tui";
-import { engineTip, gyroTip, heatTip, lifeSupportTip, pilotTip, sensorTip } from "./battle.hints";
-import { fit, h, row, span } from "./common";
+import {
+  engineTip,
+  gyroTip,
+  heatSinkTip,
+  heatTip,
+  lifeSupportTip,
+  pilotTip,
+  type RunTip,
+  sensorTip,
+} from "./battle.hints";
+import { fit, h, hintAttrs, row, span } from "./common";
 
 const { GRID: G, ROUND: R, MARK: M, ARROW: A, BAR: B } = UI_THEME;
 
@@ -134,33 +143,41 @@ function slotLabel(slot: ReturnType<typeof mechDefFor>["critSlots"]["head"][numb
   }
 }
 
-/** Crit slots of one location, one per line, with live ammo and hits. */
-export function critTip(u: UnitState, loc: Loc): string {
+/**
+ * Crit slots of one location, one per line, with live ammo and jams. Each
+ * filled slot is coloured: white intact, gray (as lost armor) destroyed by a
+ * critical hit, orange lost with its location without a hit of its own;
+ * an ammo bin's shot count takes the armor level colours (`levelCls`).
+ */
+export function critTip(u: UnitState, loc: Loc): RunTip {
   const def = mechDefFor(u);
   const bins = loadAmmoBins(def);
   const gone = u.damage.internalStructure[loc] <= 0;
-  const lines = [`${u.id} ${locName(loc)}`];
+  const head = `${u.id} ${locName(loc)}`;
+  const runs: [string, string][] = [[head, ""]];
+  let all = head;
   def.critSlots[loc].forEach((slot, i) => {
-    let text = `${fit(i + 1, 2, "right")} ${slotLabel(slot)}`;
+    const hit =
+      slot.kind !== "empty" &&
+      (isSlotDestroyed(u.critSlotsDestroyed, loc, i) ||
+        (slot.kind === "weapon" && isWeaponCritted(def, u.critSlotsDestroyed, slot.weaponIndex)));
+    const cls = slot.kind === "empty" ? "" : hit ? "ia-dim" : gone ? "ia-lv-orange" : "ia-lv-white";
+    // the slot in its state colour; an ammo bin's shot count in the armor level colours
+    const line: [string, string][] = [[`${fit(i + 1, 2, "right")} ${slotLabel(slot)}`, cls]];
     if (slot.kind === "ammo") {
       const id = ammoBinId(loc, i + 1);
       const max = bins[id];
       if (max !== undefined) {
         const curr = usableShots(u, { id, location: loc, slotIndex: i + 1 });
-        text += ` (${curr}/${max})`;
+        line.push([" (", cls], [`${curr}/${max}`, levelCls(curr, max)], [")", cls]);
       }
     }
     if (slot.kind === "weapon" && u.jammedWeapons.includes(slot.weaponIndex))
-      text += ` ${M.chipL}J${M.chipR}`;
-    const hit =
-      slot.kind !== "empty" &&
-      (gone ||
-        isSlotDestroyed(u.critSlotsDestroyed, loc, i) ||
-        (slot.kind === "weapon" && isWeaponCritted(def, u.critSlotsDestroyed, slot.weaponIndex)));
-    if (hit) text += ` ${M.chipL}X${M.chipR}`;
-    lines.push(text);
+      line.push([` ${M.chipL}J${M.chipR}`, cls]);
+    runs.push(["\n", ""], ...line);
+    all += `\n${line.map((r) => r[0]).join("")}`;
   });
-  return lines.join("\n");
+  return { text: all, runs };
 }
 
 /** One 6-cell grid value: `cur/max` plus the pool letter (I, A, F, R). */
@@ -174,13 +191,22 @@ function cell(
   key: string,
 ): TuiNode {
   const text = `${fit(Math.max(0, cur), 2, "right")}/${fit(max, 2, "right")}${pool}`;
-  return span(text, { cls: levelCls(cur, max), tip: critTip(u, loc), key, ...sheetTip(side) });
+  const tip = critTip(u, loc);
+  return span(text, {
+    cls: levelCls(cur, max),
+    tip: tip.text,
+    tipRuns: tip.runs,
+    key,
+    ...sheetTip(side),
+  });
 }
 
 function label(side: 0 | 1, u: UnitState, loc: Loc): TuiNode {
   return span(`${M.chipL}${fit(locName(loc), 2)}${M.chipR}`, {
-    tip: critTip(u, loc),
+    tip: critTip(u, loc).text,
+    tipRuns: critTip(u, loc).runs,
     key: `l${loc}`,
+    hint: `loc.${loc}`,
     ...sheetTip(side),
   });
 }
@@ -207,7 +233,9 @@ function sheetTip(side: 0 | 1): { tipXY: string; tipFrom: string; tipAnchor: Tip
  * The record sheet: 21 rows of SHEET_W cells. The box rows fill the width;
  * the text rows above them start one cell in. `side` is the drawer (0 left,
  * 1 right) for tooltip placement. `onPick` opens the unit picker;
- * `onPolicy`, when set, makes the policy code a button.
+ * `onPolicy`, when set, makes the policy code a button. The header, the
+ * tipped items and the location names are hint targets (`data-hint`) the
+ * arrows walk once the sheet has the key focus.
  */
 export function recordSheet(
   u: UnitState,
@@ -228,6 +256,7 @@ export function recordSheet(
   const heat = u.heat;
   const counts = componentHitStatus(def, u.damage, u.critSlotsDestroyed);
   const pol = policyCode(u);
+  const hs = heatSinkTip(u);
   const uc = unitChip(u);
   const pc = pilotChip(u);
   const L = (key: string, ...kids: (TuiNode | string)[]) =>
@@ -268,7 +297,11 @@ export function recordSheet(
       " ",
       H.el(
         "span",
-        { class: "ia-sheet-head", attrs: { "data-click": "" }, onClick: onPick },
+        {
+          class: "ia-sheet-head",
+          attrs: { "data-click": "", ...hintAttrs("head") },
+          onClick: onPick,
+        },
         span(head, { cls: team }),
         `${A.pick} `,
       ),
@@ -298,6 +331,7 @@ export function recordSheet(
       span(fit(`P:${pips(u.pilotHits, pilotMax)}`, 12), {
         cls: levelCls(u.pilotHitMax - u.pilotHits, u.pilotHitMax),
         tip: pilotTip(u),
+        hint: "pilot",
         ...sheetTip(side),
       }),
       // The acting player unit's policy is a [button] to its dialog.
@@ -306,11 +340,13 @@ export function recordSheet(
             tip: pol.tip,
             cls: "ia-bright",
             onClick: () => onPolicy(),
+            hint: "policy",
             ...sheetTip(side),
           })
         : span(`${M.chipL}${pol.code}${M.chipR}`, {
             tip: pol.tip,
             cls: "ia-bright",
+            hint: "policy",
             ...sheetTip(side),
           }),
       G.tv,
@@ -321,24 +357,28 @@ export function recordSheet(
       span(`E:${pips(counts.engine, ENGINE_SLOTS_KILL)}`, {
         cls: componentCls(counts.engine, ENGINE_SLOTS_KILL),
         tip: engineTip(u),
+        hint: "engine",
         ...sheetTip(side),
       }),
       " ",
       span(`G:${pips(counts.gyro, GYRO_DESTROYED_HITS)}`, {
         cls: componentCls(counts.gyro, GYRO_DESTROYED_HITS),
         tip: gyroTip(u),
+        hint: "gyro",
         ...sheetTip(side),
       }),
       " ",
       span(`S:${pips(counts.sensors, SENSOR_BLIND_HITS)}`, {
         cls: componentCls(counts.sensors, SENSOR_BLIND_HITS),
         tip: sensorTip(u),
+        hint: "sensors",
         ...sheetTip(side),
       }),
       " ",
       span(`L:${pips(counts.lifeSupport, 1)}`, {
         cls: componentCls(counts.lifeSupport, 1),
         tip: lifeSupportTip(u),
+        hint: "life",
         ...sheetTip(side),
       }),
       ` ${G.tv}`,
@@ -377,7 +417,14 @@ export function recordSheet(
       "l1",
       G.tv,
       cell(side, u, "rightLeg", is.rightLeg, def.internalStructure.rightLeg, "I", "irl"),
-      `${G.tv} ${M.chipL}HS${M.chipR} ${G.tv}`,
+      `${G.tv} `,
+      span(`${M.chipL}HS${M.chipR}`, {
+        tip: hs.text,
+        tipRuns: hs.runs,
+        hint: "hs",
+        ...sheetTip(side),
+      }),
+      ` ${G.tv}`,
       cell(side, u, "leftLeg", is.leftLeg, def.internalStructure.leftLeg, "I", "ill"),
       G.tv,
     ),
@@ -386,8 +433,12 @@ export function recordSheet(
       G.tv,
       cell(side, u, "rightLeg", a.rightLeg, def.armor.rightLeg, "A", "arl"),
       G.tv,
+      // the dissipation value tips the heat sinks too, as the grid cells tip their location
       span(`-${fit(sinks, 2, "right")}/${fit(sinksMax, 2, "right")}`, {
         cls: levelCls(sinks, sinksMax),
+        tip: hs.text,
+        tipRuns: hs.runs,
+        ...sheetTip(side),
       }),
       G.tv,
       cell(side, u, "leftLeg", a.leftLeg, def.armor.leftLeg, "A", "all"),
@@ -399,6 +450,7 @@ export function recordSheet(
       span(`${R.nw}HT${fit(heat, 2, "right")}${R.ne}`, {
         cls: heatCls,
         tip: heatTip(u),
+        hint: "heat",
         ...sheetTip(side),
       }),
       `${R.sw}${G.th.repeat(6)}${R.se}`,
