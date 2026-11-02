@@ -191,7 +191,7 @@
   white-space: nowrap;
 }
 
-.link-button.vote[aria-pressed="true"] {
+.link-button.vote[data-on] {
   color: var(--c-yellow);
   border-color: var(--c-yellow);
   background: var(--cb-yellow);

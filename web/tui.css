@@ -701,7 +701,7 @@ select.tui-native {
 .tui-item.is-active .tui-cursor {
   color: var(--tui-sel-fg);
 }
-.tui-item[aria-disabled="true"] {
+.tui-item[data-disabled] {
   color: var(--tui-dim);
   cursor: default;
   background: none;

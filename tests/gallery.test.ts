@@ -175,9 +175,8 @@ describe("home-link", () => {
           /<a id="home-link" class="link-button" href="\.\/"[^>]*>(.*?)<\/a>/,
         );
         expect(link).not.toBeNull();
-        expect(link?.[1]).toContain("← bt10x");
-        expect(link?.[1]).toContain('<span lang="en">bt10x home</span>');
-        expect(link?.[1]).toContain('<span lang="ko">bt10x 홈</span>');
+        expect(link?.[0]).toContain('title="bt10x home"');
+        expect(link?.[1]).toBe("← bt10x");
         // Rightmost: nothing but the closing marker comes before the row ends.
         const after = html.slice((link?.index ?? 0) + (link?.[0].length ?? 0));
         expect(after).toMatch(/^\s*(<!-- \/home-link -->\s*)?<\/(header|div)>/);

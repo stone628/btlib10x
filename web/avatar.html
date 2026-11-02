@@ -39,7 +39,7 @@
             home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
           }
           for (const b of document.querySelectorAll("#lang button")) {
-            b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+            b.toggleAttribute("data-on", b.dataset.lang === locale);
           }
         };
         document.documentElement.lang = fromUrl ?? stored ?? "en";
@@ -51,18 +51,18 @@
     <main id="avatar-app">
       <header id="avatar-head">
         <div id="head-row">
-          <nav id="lang" aria-label="language">
+          <nav id="lang">
             <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
             <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
           </nav>
-          <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+          <a id="home-link" class="link-button" href="./" title="bt10x home">← bt10x</a>
         </div>
         <h1><span lang="en">'MECH AVATAR CREATOR</span><span lang="ko">'MECH 아바타 생성기</span></h1>
         <p class="hint">
           <span lang="en">up/down selects part · left/right changes variant · click or tap works too<br />click a box around the avatar to set its character</span><span lang="ko">위/아래로 부위 선택 · 왼쪽/오른쪽으로 변형 변경 · 클릭이나 탭도 됩니다<br />아바타 주위의 상자를 눌러 그 자리의 문자를 지정합니다</span>
         </p>
       </header>
-      <div id="stage" aria-live="off"></div>
+      <div id="stage"></div>
       <section id="out-row">
         <p class="hint">
           <span lang="en">final avatar with overrides applied · click a part box to override</span><span lang="ko">덮어쓰기를 적용한 최종 아바타 · 부위 상자를 눌러 덮어쓰기를 지정합니다</span>
@@ -83,7 +83,7 @@
           </div>
         </div>
       </section>
-      <dialog id="snippet-panel" aria-labelledby="snippet-title">
+      <dialog id="snippet-panel">
         <div id="snippet-title" class="gp-title"><span lang="en">HTML SNIPPET</span><span lang="ko">HTML 스니펫</span></div>
         <p class="hint"><span lang="en">paste into html page; the font loads from this site, and the avatar links back to this creator</span><span lang="ko">html 페이지에 붙여넣으세요. 글꼴은 이 사이트에서 불러오고, 아바타를 누르면 이 생성기로 연결됩니다</span></p>
         <textarea id="snippet-code" readonly spellcheck="false" autocomplete="off"></textarea>
@@ -101,7 +101,6 @@
       of their respective owners.
     </footer>
     <dialog id="glyph-picker"></dialog>
-    <div id="sr-live" class="sr-only" aria-live="polite"></div>
     <script>
       (() => {
         const init = window.bt10xInitialLang;

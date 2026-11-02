@@ -40,7 +40,6 @@ const NO_UNIT = "none";
 const app = document.getElementById("gallery-app") as HTMLElement;
 const viewEl = document.getElementById("view") as HTMLElement;
 const noticeEl = document.getElementById("notice") as HTMLElement;
-const live = document.getElementById("sr-live") as HTMLElement;
 const turnstileHost = document.getElementById("ag-turnstile") as HTMLElement;
 const whoami = document.getElementById("whoami") as HTMLElement;
 
@@ -75,10 +74,6 @@ function el<K extends keyof HTMLElementTagNameMap>(
   return e;
 }
 
-function say(text: string): void {
-  live.textContent = text;
-}
-
 function link(href: string, text: string, cls = ""): HTMLAnchorElement {
   const a = el("a", cls, text);
   a.href = href;
@@ -106,7 +101,6 @@ function creatorHref(q: string): string {
 
 function art(q: string, selected = false): HTMLPreElement {
   const pre = el("pre", "art", avatarLines(q, selected).join("\n"));
-  pre.setAttribute("aria-hidden", "true");
   return pre;
 }
 
@@ -132,7 +126,6 @@ function showError(e: unknown, where: HTMLElement = viewEl): void {
   const code = e instanceof ApiError ? e.code : "network";
   const p = el("p", "error", errorText(code));
   where.append(p);
-  say(p.textContent ?? "");
 }
 
 /** Vote toggle; updates the button and count in place. */
@@ -142,17 +135,7 @@ function voteButton(entry: GalleryEntry): HTMLButtonElement {
   const paint = () => {
     const m = gmsg();
     b.textContent = `${entry.voted ? `♥ ${m.voted}` : `♡ ${m.vote}`} · ${entry.votes}`;
-    b.setAttribute("aria-pressed", String(entry.voted));
-    const name = entry.unit?.name;
-    const label =
-      name === undefined
-        ? entry.voted
-          ? m.unvoteLabelNoMech
-          : m.voteLabelNoMech
-        : entry.voted
-          ? m.unvoteLabel(name)
-          : m.voteLabel(name);
-    b.setAttribute("aria-label", `${label}, ${m.votes(entry.votes)}`);
+    b.toggleAttribute("data-on", entry.voted);
   };
   paint();
   b.addEventListener("click", async () => {
@@ -164,7 +147,6 @@ function voteButton(entry: GalleryEntry): HTMLButtonElement {
       entry.voted = r.voted;
       entry.votes = r.votes;
       paint();
-      say(`${r.voted ? gmsg().voted : gmsg().vote}, ${gmsg().votes(r.votes)}`);
     } catch (e) {
       showError(e, b.parentElement ?? viewEl);
     } finally {
@@ -187,7 +169,6 @@ function entryActions(entry: GalleryEntry, onRemoved: () => void): HTMLElement {
     try {
       await withKey(turnstileHost, () => api(`/avatars/${entry.id}/report`, { method: "POST" }));
       report.textContent = gmsg().reported;
-      say(gmsg().reported);
     } catch (e) {
       report.disabled = false;
       showError(e, row);
@@ -202,7 +183,6 @@ function entryActions(entry: GalleryEntry, onRemoved: () => void): HTMLElement {
       del.disabled = true;
       try {
         await api(`/avatars/${entry.id}`, { method: "DELETE" });
-        say(gmsg().removed);
         onRemoved();
       } catch (e) {
         del.disabled = false;
@@ -227,7 +207,7 @@ function card(entry: GalleryEntry, showUnit = true): HTMLElement {
   const a = link(entryHref(entry.id), "");
   a.className = "card-art";
   a.append(art(entry.q));
-  a.setAttribute("aria-label", entry.unit?.name ?? gmsg().noMechLabel);
+  a.title = entry.unit?.name ?? gmsg().noMechLabel;
   c.append(a);
   if (showUnit) c.append(unitLink(entry.unit, "card-unit"));
   c.append(byLine(entry, "card-by"));
@@ -312,7 +292,6 @@ async function renderMechs(host: HTMLElement, q: string): Promise<void> {
   input.name = "q";
   input.value = q;
   input.placeholder = "Atlas, AS7-D…";
-  input.setAttribute("aria-label", "search");
   const hidden = el("input");
   hidden.type = "hidden";
   hidden.name = "view";
@@ -337,7 +316,7 @@ async function renderMechs(host: HTMLElement, q: string): Promise<void> {
       const a = link(unitHref(u.slug), "");
       a.className = "card-art";
       a.append(art(u.top));
-      a.setAttribute("aria-label", u.name);
+      a.title = u.name;
       c.append(
         a,
         link(unitHref(u.slug), u.name, "card-unit"),
@@ -350,7 +329,7 @@ async function renderMechs(host: HTMLElement, q: string): Promise<void> {
       const a = link(unitHref(NO_UNIT), "");
       a.className = "card-art";
       a.append(art(unlinked.top));
-      a.setAttribute("aria-label", m.noMechTitle);
+      a.title = m.noMechTitle;
       c.append(
         a,
         unitLink(null, "card-unit"),
@@ -458,8 +437,7 @@ function markTab(view: View): void {
         ? view.kind
         : "";
   document.querySelectorAll<HTMLAnchorElement>("#tabs a").forEach((a) => {
-    if (a.dataset.tab === active) a.setAttribute("aria-current", "page");
-    else a.removeAttribute("aria-current");
+    a.toggleAttribute("data-on", a.dataset.tab === active);
   });
 }
 
@@ -501,7 +479,6 @@ async function showSubmitted(next: AfterSubmit): Promise<void> {
   highlight = next.highlight;
   app.scrollTop = 0;
   await render();
-  say(gmsg()[next.notice]);
   viewEl.querySelector<HTMLElement>(".just-added")?.focus({ preventScroll: true });
 }
 

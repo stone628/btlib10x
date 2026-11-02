@@ -100,7 +100,6 @@ function glyphCell(ch: string): HTMLButtonElement {
   g.textContent = ch;
   b.append(g);
   b.title = codePointLabel(ch);
-  b.setAttribute("aria-label", codePointLabel(ch));
   return b;
 }
 
@@ -135,7 +134,6 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   let closed = false;
   // Scroll room below the page while the panel is open (see place()).
   const spacer = document.createElement("div");
-  spacer.setAttribute("aria-hidden", "true");
   spacer.style.flex = "none";
   /** Previewed but not applied: a glyph, `null` for the variant, `undefined` for none. */
   let pending: string | null | undefined;
@@ -144,7 +142,6 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   const slotName = m.slot[opts.slot.id];
   dialog.replaceChildren();
   dialog.className = "glyph-picker";
-  dialog.setAttribute("aria-label", m.pickerLabel(slotName));
 
   const title = document.createElement("div");
   title.className = "gp-title";
@@ -153,7 +150,6 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   /** Code point of the focused glyph, or a find message. */
   const status = document.createElement("span");
   status.className = "gp-status";
-  status.setAttribute("aria-live", "polite");
   title.append(titleName, status);
 
   const controls = document.createElement("div");
@@ -180,7 +176,6 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
 
   const grid = document.createElement("div");
   grid.className = "gp-grid";
-  grid.setAttribute("role", "grid");
 
   const recentBox = document.createElement("div");
   recentBox.className = "gp-recent";
@@ -189,8 +184,6 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
   recentLabel.textContent = m.recent;
   const recentGrid = document.createElement("div");
   recentGrid.className = "gp-grid gp-recent-grid";
-  recentGrid.setAttribute("role", "grid");
-  recentGrid.setAttribute("aria-label", m.recentLabel);
   recentBox.append(recentLabel, recentGrid);
 
   const footer = document.createElement("div");
@@ -244,7 +237,6 @@ export function openPicker(dialog: HTMLDialogElement, opts: PickerOptions): void
       if (pinned.has(ch)) {
         b.classList.add("pinned");
         b.title = m.pinnedTitle(codePointLabel(ch));
-        b.setAttribute("aria-label", m.pinnedLabel(codePointLabel(ch)));
       }
       if (ch === opts.current) b.classList.add("current");
       if (pending === ch) b.classList.add("chosen");

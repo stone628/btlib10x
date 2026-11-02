@@ -3,7 +3,6 @@ import { ARMS, HEADS, LEGS, type PartVariant, SHOULDERS, TORSOS } from "./avatar
 import { msg } from "./avatar.i18n";
 import {
   applyOverrides,
-  codePointLabel,
   formatOverrides,
   type Overrides,
   type Preview,
@@ -182,7 +181,6 @@ const stage = document.getElementById("stage") as HTMLDivElement;
 const slotMapEl = document.getElementById("slotmap") as HTMLDivElement;
 const pickerEl = document.getElementById("glyph-picker") as HTMLDialogElement;
 const partsEl = document.getElementById("parts") as HTMLDivElement;
-const live = document.getElementById("sr-live") as HTMLDivElement;
 
 /** Variant data of each part, in PARTS order (head, shoulder, torso, arms, legs). */
 function currentData(): string[] {
@@ -224,17 +222,6 @@ function setVariant(p: number, vi: number): void {
   const def = PARTS[p];
   if (def === undefined) return;
   state.idx[p] = wrapIndex(vi, def.variants.length);
-}
-
-function announce(): void {
-  const def = PARTS[state.active];
-  if (def === undefined) return;
-  const v = def.variants[state.idx[state.active] ?? 0];
-  if (v === undefined) return;
-  const ovr = partOverrides(state.ovr, state.active)
-    .map(([s, ch]) => msg().slotSet(msg().slot[s.id], codePointLabel(ch)))
-    .join("");
-  live.textContent = `${msg().part[def.key]}: ${v.name}, ${v.desc}${ovr}`;
 }
 
 /** Flex gap in `.carousel` (see avatar.css); kept in sync by hand. */
@@ -290,8 +277,6 @@ function render(): void {
 
     const row = document.createElement("div");
     row.className = "carousel";
-    row.setAttribute("role", "group");
-    row.setAttribute("aria-label", m.variants(partName));
 
     for (let off = -sideCount; off <= sideCount; off++) {
       if (off === 0) {
@@ -302,13 +287,11 @@ function render(): void {
         prev.type = "button";
         prev.className = "step";
         prev.textContent = "<";
-        prev.setAttribute("aria-label", m.previous(partName));
         prev.addEventListener("click", () => {
           setVariant(p, sel - 1);
           state.active = p;
           saveState(state);
           render();
-          announce();
         });
 
         const box = document.createElement("button");
@@ -323,29 +306,24 @@ function render(): void {
         ).join("\n");
         const cap = document.createElement("span");
         cap.className = "cap";
-        cap.setAttribute("aria-hidden", "true");
         cap.textContent =
           partOverrides(state.ovr, p).length > 0 ? `${variant.name}*` : variant.name;
         box.append(art, cap);
-        box.setAttribute("aria-label", m.selected(partName, variant.name));
         box.addEventListener("click", () => {
           state.active = p;
           saveState(state);
           render();
-          announce();
         });
 
         const next = document.createElement("button");
         next.type = "button";
         next.className = "step";
         next.textContent = ">";
-        next.setAttribute("aria-label", m.next(partName));
         next.addEventListener("click", () => {
           setVariant(p, sel + 1);
           state.active = p;
           saveState(state);
           render();
-          announce();
         });
 
         mid.append(prev, box, next);
@@ -365,17 +343,14 @@ function render(): void {
         art.textContent = lines.join("\n");
         const cap = document.createElement("span");
         cap.className = "cap";
-        cap.setAttribute("aria-hidden", "true");
         cap.textContent = target?.name ?? "";
         b.append(art, cap);
-        b.setAttribute("aria-label", `${partName} ${target?.name ?? ""}`);
         b.title = target !== undefined ? `${target.name} — ${target.desc}` : "";
         b.addEventListener("click", () => {
           setVariant(p, vi);
           state.active = p;
           saveState(state);
           render();
-          announce();
         });
         row.append(b);
       }
@@ -419,7 +394,6 @@ function focusedSlot(): SlotId | null {
 }
 
 function renderSlotMap(avatar: string[]): void {
-  const m = msg();
   const keepFocus = focusedSlot();
   const data = shownData();
   const lines = slotMapLines(avatar, slotGlyphs(data));
@@ -430,7 +404,6 @@ function renderSlotMap(avatar: string[]): void {
   for (const [i, text] of withoutBoxes(lines).entries()) {
     const row = document.createElement("span");
     row.className = "map-line";
-    row.setAttribute("aria-hidden", "true");
     row.textContent = text;
     gridArea(row, 0, i, SLOT_MAP_COLS, 1);
     slotMapEl.append(row);
@@ -444,7 +417,6 @@ function renderSlotMap(avatar: string[]): void {
     const cell = document.createElement("span");
     cell.className = "map-cell";
     cell.dataset.cell = slot.id;
-    cell.setAttribute("aria-hidden", "true");
     cell.textContent = ch;
     const pos = cellPos(slot.id);
     gridArea(cell, pos.col, pos.line, 1, 1);
@@ -456,10 +428,6 @@ function renderSlotMap(avatar: string[]): void {
     if (overridden) box.classList.add("overridden");
     if (editing === slot.id) box.classList.add("editing");
     box.textContent = boxLines(lines, slot.id).join("\n");
-    box.setAttribute(
-      "aria-label",
-      `${m.slot[slot.id]}: ${ch === " " ? m.blank : ch}, ${overridden ? m.override : m.fromVariant}`,
-    );
     gridArea(box, place.box.col, place.box.line, BOX_W, BOX_H);
     const lit = (on: boolean) => cell.classList.toggle("lit", on || editing === slot.id);
     // Keyboard focus lights the cell. Focus handed back when the picker
@@ -476,7 +444,6 @@ function renderSlotMap(avatar: string[]): void {
     const frame = document.createElement("span");
     frame.className = "map-glyph";
     if (editing === slot.id) frame.classList.add("editing");
-    frame.setAttribute("aria-hidden", "true");
     gridArea(frame, place.box.col + 2, place.box.line + 1, 1, 1);
 
     slotMapEl.append(cell, box, frame);
@@ -507,7 +474,6 @@ function openSlot(slot: SlotDef): void {
       state.active = slot.part;
       saveState(state);
       render();
-      announce();
     },
     onClose: () => {
       editing = null;
@@ -527,14 +493,12 @@ function stepActive(delta: number): void {
   setVariant(state.active, (state.idx[state.active] ?? 0) + delta);
   saveState(state);
   render();
-  announce();
 }
 
 function moveActive(delta: number): void {
   state.active = wrapIndex(state.active + delta, PARTS.length);
   saveState(state);
   render();
-  announce();
 }
 
 document.addEventListener("keydown", (e) => {
@@ -561,9 +525,8 @@ document.addEventListener("keydown", (e) => {
 document.getElementById("copy")?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(`${exportText()}\n${partsEl.textContent ?? ""}`);
-    live.textContent = msg().copied;
   } catch {
-    live.textContent = msg().copyFailed;
+    // clipboard unavailable
   }
 });
 
@@ -577,9 +540,8 @@ function shareUrl(): string {
 document.getElementById("copy-link")?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(shareUrl());
-    live.textContent = msg().linkCopied;
   } catch {
-    live.textContent = msg().copyFailed;
+    // clipboard unavailable
   }
 });
 
@@ -599,7 +561,6 @@ function fontUrl(): string | null {
  */
 function snippetHtml(): string {
   const href = escapeHtml(shareUrl()).replaceAll('"', "&quot;");
-  const label = escapeHtml(msg().snippetLabel).replaceAll('"', "&quot;");
   const font = fontUrl();
   const fontCss =
     font === null
@@ -610,7 +571,7 @@ function snippetHtml(): string {
   return [
     ...fontCss,
     `<a href="${href}" style="color:inherit;text-decoration:none">` +
-      `<pre style="display:inline-block;margin:0;font-family:'Bt10x Mono','SF Mono',Menlo,Consolas,monospace;font-size:inherit;line-height:1.175;font-variant-ligatures:none" aria-label="${label}">${escapeHtml(exportText())}</pre>` +
+      `<pre style="display:inline-block;margin:0;font-family:'Bt10x Mono','SF Mono',Menlo,Consolas,monospace;font-size:inherit;line-height:1.175;font-variant-ligatures:none">${escapeHtml(exportText())}</pre>` +
       "</a>",
   ].join("\n");
 }
@@ -628,9 +589,8 @@ document.getElementById("show-snippet")?.addEventListener("click", () => {
 document.getElementById("snippet-copy")?.addEventListener("click", async () => {
   try {
     await navigator.clipboard.writeText(snippetCode.value);
-    live.textContent = msg().snippetCopied;
   } catch {
-    live.textContent = msg().copyFailed;
+    // clipboard unavailable
   }
 });
 
@@ -662,7 +622,6 @@ document.getElementById("blank")?.addEventListener("click", () => {
   state.ovr = {};
   saveState(state);
   render();
-  announce();
 });
 
 document.getElementById("random")?.addEventListener("click", () => {
@@ -674,7 +633,6 @@ document.getElementById("random")?.addEventListener("click", () => {
   state.ovr = {};
   saveState(state);
   render();
-  announce();
 });
 
 const clashes = findVariantNameClashes();
@@ -693,7 +651,6 @@ syncWidth();
 new MutationObserver(() => {
   document.title = msg().title;
   render();
-  announce();
 }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] });
 
 // Mono metrics settle after fonts load, which shifts the slot measurement.

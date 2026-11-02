@@ -231,7 +231,7 @@ function fetchText(file: string): Promise<string> {
 /** Header language buttons (as on the landing page): EN / 한국어. */
 function syncLangButtons(): void {
   document.querySelectorAll<HTMLButtonElement>("#lang button").forEach((b) => {
-    b.setAttribute("aria-pressed", String(b.dataset.lang === locale()));
+    b.toggleAttribute("data-on", b.dataset.lang === locale());
   });
   document.title = t("doc.title");
   const label: Record<string, string> = {
@@ -243,7 +243,8 @@ function syncLangButtons(): void {
     b.title = label[b.dataset.fs ?? ""] ?? "";
     if (b.dataset.fs === "fit") b.textContent = t("font.fit");
   });
-  document.getElementById("fontsize")?.setAttribute("aria-label", t("font.size"));
+  const fs = document.getElementById("fontsize");
+  if (fs) fs.title = t("font.size");
 }
 
 /** Header font size: A− / readout / A+ / Fit. */
@@ -288,7 +289,7 @@ function initMotd(): void {
   const dialog = motdDialog;
   open.addEventListener("click", () => {
     if (dialog.open) return;
-    close?.setAttribute("aria-label", t("motd.close"));
+    if (close) close.title = t("motd.close");
     // Right-align under the button (the home link sits to its right), but
     // never so far left that the panel runs off screen.
     const panelWidth = Math.min(520, window.innerWidth - 24);
@@ -299,7 +300,7 @@ function initMotd(): void {
     dialog.style.setProperty("--motd-right", `${Math.max(0, right)}px`);
     closeKitOverlays();
     dialog.showModal();
-    open.setAttribute("aria-expanded", "true");
+    open.toggleAttribute("data-on", true);
     if (dot) dot.hidden = true;
     try {
       localStorage.setItem(MOTD_SEEN_KEY, version);
@@ -318,7 +319,7 @@ function initMotd(): void {
     if (!inside) dialog.close();
   });
   dialog.addEventListener("close", () => {
-    open.setAttribute("aria-expanded", "false");
+    open.toggleAttribute("data-on", false);
     // the button must not keep the focus (Enter would open it again); the
     // browser hands it back after this event, so move it on a tick later
     setTimeout(() => {

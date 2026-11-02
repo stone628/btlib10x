@@ -139,8 +139,7 @@ async function render(): Promise<void> {
     ? (params.get("filter") as string)
     : "reported";
   document.querySelectorAll<HTMLAnchorElement>("#tabs a").forEach((a) => {
-    if (a.dataset.tab === filter) a.setAttribute("aria-current", "page");
-    else a.removeAttribute("aria-current");
+    a.toggleAttribute("data-on", a.dataset.tab === filter);
   });
   viewEl.replaceChildren();
   const grid = document.createElement("div");

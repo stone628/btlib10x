@@ -37,7 +37,7 @@
             home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
           }
           for (const b of document.querySelectorAll("#lang button")) {
-            b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+            b.toggleAttribute("data-on", b.dataset.lang === locale);
           }
         };
         document.documentElement.lang = fromUrl ?? stored ?? "en";
@@ -50,17 +50,17 @@
       <header id="gallery-head">
         <div id="head-row">
           <p id="whoami"></p>
-          <nav id="lang" aria-label="language">
+          <nav id="lang">
             <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
             <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
           </nav>
-          <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+          <a id="home-link" class="link-button" href="./" title="bt10x home">← bt10x</a>
         </div>
         <h1><a href="gallery.html"><span lang="en">'MECH AVATAR GALLERY</span><span lang="ko">'MECH 아바타 갤러리</span></a></h1>
         <p class="hint">
           <span lang="en">avatars players made for each 'Mech · like the one that fits best · <a href="avatar.html">make your own</a></span><span lang="ko">플레이어들이 'Mech마다 만든 아바타 · 가장 어울리는 것에 좋아요를 누르세요 · <a href="avatar.html">직접 만들기</a></span>
         </p>
-        <nav id="tabs" aria-label="views">
+        <nav id="tabs">
           <a class="link-button" data-tab="top" href="gallery.html?sort=top"><span lang="en">top</span><span lang="ko">인기</span></a>
           <a class="link-button" data-tab="new" href="gallery.html?sort=new"><span lang="en">new</span><span lang="ko">최신</span></a>
           <a class="link-button" data-tab="mechs" href="gallery.html?view=mechs"><span lang="en">by 'Mech</span><span lang="ko">'Mech별</span></a>
@@ -71,16 +71,16 @@
       <section id="view"></section>
       <div id="ag-turnstile" class="turnstile-host"></div>
       <!-- Opened by the creator's "submit to gallery" link: gallery.html?submit&head=… -->
-      <dialog id="submit-panel" aria-labelledby="submit-title">
+      <dialog id="submit-panel">
         <div id="submit-title" class="gp-title"><span lang="en">SUBMIT TO GALLERY</span><span lang="ko">갤러리에 등록</span></div>
         <div id="submit-form">
-          <pre id="submit-preview" aria-hidden="true"></pre>
+          <pre id="submit-preview"></pre>
           <label class="hint" for="submit-mul"><span lang="en">which 'Mech is this for? (optional) paste its <a href="https://masterunitlist.battletech.com/" target="_blank" rel="noopener noreferrer">Master Unit List</a> page</span><span lang="ko">어느 'Mech의 아바타인가요? (선택) <a href="https://masterunitlist.battletech.com/" target="_blank" rel="noopener noreferrer">Master Unit List</a> 유닛 페이지 주소를 붙여넣으세요</span></label>
           <input id="submit-mul" type="url" inputmode="url" autocomplete="off" spellcheck="false" placeholder="https://masterunitlist.battletech.com/units/atlas-as7-d" />
           <p id="submit-who"></p>
         </div>
         <div id="submit-turnstile"></div>
-        <p id="submit-status" role="status"></p>
+        <p id="submit-status"></p>
         <div class="gp-footer">
           <a id="submit-edit" class="link-button" href="avatar.html"><span lang="en">← edit in creator</span><span lang="ko">← 생성기에서 수정</span></a>
           <span class="gp-buttons">
@@ -90,7 +90,7 @@
         </div>
       </dialog>
       <!-- Opened from "move key" next to your ID; also by gallery.html#key=… links. -->
-      <dialog id="key-panel" aria-labelledby="key-title">
+      <dialog id="key-panel">
         <div id="key-title" class="gp-title"><span lang="en">MOVE DEVICE KEY</span><span lang="ko">기기 키 옮기기</span></div>
         <p class="hint"><span lang="en">your device key is who you are here: your ID, likes and avatars. Take it to another browser to be the same player there. Keep it private: anyone with it can like and delete as you.</span><span lang="ko">기기 키가 이곳에서의 나입니다: ID, 좋아요, 아바타. 다른 브라우저로 옮기면 그곳에서도 같은 플레이어가 됩니다. 남에게 알려주지 마세요: 키를 가진 사람은 나로서 좋아요를 누르고 삭제할 수 있습니다.</span></p>
         <section id="key-out" class="gp-section">
@@ -110,7 +110,7 @@
             <button id="key-use" class="link-button" type="button"><span lang="en">use this key</span><span lang="ko">이 키 사용</span></button>
           </span>
         </section>
-        <p id="key-status" class="gp-status" role="status"></p>
+        <p id="key-status" class="gp-status"></p>
         <div class="gp-footer">
           <span class="gp-buttons">
             <button id="key-close" class="link-button" type="button"><span lang="en">close</span><span lang="ko">닫기</span></button>
@@ -123,7 +123,6 @@
       Company, Inc. or Microsoft.<br />BattleTech, BattleMech, 'Mech and MechWarrior are trademarks
       of their respective owners. Unit art is shown from, and links to, the Master Unit List.
     </footer>
-    <div id="sr-live" class="sr-only" aria-live="polite"></div>
     <script>
       (() => {
         const init = window.bt10xInitialLang;

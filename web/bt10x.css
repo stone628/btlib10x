@@ -105,15 +105,6 @@ html {
   font-size: 10px;
   color: var(--c-dim);
 }
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: pre;
-}
-
 .hint {
   color: var(--c-hint);
   font-style: italic;
@@ -143,12 +134,12 @@ html {
     border-color 0.15s ease,
     color 0.15s ease;
 }
-/* Hover, and the pressed / current / open states of toggles, tabs and
-   disclosure buttons. */
+/* Hover, and the on state (`data-on`) of toggles, tabs and disclosure
+   buttons. 404.html, which keeps its ARIA, marks its language toggle with
+   aria-pressed. */
 .link-button:hover,
-.link-button[aria-pressed="true"],
-.link-button[aria-current="page"],
-.link-button[aria-expanded="true"] {
+.link-button[data-on],
+.link-button[aria-pressed="true"] {
   background-color: var(--cb-green);
   color: var(--c-white);
   border-color: var(--c-green);

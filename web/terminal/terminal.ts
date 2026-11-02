@@ -87,22 +87,6 @@ function scrollToBottom(): void {
 /** Scrollback cap: oldest entries go first, keeping #inrow last. */
 const MAX_SCROLLBACK = 1500;
 
-/** Plain-text copy of a chunk for the screen-reader live region. */
-function spokenText(chunk: Chunk): string[] {
-  if (chunk.kind === "lines") {
-    if (chunk.lines.length === 1 && chunk.lines[0] === "\f") return [];
-    return [chunk.lines.join("\n")];
-  }
-  if (chunk.kind === "columns") {
-    const rows: string[] = [];
-    const n = Math.max(0, ...chunk.columns.map((c) => c.length));
-    for (let i = 0; i < n; i++) rows.push(chunk.columns.map((c) => c[i] ?? "").join(" "));
-    return rows;
-  }
-  if (chunk.kind === "collapsible") return [chunk.summary];
-  return [];
-}
-
 function appendChunk(chunk: Chunk, parent: HTMLElement = out): void {
   const kind = chunk.kind;
   const insert = (el: Node): void => {
@@ -189,7 +173,6 @@ function printError(message: string): void {
 function submitImpl(raw: string, record = true): boolean {
   const line = raw.trim();
   let failed = false;
-  const said: string[] = [];
   try {
     const echo = document.createElement("div");
     echo.className = "cmd";
@@ -203,17 +186,11 @@ function submitImpl(raw: string, record = true): boolean {
     for (const chunk of runChunks(session, line)) {
       if (chunk.kind === "lines" && chunk.cls === "err") failed = true;
       appendChunk(chunk, out);
-      said.push(...spokenText(chunk));
     }
   } catch (e) {
     failed = true;
-    const message = `${i18n("err.prefix")} ${errorMessage(e)}`;
     printError(errorMessage(e));
-    said.push(message);
   }
-  // Silent while autoplay is running: the demo would flood the reader.
-  const live = document.getElementById("sr-live");
-  if (live !== null && autoPlayTimer === null) live.textContent = said.join("\n");
   return failed;
 }
 
@@ -363,7 +340,7 @@ if (motdDot) motdDot.hidden = motdSeen === motdVersion;
 if (motdDialog && motdOpen) {
   motdOpen.addEventListener("click", () => {
     if (motdDialog.open) return;
-    motdClose?.setAttribute("aria-label", i18n("motd.close"));
+    if (motdClose) motdClose.title = i18n("motd.close");
     // Right-align under the button (the home link sits to its right), but
     // never so far left that the panel runs off screen.
     const panelWidth = Math.min(520, window.innerWidth - 24);
@@ -373,7 +350,7 @@ if (motdDialog && motdOpen) {
     );
     motdDialog.style.setProperty("--motd-right", `${Math.max(0, right)}px`);
     motdDialog.showModal();
-    motdOpen.setAttribute("aria-expanded", "true");
+    motdOpen.toggleAttribute("data-on", true);
     if (motdDot) motdDot.hidden = true;
     try {
       localStorage.setItem(MOTD_SEEN_KEY, motdVersion);
@@ -392,7 +369,7 @@ if (motdDialog && motdOpen) {
     if (!inside) motdDialog.close();
   });
   motdDialog.addEventListener("close", () => {
-    motdOpen.setAttribute("aria-expanded", "false");
+    motdOpen.toggleAttribute("data-on", false);
     input.focus();
   });
 }

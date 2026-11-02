@@ -39,7 +39,7 @@
       home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
     }
     for (const b of document.querySelectorAll("#lang button")) {
-      b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+      b.toggleAttribute("data-on", b.dataset.lang === locale);
     }
   };
   document.documentElement.lang = fromUrl ?? stored ?? "en";
@@ -166,27 +166,27 @@ button.on, button.on:hover:not(:disabled) { border-color:var(--acc); color:var(-
 <header id="title">
   <h1><span lang="en">GLYPHPAINT</span><span lang="ko">글리프 페인트</span></h1>
   <div id="head-row">
-    <nav id="lang" aria-label="language">
+    <nav id="lang">
       <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
       <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
     </nav>
-    <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+    <a id="home-link" class="link-button" href="./" title="bt10x home">← bt10x</a>
   </div>
 </header>
 <div id="app">
   <header id="bar">
-    <div class="grp" id="menuWrap"><button type="button" id="bMenu" data-tip="bMenu" aria-haspopup="menu" aria-expanded="false" aria-controls="menu"><span lang="en">Menu ▾</span><span lang="ko">메뉴 ▾</span></button>
-      <div id="menu" role="menu" hidden>
-        <button type="button" role="menuitem" id="bNew" data-tip="bNew"><span lang="en">New</span><span lang="ko">새 장면</span></button>
-        <button type="button" role="menuitem" id="bLoad" data-tip="bLoad"><span><span lang="en">Load…</span><span lang="ko">열기…</span></span><span class="hint">Ctrl+O</span></button>
-        <button type="button" role="menuitem" id="bSave" data-tip="bSave"><span><span lang="en">Save .json</span><span lang="ko">.json 저장</span></span><span class="hint">Ctrl+S</span></button>
-        <button type="button" role="menuitem" id="bExport" data-tip="bExport"><span lang="en">Export…</span><span lang="ko">내보내기…</span></button>
+    <div class="grp" id="menuWrap"><button type="button" id="bMenu" data-tip="bMenu"><span lang="en">Menu ▾</span><span lang="ko">메뉴 ▾</span></button>
+      <div id="menu" hidden>
+        <button type="button" id="bNew" data-tip="bNew"><span lang="en">New</span><span lang="ko">새 장면</span></button>
+        <button type="button" id="bLoad" data-tip="bLoad"><span><span lang="en">Load…</span><span lang="ko">열기…</span></span><span class="hint">Ctrl+O</span></button>
+        <button type="button" id="bSave" data-tip="bSave"><span><span lang="en">Save .json</span><span lang="ko">.json 저장</span></span><span class="hint">Ctrl+S</span></button>
+        <button type="button" id="bExport" data-tip="bExport"><span lang="en">Export…</span><span lang="ko">내보내기…</span></button>
       </div></div>
     <div class="grp"><button type="button" id="bUndo" data-tip="bUndo"><span lang="en">Undo</span><span lang="ko">되돌리기</span></button><button type="button" id="bRedo" data-tip="bRedo"><span lang="en">Redo</span><span lang="ko">다시 실행</span></button></div>
     <div class="grp" data-tip="scene"><span class="lbl"><span lang="en">Scene</span><span lang="ko">장면</span></span><input type="number" id="sw" min="1" max="500"><span>×</span><input type="number" id="sh" min="1" max="500"><input type="color" id="sbg" data-tip="sbg"></div>
     <div class="grp"><span class="grp" data-tip="zoom"><button type="button" id="zOut">−</button><span id="zv" class="lbl"></span><button type="button" id="zIn">+</button></span>
       <label class="opt" data-tip="cGrid"><input type="checkbox" id="cGrid"> <span lang="en">grid</span><span lang="ko">격자</span></label><label class="opt" data-tip="cBounds"><input type="checkbox" id="cBounds"> <span lang="en">layer box</span><span lang="ko">레이어 상자</span></label></div>
-    <div class="grp" id="foldWrap"><button type="button" id="rFold" data-tip="rFold" aria-expanded="true"><span class="fold"><span lang="en">Fold right pane ▸</span><span lang="ko">오른쪽 패널 접기 ▸</span></span><span class="unfold"><span lang="en">◂ Unfold right pane</span><span lang="ko">◂ 오른쪽 패널 펼치기</span></span></button></div>
+    <div class="grp" id="foldWrap"><button type="button" id="rFold" data-tip="rFold"><span class="fold"><span lang="en">Fold right pane ▸</span><span lang="ko">오른쪽 패널 접기 ▸</span></span><span class="unfold"><span lang="en">◂ Unfold right pane</span><span lang="ko">◂ 오른쪽 패널 펼치기</span></span></button></div>
   </header>
 
   <aside id="left">
@@ -351,9 +351,6 @@ const STR = {
     // controls inside the modal dialogs (the backdrop covers the status line, so these are tooltips)
     placeholder: { gpName: 'palette name', gpQ: 'search: char, U+2588, or block name', gpText: 'paste characters to add to the palette', ttext: 'text for the text tool' },
     titles: { gpName: 'palette name', gpBrush: 'add the current brush glyph', bExpJson: 'layered snapshot, coordinates rebased to the area' },
-    aria: { zOut: 'zoom out', zIn: 'zoom in', lUp: 'move layer up', lDn: 'move layer down', sbg: 'scene background', brushGlyph: 'glyph brush',
-            sw: 'scene width', sh: 'scene height', fcol: 'foreground colour', gcol: 'background colour', falpha: 'foreground opacity',
-            galpha: 'background opacity', lOx: 'layer x offset', lOy: 'layer y offset' },
     // hover / focus help, shown over the status line
     tips: {
       bNew: 'Start a new scene with one empty layer. Asks first; the current scene is lost unless saved.',
@@ -465,9 +462,6 @@ const STR = {
     },
     placeholder: { gpName: '팔레트 이름', gpQ: '검색: 문자, U+2588 또는 블록 이름', gpText: '팔레트에 추가할 문자를 붙여넣으세요', ttext: '텍스트 도구로 넣을 글자' },
     titles: { gpName: '팔레트 이름', gpBrush: '현재 브러시 글리프 추가', bExpJson: '레이어를 유지한 스냅숏, 좌표는 영역 기준으로 다시 맞춤' },
-    aria: { zOut: '축소', zIn: '확대', lUp: '레이어 위로', lDn: '레이어 아래로', sbg: '장면 배경색', brushGlyph: '글리프 브러시',
-            sw: '장면 너비', sh: '장면 높이', fcol: '전경색', gcol: '배경색', falpha: '전경 불투명도',
-            galpha: '배경 불투명도', lOx: '레이어 x 오프셋', lOy: '레이어 y 오프셋' },
     tips: {
       bNew: '빈 레이어 하나로 새 장면을 시작합니다. 먼저 확인을 묻고, 저장하지 않은 현재 장면은 사라집니다.',
       bLoad: 'glyphpaint .json 파일을 엽니다 (Ctrl+O). 파일을 페이지에 끌어다 놓아도 됩니다.',
@@ -1335,7 +1329,7 @@ $('#bExpCancel').onclick = () => { ex.hidden = true; modals(); };
 for (const id of ['#bExpJson', '#bExpPng']) $(id).addEventListener('click', () => { ex.hidden = true; modals(); });
 $('#bLoad').onclick = () => $('#fileIn').click();
 const menu = $('#menu'), menuItems = () => [...menu.querySelectorAll('button')];
-function setMenu(open) { menu.hidden = !open; $('#bMenu').setAttribute('aria-expanded', String(open)); }
+function setMenu(open) { menu.hidden = !open; }
 $('#bMenu').onclick = () => setMenu(menu.hidden);
 // capture: close before the item's own handler runs, so a confirm() or file picker doesn't sit over an open menu
 menu.addEventListener('click', e => { if (e.target.closest('button')) setMenu(false); }, true);
@@ -1357,7 +1351,6 @@ $('#zIn').onclick = () => zoom(1); $('#zOut').onclick = () => zoom(-1);
 // the right pane fold is a view preference; the canvas view just gets the freed width (no relayout needed)
 function setRightFold(on, quiet) {
   S.rfold = !!on; $('#app').classList.toggle('rfold', S.rfold);
-  $('#rFold').setAttribute('aria-expanded', String(!S.rfold));
   if (tipEl && !tipEl.checkVisibility?.()) showTip(null);
   if (!quiet) saveView();
 }
@@ -1486,7 +1479,6 @@ function localize() {
   toolLabels();
   for (const [id, s] of Object.entries(t.placeholder)) $(`#${id}`).placeholder = s;
   for (const [id, s] of Object.entries(t.titles)) $(`#${id}`).title = s;
-  for (const [id, s] of Object.entries(t.aria)) $(`#${id}`).setAttribute('aria-label', s);
   ciKey = ''; showTip(tipEl);
   modeInfo(); syncInfo(); syncLayers(); markPanel(); if (gpBuilt) filterPanel(); redraw();
 }

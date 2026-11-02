@@ -297,7 +297,6 @@
       st.inner = inner;
       st.bg = div("tui-bg");
       st.frame = div("tui-frame");
-      st.frame.setAttribute("aria-hidden", "false");
       el.append(st.bg, st.frame, st.body);
       boxes.add(el);
       if (typeof ResizeObserver !== "undefined") {
@@ -421,11 +420,7 @@
           at,
           text,
           cls: `tui-tab${i === st.activeTab ? " is-active" : ""}`,
-          attrs: {
-            role: "tab",
-            tabindex: i === st.activeTab ? "0" : "-1",
-            "aria-selected": String(i === st.activeTab),
-          },
+          attrs: { tabindex: i === st.activeTab ? "0" : "-1" },
           onClick: () => st.selectTab(i, true),
           onKey: (e) => st.tabKey(e, i),
         });
@@ -520,7 +515,7 @@
 
   /* Read items from markup: any child element is an item, <hr> or .tui-sep
      is a separator. data-key shows a shortcut, data-value is reported back,
-     [disabled] / aria-disabled greys it out. */
+     [disabled] / data-disabled greys it out. */
   function readItems(container) {
     return Array.from(container.children).map((c) => {
       if (c.tagName === "HR" || c.classList.contains("tui-sep")) return { sep: true };
@@ -528,7 +523,7 @@
         html: c.innerHTML,
         key: c.dataset.key || "",
         value: c.dataset.value !== undefined ? c.dataset.value : c.textContent.trim(),
-        disabled: c.hasAttribute("disabled") || c.getAttribute("aria-disabled") === "true",
+        disabled: c.hasAttribute("disabled") || c.hasAttribute("data-disabled"),
       };
     });
   }
@@ -542,8 +537,7 @@
         continue;
       }
       const row = div("tui-item");
-      row.setAttribute("role", kind === "list" ? "option" : "menuitem");
-      if (it.disabled) row.setAttribute("aria-disabled", "true");
+      if (it.disabled) row.dataset.disabled = "";
       if (kind === "list") row.appendChild(span("tui-cursor", "  "));
       const label = span("tui-item-label");
       if (it.html !== undefined) label.innerHTML = it.html;
@@ -560,13 +554,12 @@
   /* Keyboard + pointer behaviour shared by menus, lists and popups. */
   function menuController(el, rows, kind, onPick) {
     let active = -1;
-    const ok = (i) => rows[i] && rows[i].getAttribute("aria-disabled") !== "true";
+    const ok = (i) => rows[i] && !rows[i].hasAttribute("data-disabled");
     function set(i) {
       active = i;
       rows.forEach((row, k) => {
         row.classList.toggle("is-active", k === i);
         if (kind === "list") {
-          row.setAttribute("aria-selected", String(k === i));
           row.firstChild.textContent = k === i ? "▸ " : "  ";
         }
       });
@@ -639,7 +632,6 @@
     const items = readItems(el);
     el.textContent = "";
     if (!el.hasAttribute("tabindex")) el.tabIndex = 0;
-    el.setAttribute("role", kind === "list" ? "listbox" : "menu");
     box(el);
     const rows = renderItems(el._tui.inner, items, kind);
     const ctl = menuController(el, rows, kind, (i) => {
@@ -759,7 +751,6 @@
     btn.className = "tui-select";
     btn.style.setProperty("--cols", cols);
     if (sel.id) btn.id = `${sel.id}-tui`;
-    btn.setAttribute("aria-haspopup", "listbox");
     const label = span("tui-select-label");
     btn.append(label, span("tui-select-arrow", "▼"));
     sel.classList.add("tui-native");
@@ -813,7 +804,6 @@
     }));
     bar.textContent = "";
     bar.classList.add("tui-menubar");
-    bar.setAttribute("role", "menubar");
     const buttons = [];
     menus.forEach((m, i) => {
       if (m.right && !bar.querySelector(".tui-menubar-spacer"))
@@ -887,7 +877,6 @@
     );
     panes.forEach((p, i) => {
       p.hidden = i !== st.activeTab;
-      p.setAttribute("role", "tabpanel");
     });
     st.selectTab = (i, focus) => {
       st.activeTab = i;
@@ -897,7 +886,6 @@
       st.frame.querySelectorAll(".tui-tab").forEach((t, k) => {
         t.classList.toggle("is-active", k === i);
         t.setAttribute("tabindex", k === i ? "0" : "-1");
-        t.setAttribute("aria-selected", String(k === i));
         if (k === i && focus) t.focus();
       });
       emit(el, "tui-tab", { index: i, label: st.tabs[i].label });
@@ -1032,7 +1020,6 @@
 
     el.classList.add("tui-table");
     el.tabIndex = 0;
-    el.setAttribute("role", "grid");
     el.textContent = "";
     box(el, { cols: inner + 2, rows: "auto", pad: 0 });
     const st = el._tui;
@@ -1124,15 +1111,12 @@
 
   function progress(el, value) {
     el.classList.add("tui-progress");
-    el.setAttribute("role", "progressbar");
     if (value !== undefined) el.dataset.value = value;
     if (el.dataset.dir === "v") return vprogress(el);
     el.classList.remove("is-vertical");
-    el.removeAttribute("aria-orientation");
     const v = el.dataset.value;
     const cols = num(el.dataset.cols, 20);
     if (v === "indeterminate") {
-      el.removeAttribute("aria-valuenow");
       el._tuiTick = 0;
       animated.add(el);
       tickProgress(el);
@@ -1140,7 +1124,6 @@
     }
     animated.delete(el);
     const p = Math.min(1, Math.max(0, num(v, 0)));
-    el.setAttribute("aria-valuenow", Math.round(p * 100));
     const label =
       el.dataset.label === "none" ? "" : ` ${fit(`${Math.round(p * 100)}%`, 4, "right")}`;
     const w = cols - len(label);
@@ -1168,7 +1151,6 @@
      eighth-row partials (▁…▇) over a ░ track; the % label sits below. */
   function vprogress(el) {
     el.classList.add("is-vertical");
-    el.setAttribute("aria-orientation", "vertical");
     const v = el.dataset.value;
     const rows = Math.max(1, num(el.dataset.rows, 8));
     const cols = Math.max(1, num(el.dataset.cols, 1));
@@ -1177,13 +1159,11 @@
     const indet = v === "indeterminate";
     let p = 0;
     if (indet) {
-      el.removeAttribute("aria-valuenow");
       if (!animated.has(el)) el._tuiTick = 0;
       animated.add(el);
     } else {
       animated.delete(el);
       p = Math.min(1, Math.max(0, num(v, 0)));
-      el.setAttribute("aria-valuenow", Math.round(p * 100));
     }
     const label = indet || el.dataset.label === "none" ? "" : `${Math.round(p * 100)}%`;
     const w = Math.max(cols, len(label));
@@ -1264,8 +1244,6 @@
     el.classList.add("tui-scroll");
     const vbar = div("tui-scrollbar");
     const hbar = div("tui-hscrollbar");
-    vbar.setAttribute("aria-hidden", "true");
-    hbar.setAttribute("aria-hidden", "true");
     el.append(vbar, hbar);
     const body = st.body;
     const geom = { x: null, y: null };
@@ -1407,9 +1385,6 @@
       const overlay = div("tui-overlay tui-font");
       if (opts.theme) overlay.dataset.theme = opts.theme;
       const win = div("tui-dialog");
-      win.setAttribute("role", "dialog");
-      win.setAttribute("aria-modal", "true");
-      if (opts.title) win.setAttribute("aria-label", opts.title);
       const text = div("tui-dialog-text");
       if (opts.content instanceof Node) text.appendChild(opts.content);
       else text.textContent = opts.text || "";
@@ -1482,7 +1457,6 @@
     const lines = target.dataset.tip.split("\n");
     const w = Math.max(...lines.map(len));
     tipEl = div("tui-popup tui-font tui-tip");
-    tipEl.setAttribute("role", "tooltip");
     inheritTheme(tipEl, target);
     // data-tip-runs: the same text as styled runs, JSON [[text, class], …]
     const runs = parseRuns(target.dataset.tipRuns);
@@ -2074,11 +2048,8 @@
     el.classList.add("tui-split-handle", h ? "is-v" : "is-h");
     el.tabIndex = 0;
     el.dataset.splitId = id;
-    el.setAttribute("role", "separator");
-    el.setAttribute("aria-orientation", h ? "vertical" : "horizontal");
     const now = () =>
       h ? sp.sizes : sp.panes.map((p) => Math.round(p.getBoundingClientRect().height / metrics.ch));
-    el.setAttribute("aria-valuenow", now()[k]);
     const move = (delta) => {
       const cur = now();
       const mins = sp.panes.map(h ? paneMin : () => 1);

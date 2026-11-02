@@ -12,24 +12,23 @@
   <body>
     <header id="topbar">
       <span id="topbar-title">bt10x terminal <span id="topbar-version"></span></span>
-      <button id="motd-open" class="link-button" type="button" aria-haspopup="dialog" aria-controls="motd" aria-expanded="false"><span id="motd-dot" aria-hidden="true" hidden></span>MOTD</button>
+      <button id="motd-open" class="link-button" type="button"><span id="motd-dot" hidden></span>MOTD</button>
       <!-- home-link: stripped from the standalone build (scripts/standalone-web.mjs), which has no landing page. -->
-      <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+      <a id="home-link" class="link-button" href="./" title="bt10x home">← bt10x</a>
       <!-- /home-link -->
     </header>
-    <dialog id="motd" aria-labelledby="motd-title">
-      <div id="motd-head"><span id="motd-title">MOTD</span><button id="motd-close" type="button" aria-label="Close">✕</button></div>
+    <dialog id="motd">
+      <div id="motd-head"><span id="motd-title">MOTD</span><button id="motd-close" type="button">✕</button></div>
       <div id="motd-body"></div>
     </dialog>
     <div id="term">
-      <div id="out"><div id="inrow"><span id="prompt"></span><input id="cmd" autocomplete="off" spellcheck="false" autocapitalize="none" autocorrect="off" enterkeyhint="send" aria-label="command" aria-describedby="prompt" /></div></div>
+      <div id="out"><div id="inrow"><span id="prompt"></span><input id="cmd" autocomplete="off" spellcheck="false" autocapitalize="none" autocorrect="off" enterkeyhint="send" /></div></div>
     </div>
     <footer id="legal">
       Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps
       Company, Inc. or Microsoft.<br/>BattleTech, BattleMech, 'Mech and MechWarrior are trademarks
       of their respective owners.
     </footer>
-    <div id="sr-live" class="sr-only" aria-live="polite"></div>
     <script type="importmap">{ "imports": { "btlib10x": "./btlib10x.js" } }</script>
     <script type="module" src="./terminal.js"></script>
   </body>

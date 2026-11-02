@@ -52,7 +52,7 @@
           const glyphpaint = document.getElementById("card-glyphpaint");
           if (glyphpaint) glyphpaint.href = saved ? "glyphpaint.html" : `glyphpaint.html?lang=${locale}`;
           for (const b of document.querySelectorAll("#lang button")) {
-            b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+            b.toggleAttribute("data-on", b.dataset.lang === locale);
           }
         };
         document.documentElement.lang = fromUrl ?? stored ?? "en";
@@ -63,7 +63,7 @@
   <body>
     <main id="landing">
       <header id="landing-head">
-        <nav id="lang" aria-label="language">
+        <nav id="lang">
           <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
           <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
         </nav>
@@ -74,7 +74,7 @@
       </header>
       <div id="cards" class="cards">
         <a id="card-terminal" class="card" href="terminal.html">
-          <pre class="preview" aria-hidden="true">
+          <pre class="preview">
 <span class="g">&gt;</span> map quickstart
 <span class="g">&gt;</span> add a AS7-D 3 5 n
 <span class="g">&gt;</span> add b HBK-4G 9 4 s
@@ -89,7 +89,7 @@
           <span class="go"><span lang="en">open terminal →</span><span lang="ko">터미널 열기 →</span></span>
         </a>
         <a id="card-instant" class="card" href="instant.html">
-          <pre class="preview" aria-hidden="true">╔═ New battle ════════╗
+          <pre class="preview">╔═ New battle ════════╗
 ║▸1 A1 HBK-4G  Player ║
 ║ 2 A2 CN9     Alpha  ║
 ║   <span class="g">[ LAUNCH  F10 ]</span>   ║
@@ -104,7 +104,7 @@
         </a>
         <a id="card-avatar" class="card" href="avatar.html?head=bv&amp;shoulder=l3&amp;torso=dbo&amp;arms=pb&amp;legs=bf">
           <!-- Composite from the creator: head=bv shoulder=l3 torso=dbo arms=pb legs=bf. -->
-          <pre class="preview avatar-art" aria-hidden="true">╔════╗
+          <pre class="preview avatar-art">╔════╗
 ║⚂[]⚂║
 ║╜╪╪╙║
 ║ ╜╙ ║
@@ -119,7 +119,7 @@
         </a>
         <a id="card-gallery" class="card" href="gallery.html">
           <!-- Creator composites: sq/dl/fbo/csb/st, rv/m4/by/hr/sr, av/hvy/pbo/lmg/jj. -->
-          <pre class="preview avatar-art gallery-art" aria-hidden="true"><span>╔════╗  ╔════╗  ╔════╗
+          <pre class="preview avatar-art gallery-art"><span>╔════╗  ╔════╗  ╔════╗
 ║╔┌┐╗║  ║⁘()⁘║  ║┏&lt;&gt;┓║
 ║╚╬╬╝║  ║╰{}╯║  ║╪╫╫╪║
 ║ ╝╚ ║  ║ ╯╰ ║  ║ ╨╨ ║
@@ -135,7 +135,7 @@
         </a>
         <!-- Desktop only: fills the empty grid cell next to the card above. -->
         <!--
-        <div class="card card-soon" aria-hidden="true">
+        <div class="card card-soon">
           <span lang="en">more coming soon</span><span lang="ko">곧 더 추가됩니다</span>
         </div>
         -->
@@ -145,7 +145,7 @@
       </p>
       <div id="cards-more" class="cards">
         <a id="card-glyphart" class="card" href="glyphart.html">
-          <pre class="preview glyph-art" aria-hidden="true"><span><span class="g">   ████▓▓▒   </span>        @@@%#*+
+          <pre class="preview glyph-art"><span><span class="g">   ████▓▓▒   </span>        @@@%#*+
 <span class="g"> ██████▓▓▒▒░ </span>      @@@@@%#*+=:
 <span class="g">▓█████▓▓▒▒░░░</span>  <span class="d">→</span>  #%@%%%#*+=-:.
 <span class="g">▓▓▓▓▓▓▒▒▒░░░░</span>     *###**++=-...
@@ -161,7 +161,7 @@
         </a>
         <a id="card-glyphpaint" class="card" href="glyphpaint.html">
           <!-- Two overlapping layers (yellow on top) and a palette strip. -->
-          <pre class="preview paint-art" aria-hidden="true"><span><span class="g">┌─────────┐</span>
+          <pre class="preview paint-art"><span><span class="g">┌─────────┐</span>
 <span class="g">│ ▓▓▓  </span><span class="y">┌──┼──────┐</span>
 <span class="g">│ ▓▓▓  </span><span class="y">│░░</span><span class="g">│</span><span class="y"> ★    │</span>
 <span class="g">└──────</span><span class="y">┼</span><span class="g">──┘</span><span class="y">      │</span>
@@ -177,7 +177,7 @@
         </a>
         <!-- Desktop only: fills the empty grid cell next to the card above. -->
         <!--
-        <div class="card card-soon" aria-hidden="true">
+        <div class="card card-soon">
           <span lang="en">more coming soon</span><span lang="ko">곧 더 추가됩니다</span>
         </div>
         -->

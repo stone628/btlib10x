@@ -176,8 +176,7 @@ function press(key: string, code: string, repeat: boolean): void {
   }
   const ev = new KeyboardEvent("keydown", { key, code, repeat, bubbles: true, cancelable: true });
   if (!el.dispatchEvent(ev)) return;
-  if (key === "Enter" && el.matches("button:not([data-commit]), [role=button], [role=tab]"))
-    el.click();
+  if (key === "Enter" && el.matches("button:not([data-commit]), .tui-tab")) el.click();
   else if (key === "Tab") stepFocus(1);
 }
 

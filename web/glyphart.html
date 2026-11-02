@@ -40,7 +40,7 @@
       home.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
     }
     for (const b of document.querySelectorAll("#lang button")) {
-      b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
+      b.toggleAttribute("data-on", b.dataset.lang === locale);
     }
   };
   document.documentElement.lang = fromUrl ?? stored ?? "en";
@@ -132,11 +132,11 @@ input:disabled { opacity:.4; }
 <header id="title">
   <h1><span lang="en">GLYPHART</span><span lang="ko">글리프 아트</span></h1>
   <div id="head-row">
-    <nav id="lang" aria-label="language">
+    <nav id="lang">
       <button class="link-button" type="button" data-lang="en" lang="en">EN</button>
       <button class="link-button" type="button" data-lang="ko" lang="ko">한국어</button>
     </nav>
-    <a id="home-link" class="link-button" href="./" title="bt10x home"><span aria-hidden="true">← bt10x</span><span class="sr-only"><span lang="en">bt10x home</span><span lang="ko">bt10x 홈</span></span></a>
+    <a id="home-link" class="link-button" href="./" title="bt10x home">← bt10x</a>
   </div>
 </header>
 <div id="app">
