@@ -180,7 +180,9 @@ in the terminal). Each choice shows its MP budget after any posture cost.
   cost per hex. A click (or A on the reticle) picks a landing hex and the
   facing wedge under the pointer, else the reachable facing nearest it; a
   further click on that hex steps to the next reachable facing clockwise
-  (see Controls).
+  (see Controls). A second row of the Movement Command box says what to do
+  next ("click a tinted hex") or shows the picked landing (hex, facing,
+  MP); the status bar holds only key hints.
 - **Charge / DFA** are declared as in the terminal: a Walk / Run (charge) or
   Jump (DFA) landing on an enemy hex stops in the hex before it; the landing
   says so. Only legal declarations are offered.

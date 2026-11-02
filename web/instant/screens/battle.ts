@@ -182,11 +182,15 @@ function moveMenu(): { rows: TuiNode[]; width: number } {
   return { rows: [h().el("div", { class: "ia-row", key: "modes" }, ...kids)], width };
 }
 
-/** The movement hint (and a melee warning) for the right of the status line. */
-function moveHint(): TuiChild[] {
+/**
+ * The movement hint (and a melee warning) as a row of the Movement Command
+ * box, which has the width the status line lacks: its width in cells, and
+ * the row centred in a box `width` cells wide.
+ */
+function moveHint(): { width: number; row: (width: number) => TuiNode } | null {
   const b = app.battle!;
   const draft = b.move;
-  if (!draft || b.actorPersona !== null) return [];
+  if (!draft) return null;
   const l = draft.landing;
   const info = l
     ? t("orders.landing", {
@@ -200,12 +204,18 @@ function moveHint(): TuiChild[] {
       : draft.choice
         ? t("orders.noMoveNeeded")
         : t("orders.chooseMode");
-  const out: TuiChild[] = [span(info, { cls: "ia-accent", key: "info" })];
-  if (l?.melee)
-    out.push(
-      span(` ${t("orders.melee", { kind: l.melee.kind })}`, { cls: "ia-err", key: "melee" }),
-    );
-  return out;
+  const melee = l?.melee ? ` ${t("orders.melee", { kind: l.melee.kind })}` : "";
+  const used = cells(`${info}${melee}`);
+  return {
+    width: used + 2,
+    row: (width) => {
+      const left = Math.max(1, Math.floor((width - used) / 2));
+      const kids: TuiChild[] = [" ".repeat(left), span(info, { cls: "ia-accent", key: "info" })];
+      if (melee) kids.push(span(melee, { cls: "ia-err", key: "melee" }));
+      kids.push(" ".repeat(Math.max(1, width - used - left)));
+      return h().el("div", { class: "ia-row", key: "hint" }, ...kids);
+    },
+  };
 }
 
 // ------------------------------------------------------------ attack orders
@@ -548,8 +558,11 @@ function orders(): Orders {
   }
   if (b.phase === "movement") {
     const m = moveMenu();
+    const hint = moveHint();
     const title = t("orders.moveTitle");
-    return out(m.rows, Math.max(m.width, cells(title) + 4), moveReady(), title);
+    // the whole box width (an error row may widen it), so the hint centres in it
+    const width = Math.max(m.width, hint?.width ?? 0, cells(title) + 4, ...extra.map((x) => x[1]));
+    return out(hint ? [...m.rows, hint.row(width)] : m.rows, width, moveReady(), title);
   }
   showTargetSheet();
   return out(attackOrders(ATTACK_W), ATTACK_W, true, t("orders.attackTitle"));
@@ -600,7 +613,6 @@ function regionKeys(persona: boolean): StatusKey[] {
 export function battleScreen(): TuiNode {
   const H = h();
   const b = app.battle!;
-  const phase = b.phase === "attack" ? "attack" : "movement";
   focusMover();
   const o = orders();
   // a persona waits for Enter (A) or a click on NEXT
@@ -650,7 +662,6 @@ export function battleScreen(): TuiNode {
           },
         ],
       ]),
-      phase === "movement" ? moveHint() : [],
     ),
     app.modal ? battleModal() : null,
   );
