@@ -640,7 +640,19 @@ export function doneButton(onDone: () => void, label = "orders.doneButton"): Tui
     42,
     26,
     { class: "ia-done", key: label },
-    h().button({ border: "rounded", cols: 16, key: "donebtn", onClick: () => onDone() }, t(label)),
+    h().button(
+      {
+        border: "rounded",
+        cols: 16,
+        key: "donebtn",
+        // a clicked button keeps the focus and would take the next Enter from the orders
+        onClick: (e) => {
+          if (e.currentTarget instanceof HTMLElement) e.currentTarget.blur();
+          onDone();
+        },
+      },
+      t(label),
+    ),
   );
 }
 

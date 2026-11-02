@@ -123,6 +123,8 @@ export interface BattleUi {
   queueFor: string | null;
   /** Actor and attack target whose sheet the right drawer last showed. */
   sheetTarget: string | null;
+  /** Turn, actor and attack target the map last framed. */
+  frameFor: string | null;
   /** Drawer open states hidden by the LOGS drawer, restored when it closes. */
   logSheets: [boolean, boolean] | null;
   /** Turn and unit the movement focus (left sheet, map centre) last went to. */
@@ -154,6 +156,7 @@ export function newBattleUi(): BattleUi {
     logs: false,
     queueFor: null,
     sheetTarget: null,
+    frameFor: null,
     logSheets: null,
     focusFor: null,
     centerPending: false,

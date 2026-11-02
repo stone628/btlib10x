@@ -64,15 +64,23 @@ export function pickTarget(id: string): void {
   rerender();
 }
 
-/** The weapon target's sheet in the right drawer, once per new target. */
+/**
+ * Frame the shooter and the weapon target on the map once per attack and new
+ * target, and show the target's sheet in the right drawer once per new target.
+ */
 export function showTargetSheet(): void {
   const b = app.battle;
   const id = b?.attack?.targetId ?? null;
   const ui = app.battleUi;
-  const key = `${b?.actorId}>${id}`;
-  if (id === null || key === ui.sheetTarget) return;
+  if (!b || id === null) return;
+  const frame = `${b.state.turn}:${b.actorId}>${id}`;
+  if (frame !== ui.frameFor) {
+    ui.frameFor = frame;
+    ui.framePending = true;
+  }
+  const key = `${b.actorId}>${id}`;
+  if (key === ui.sheetTarget) return;
   ui.sheetTarget = key;
-  ui.framePending = true;
   const side = sheetSideOf(id);
   const d = ui.sheets[side];
   d.unitId = id;
@@ -298,6 +306,7 @@ export function attackPanel(minWidth: number): { rows: TuiNode[]; width: number 
       fit(
         t("orders.heatAfter", { now, fire: heat, sinks, after: Math.max(0, now + heat - sinks) }),
         width,
+        "center",
       ),
       { cls: "ia-dim", key: "heat" },
     ),

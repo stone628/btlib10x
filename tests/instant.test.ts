@@ -32,6 +32,7 @@ import { commitAlias } from "../web/instant/input";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
 import { battleKey } from "../web/instant/screens/battle";
+import { showTargetSheet } from "../web/instant/screens/battle.attack";
 import {
   engineTip,
   gyroTip,
@@ -636,6 +637,19 @@ describe("Instant Action battle keys", () => {
       expect(other).toBeDefined();
       b.setTarget(other!);
       expect(b.attack!.physical).toHaveLength(1);
+    });
+
+    it("frames the shooter and the weapon target once per attack, every turn", () => {
+      const b = attackBattle();
+      setUp(b);
+      showTargetSheet();
+      expect(app.battleUi.framePending).toBe(true);
+      app.battleUi.framePending = false;
+      showTargetSheet();
+      expect(app.battleUi.framePending).toBe(false); // same attack: once
+      b.state.turn++; // the same actor and target on a later turn frames again
+      showTargetSheet();
+      expect(app.battleUi.framePending).toBe(true);
     });
 
     it("hides the Club row with no club action", () => {
