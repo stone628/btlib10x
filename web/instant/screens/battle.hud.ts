@@ -467,17 +467,18 @@ export function toggleLogs(): void {
 }
 
 /**
- * A new unit to move: its sheet goes in the left drawer (or into the state
- * the LOGS drawer restores) and, after the render, the map fits it and the
- * enemy units into the clear area.
+ * A new unit to move or attack with: its sheet goes in its drawer (or into
+ * the state the LOGS drawer restores). For a mover the map then fits it and
+ * the enemy units into the clear area; the attack phase frames its target
+ * instead (`framePending`).
  */
 export function focusMover(): void {
   const ui = app.battleUi;
   const b = app.battle!;
-  const key = `${b.state.turn}:${b.actorId}`;
-  if (b.phase !== "movement" || b.actorId === null || ui.focusFor === key) return;
+  const key = `${b.state.turn}:${b.phase}:${b.actorId}`;
+  if (b.phase === "over" || b.actorId === null || ui.focusFor === key) return;
   ui.focusFor = key;
-  ui.centerPending = true;
+  if (b.phase === "movement") ui.centerPending = true;
   const side = sheetSideOf(b.actorId);
   const d = ui.sheets[side];
   d.unitId = b.actorId;
