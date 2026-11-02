@@ -16,7 +16,6 @@ import { locName, t } from "../i18n";
 import { type AttackDialog, type AttackPanelRow, app, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
-import { sheetSideOf } from "./battle.hud";
 import { cells, fit, h, row, span } from "./common";
 
 const { MARK: M, ARROW: A, GRID: G } = UI_THEME;
@@ -56,37 +55,24 @@ function cycleTarget(dir: number): void {
   pickTarget(next.targetId);
 }
 
-/** Aim the weapons at a unit and show its record sheet in the right drawer. */
+/** Aim the weapons at a unit; the sheet policy shows it in the right drawer. */
 export function pickTarget(id: string): void {
   const b = app.battle!;
   act(() => b.setTarget(id));
-  showTargetSheet();
+  frameTarget();
   rerender();
 }
 
-/**
- * Frame the shooter and the weapon target on the map once per attack and new
- * target, and show the target's sheet in the right drawer once per new target.
- */
-export function showTargetSheet(): void {
+/** Frame the shooter and the weapon target on the map once per attack and new target. */
+export function frameTarget(): void {
   const b = app.battle;
   const id = b?.attack?.targetId ?? null;
   const ui = app.battleUi;
   if (!b || id === null) return;
   const frame = `${b.state.turn}:${b.actorId}>${id}`;
-  if (frame !== ui.frameFor) {
-    ui.frameFor = frame;
-    ui.framePending = true;
-  }
-  const key = `${b.actorId}>${id}`;
-  if (key === ui.sheetTarget) return;
-  ui.sheetTarget = key;
-  const side = sheetSideOf(id);
-  const d = ui.sheets[side];
-  d.unitId = id;
-  d.openedAt = ++ui.seq;
-  if (ui.logSheets) ui.logSheets[side] = true;
-  else d.open = true;
+  if (frame === ui.frameFor) return;
+  ui.frameFor = frame;
+  ui.framePending = true;
 }
 
 // ------------------------------------------------------------ panel rows

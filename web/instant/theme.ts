@@ -53,6 +53,8 @@ export const UI_THEME = {
     times: "×", // multiplication: cluster shots, map size, zoom
     sep: "·", // separator between facts on one line
     more: "…", // cut text
+    pinOff: "◇", // record sheet pin, off
+    pinOn: "◆", // record sheet pin, on
   },
   ARROW: {
     to: "→", // queue order, attacker to target

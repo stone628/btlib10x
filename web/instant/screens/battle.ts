@@ -17,9 +17,9 @@ import {
   attackKeys,
   attackPanel,
   dialogKey,
+  frameTarget,
   physicalOutline,
   pickTarget,
-  showTargetSheet,
 } from "./battle.attack";
 import {
   BODY,
@@ -31,7 +31,9 @@ import {
   openSheetFor,
   setLogs,
   sheetKey,
+  sheetPolicy,
   toggleLogs,
+  togglePin,
   toggleSheet,
 } from "./battle.hud";
 import { SHEET_W } from "./battle.sheet";
@@ -312,7 +314,7 @@ function orders(): Orders {
     const width = Math.max(m.width, hint?.width ?? 0, cells(title) + 4, ...extra.map((x) => x[1]));
     return out(hint ? [...m.rows, hint.row(width)] : m.rows, width, moveReady(), title);
   }
-  showTargetSheet();
+  frameTarget();
   const panel = attackPanel(ATTACK_W);
   return out(panel.rows, panel.width, true, t("orders.attackTitle"));
 }
@@ -358,6 +360,7 @@ export function battleScreen(): TuiNode {
   const H = h();
   const b = app.battle!;
   focusMover();
+  sheetPolicy();
   const o = orders();
   // a persona waits for Enter (A) or a click on NEXT
   const stepping = b.actorPersona !== null && app.aiPace === "step" && b.result === null;
@@ -725,7 +728,9 @@ export function battleKey(e: KeyboardEvent): boolean {
   if (e.key === "Escape") openMenu();
   // Tab / Shift+Tab (X): left sheet, orders, right sheet
   else if (e.key === "Tab") cycleFocus(e.shiftKey ? -1 : 1);
-  // [ and ] (LB / RB) open and close the left and right record sheets.
+  // [ and ] (LB / RB) open and close the left and right record sheets;
+  // with Shift they pin and unpin them.
+  else if (bracket(e) && e.shiftKey) togglePin(bracket(e) < 0 ? 0 : 1);
   else if (bracket(e)) toggleSheet(bracket(e) < 0 ? 0 : 1);
   else if (isLogsKey(e)) setLogs(!app.battleUi.logs);
   else if (sheetKey(e)) return true;

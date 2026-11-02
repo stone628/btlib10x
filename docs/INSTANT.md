@@ -279,7 +279,14 @@ or Esc go back to the menu); they take effect as described there.
   removals, wreckage, building collapses, club handling).
 - **Record sheets** — any unit's sheet (click it on the map, or open the
   left / right sheet): armor and internal structure, weapons, critical slots,
-  heat, pilot. Hovering the pilot, engine, gyro, sensors, life support or
+  heat, pilot. Each new actor, Player or persona alike, resets the drawers:
+  in the movement phase the left one shows the mover and the right one
+  closes; in the attack phase the right one shows the weapon target (a new
+  target updates it) and the left one closes. Manual opens, closes and
+  picks hold until then. The header's `S1: A1 ▼` picks the unit; its pin
+  (`◇` / `◆` pinned, on the map side of the header, or Shift+`[` / `]`) keeps that drawer as it is
+  through the policy (a map or queue click meant for it uses the other one).
+  Hovering the pilot, engine, gyro, sensors, life support or
   heat explains what the current value costs now and what the next step adds,
   with the 2D6 roll and its chance (TW pp. 41–42, 60, 125, 159–160).
   Hovering HS lists the heat sinks: operational / total and type, the ones
@@ -411,8 +418,8 @@ space there; pad B leaves the box (a pad cannot type).
 | Choose 'Mech | opens on the list (its cursor row is the one Tab stop); list: ↑ ↓ PgUp PgDn move, Enter / Space use, ↑ past the first row to the filters, → to Use; on a dropdown, the search or a button, arrows move to the nearest control (the list's cursor row too; Enter opens a dropdown); in the search ↑ ↓ leave it, Enter goes to the list; Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Choose Control | opens on the list at the slot's current control; ↑ ↓ move (the detail follows), PgUp / Home first, PgDn / End last, Enter / Space / double-click use, → to Use; on a button or a hint target, arrows move to the nearest control (the weight labels and setting keys too, which show their tooltip while focused; ← back to the list); Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, Options) |
-| Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
-| Battle, a sheet focused | arrows move to the nearest hint target that way (header, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
+| Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), Shift+`[` / `]` pin / unpin it, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
+| Battle, a sheet focused | arrows move to the nearest hint target that way (header, pin, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the pin toggle it, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
 | Movement | ← → along the mode bar; on Hold, Enter / Space open its dropdown on the held choice, ↓ / ↑ open it one choice after / before it, round the list (nothing held: ↓ the first, ↑ the last); Enter / Space on a mode choose it (another mode drops the landing); Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
 | Attack | ↑ ↓ Twist, Weapon Target, weapons button, physical attacks button, Club (hidden and dim rows skipped); ← → previous / next target on Weapon Target, previous / next action on Club, else twist; Enter / Space step the twist, next target or club action, or open the button's dialog; F10 done (with nothing checked, a Pass? confirm) |
 | Attack dialog | ↑ ↓ rows that can be checked; Enter / Space toggle the row and move on to the next (A A A checks a volley); Esc / Backspace / F10 close, the checks kept |

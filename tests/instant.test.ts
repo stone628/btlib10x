@@ -34,7 +34,7 @@ import { commitAlias } from "../web/instant/input";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
 import { battleKey } from "../web/instant/screens/battle";
-import { showTargetSheet } from "../web/instant/screens/battle.attack";
+import { frameTarget } from "../web/instant/screens/battle.attack";
 import {
   engineTip,
   gyroTip,
@@ -44,6 +44,7 @@ import {
   pilotTip,
   sensorTip,
 } from "../web/instant/screens/battle.hints";
+import { sheetPolicy } from "../web/instant/screens/battle.hud";
 import { critTip } from "../web/instant/screens/battle.sheet";
 import { debriefKey } from "../web/instant/screens/debrief";
 import { closesMessage, menuKey, openMenu, prefItems } from "../web/instant/screens/menu";
@@ -505,6 +506,47 @@ describe("Instant Action battle keys", () => {
     expect(app.battleUi.focus).toBe("orders");
   });
 
+  describe("record sheet policy", () => {
+    const sheets = () => app.battleUi.sheets.map((d) => (d.open ? d.unitId : null));
+
+    it("shows the mover left and closes the right drawer, Player or persona", () => {
+      for (const control of [{ A1: null }, { A1: "alpha" as const }]) {
+        const b = battle({ kind: "destroyAll" }, { A2: null, B1: null, B2: null, ...control });
+        setUp(b);
+        app.battleUi.sheets[1] = { open: true, unitId: "B1", pinned: false };
+        sheetPolicy();
+        expect(b.phase).toBe("movement");
+        expect(sheets()).toEqual([b.actorId, null]);
+      }
+    });
+
+    it("shows the target right and closes the left drawer in the attack phase", () => {
+      const b = attackBattle();
+      setUp(b);
+      app.battleUi.sheets[0] = { open: true, unitId: "A1", pinned: false };
+      sheetPolicy();
+      expect(b.phase).toBe("attack");
+      expect(sheets()).toEqual([null, b.attack!.targetId]);
+      // a manual open holds until the next actor or target
+      app.battleUi.sheets[0].open = true;
+      sheetPolicy();
+      expect(sheets()).toEqual(["A1", b.attack!.targetId]);
+    });
+
+    it("leaves a pinned drawer as it is", () => {
+      const b = attackBattle();
+      setUp(b);
+      app.battleUi.sheets[0] = { open: true, unitId: "B1", pinned: false };
+      expect(battleKey({ key: "{", code: "BracketLeft", shiftKey: true } as KeyboardEvent)).toBe(
+        true,
+      );
+      expect(app.battleUi.sheets[0]).toMatchObject({ open: true, pinned: true });
+      sheetPolicy();
+      expect(sheets()).toEqual(["B1", b.attack!.targetId]);
+      expect(app.battleUi.sheets[0].pinned).toBe(true);
+    });
+  });
+
   it("walks the movement bar with ← → and chooses a mode with Enter", () => {
     const b = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null });
     setUp(b);
@@ -654,13 +696,13 @@ describe("Instant Action battle keys", () => {
     it("frames the shooter and the weapon target once per attack, every turn", () => {
       const b = attackBattle();
       setUp(b);
-      showTargetSheet();
+      frameTarget();
       expect(app.battleUi.framePending).toBe(true);
       app.battleUi.framePending = false;
-      showTargetSheet();
+      frameTarget();
       expect(app.battleUi.framePending).toBe(false); // same attack: once
       b.state.turn++; // the same actor and target on a later turn frames again
-      showTargetSheet();
+      frameTarget();
       expect(app.battleUi.framePending).toBe(true);
     });
 

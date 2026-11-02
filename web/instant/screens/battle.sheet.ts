@@ -233,7 +233,8 @@ function sheetTip(side: 0 | 1): { tipXY: string; tipFrom: string; tipAnchor: Tip
  * The record sheet: 21 rows of SHEET_W cells. The box rows fill the width;
  * the text rows above them start one cell in. `side` is the drawer (0 left,
  * 1 right) for tooltip placement. `onPick` opens the unit picker;
- * `onPolicy`, when set, makes the policy code a button. The header, the
+ * `onPolicy`, when set, makes the policy code a button; `pin` is the
+ * drawer's pin toggle, on the header's inner side. The header, the pin, the
  * tipped items and the location names are hint targets (`data-hint`) the
  * arrows walk once the sheet has the key focus.
  */
@@ -242,6 +243,7 @@ export function recordSheet(
   side: 0 | 1,
   onPick: (e: MouseEvent) => void,
   onPolicy: (() => void) | null,
+  pin: { on: boolean; toggle: () => void },
 ): TuiNode[] {
   const H = h();
   const textW = SHEET_W - 1;
@@ -288,23 +290,35 @@ export function recordSheet(
   const filled = Math.max(0, Math.min(20, Math.round((heat / HEAT_SCALE_MAX) * 20)));
   const heatCls = heat >= 14 ? "ia-err" : heat >= 5 ? "ia-warn" : "ia-accent";
   const pilotMax = Math.min(8, u.pilotHitMax);
-  // The unit picker: the sheet width less a cell on each side.
-  const head = fit(` ${t("sheet.side", { team: u.team })} : ${u.id}`, SHEET_W - 4);
+  // The unit picker (side and id, then the arrow) and the pin button, the
+  // pin towards the map: right of the picker on the left sheet, left of it
+  // on the right one.
+  const picker = H.el(
+    "span",
+    {
+      class: "ia-sheet-head",
+      key: "pick",
+      attrs: { "data-click": "", ...hintAttrs("head") },
+      onClick: onPick,
+    },
+    span(fit(` ${t("sheet.side", { team: u.team })}: ${u.id}`, SHEET_W - 6), { cls: team }),
+    `${A.pick} `,
+  );
+  const pinBtn = span(pin.on ? M.pinOn : M.pinOff, {
+    cls: pin.on ? "ia-accent" : "ia-dim",
+    key: "pin",
+    tip: t("sheet.pinTip"),
+    onClick: () => pin.toggle(),
+    hint: "pin",
+    ...sheetTip(side),
+  });
+  const gap = " ";
   return [
     H.el(
       "div",
       { class: "ia-row", key: "head" },
       " ",
-      H.el(
-        "span",
-        {
-          class: "ia-sheet-head",
-          attrs: { "data-click": "", ...hintAttrs("head") },
-          onClick: onPick,
-        },
-        span(head, { cls: team }),
-        `${A.pick} `,
-      ),
+      ...(side === 0 ? [picker, gap, pinBtn] : [pinBtn, gap, picker]),
       " ",
     ),
     text(G.th.repeat(textW), { cls: "ia-dim", key: "rule" }),

@@ -145,8 +145,8 @@ export interface SheetDrawer {
   open: boolean;
   /** Last unit shown; kept while closed. Null until first opened. */
   unitId: string | null;
-  /** Open order (higher = opened later); picks the drawer a queue click reuses. */
-  openedAt: number;
+  /** Pinned: the phase policy (`sheetPolicy`) leaves this drawer as it is. */
+  pinned: boolean;
 }
 
 /** Battle screen drawers and the Action Order strip's scroll position. */
@@ -155,13 +155,15 @@ export interface BattleUi {
   logs: boolean;
   /** Action Order (ids and states) the scroll was last centred for; a change re-centres it. */
   queueFor: string | null;
-  /** Actor and attack target whose sheet the right drawer last showed. */
+  /** Turn, phase and actor the sheet policy last opened the drawers for. */
+  sheetFor: string | null;
+  /** Attack target the sheet policy last showed in the right drawer. */
   sheetTarget: string | null;
   /** Turn, actor and attack target the map last framed. */
   frameFor: string | null;
   /** Drawer open states hidden by the LOGS drawer, restored when it closes. */
   logSheets: [boolean, boolean] | null;
-  /** Turn and unit the movement focus (left sheet, map centre) last went to. */
+  /** Turn and mover the map last fitted (`centerPending`). */
   focusFor: string | null;
   /** Fit the mover and its enemies on the map after the next render. */
   centerPending: boolean;
@@ -169,8 +171,6 @@ export interface BattleUi {
   framePending: boolean;
   /** Size of the orders box over the map (cells), null when there is none. */
   menuBox: { cols: number; rows: number } | null;
-  /** Counter behind `SheetDrawer.openedAt`. */
-  seq: number;
   /** Key focus (Tab / X): the left sheet or its tab, the orders panel, the right sheet or tab. */
   focus: BattleFocus;
   /** Hint target (`data-hint`) the focused sheet's cursor sits on; null = its first. */
@@ -184,11 +184,12 @@ export type BattleFocus = 0 | "orders" | 1;
 export function newBattleUi(): BattleUi {
   return {
     sheets: [
-      { open: false, unitId: null, openedAt: 0 },
-      { open: false, unitId: null, openedAt: 0 },
+      { open: false, unitId: null, pinned: false },
+      { open: false, unitId: null, pinned: false },
     ],
     logs: false,
     queueFor: null,
+    sheetFor: null,
     sheetTarget: null,
     frameFor: null,
     logSheets: null,
@@ -196,7 +197,6 @@ export function newBattleUi(): BattleUi {
     centerPending: false,
     framePending: false,
     menuBox: null,
-    seq: 0,
     focus: "orders",
     hint: null,
     attackRow: null,

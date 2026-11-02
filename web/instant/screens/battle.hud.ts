@@ -152,22 +152,29 @@ export function toggleSheet(side: 0 | 1): void {
       d.unitId = order.find((id) => sheetSideOf(id) === side) ?? order[0] ?? null;
     }
     d.open = d.unitId !== null;
-    d.openedAt = ++ui.seq;
   }
   rerender();
 }
 
-/** Show a unit's sheet in its side's drawer (sheetSideOf), unless a drawer
- *  already shows it. */
+/** Show a unit's sheet in its side's drawer (sheetSideOf), or the other one
+ *  when that is pinned, unless a drawer already shows it. Both pinned: nothing. */
 export function openSheetFor(unitId: string): void {
   const ui = app.battleUi;
   setLogs(false);
   const [l, r] = ui.sheets;
   if ((l.open && l.unitId === unitId) || (r.open && r.unitId === unitId)) return;
-  const d = ui.sheets[sheetSideOf(unitId)];
+  const side = sheetSideOf(unitId);
+  const d = ui.sheets[side].pinned ? ui.sheets[side === 0 ? 1 : 0] : ui.sheets[side];
+  if (d.pinned) return;
   d.open = true;
   d.unitId = unitId;
-  d.openedAt = ++ui.seq;
+  rerender();
+}
+
+/** Pin or unpin a drawer: a pinned one keeps its unit and open state through the phase policy. */
+export function togglePin(side: 0 | 1): void {
+  const d = app.battleUi.sheets[side];
+  d.pinned = !d.pinned;
   rerender();
 }
 
@@ -272,6 +279,7 @@ function drawer(side: 0 | 1): TuiNode | null {
     side,
     (e) => pickUnit(side, e.currentTarget instanceof HTMLElement ? e.currentTarget : null),
     u.id === b.actorId && b.actorPersona === null ? () => openPolicy(u.id) : null,
+    { on: d.pinned, toggle: () => togglePin(side) },
   ).forEach((body, i) => {
     const r = DRAWER_ROW + 1 + i;
     const bar = span(r >= TAB_ROW && r <= TAB_ROW + 8 ? " " : F.v, { key: "bar" });
@@ -404,7 +412,7 @@ function nextHint(all: HTMLElement[], from: HTMLElement, dir: readonly [number, 
 
 /**
  * Keys while a sheet has the focus: arrows walk its hint targets, Enter /
- * Space run the header (unit picker), the policy button or a closed tab,
+ * Space run the header (unit picker), the pin, the policy button or a closed tab,
  * Backspace hands the focus back to the orders. Other keys fall through.
  */
 export function sheetKey(e: KeyboardEvent): boolean {
@@ -434,6 +442,7 @@ export function sheetKey(e: KeyboardEvent): boolean {
     ui.focus = side;
     ui.hint = null;
   } else if (hint === "head") pickUnit(side, cur ?? null);
+  else if (hint === "pin") togglePin(side);
   else if (hint === "policy") {
     const id = ui.sheets[side].unitId;
     if (id && id === b.actorId && b.actorPersona === null) openPolicy(id);
@@ -467,10 +476,8 @@ export function toggleLogs(): void {
 }
 
 /**
- * A new unit to move or attack with: its sheet goes in its drawer (or into
- * the state the LOGS drawer restores). For a mover the map then fits it and
- * the enemy units into the clear area; the attack phase frames its target
- * instead (`framePending`).
+ * A new unit to move: the map fits it and the enemy units into the clear
+ * area once (the attack phase frames its target instead, `framePending`).
  */
 export function focusMover(): void {
   const ui = app.battleUi;
@@ -479,12 +486,43 @@ export function focusMover(): void {
   if (b.phase === "over" || b.actorId === null || ui.focusFor === key) return;
   ui.focusFor = key;
   if (b.phase === "movement") ui.centerPending = true;
-  const side = sheetSideOf(b.actorId);
-  const d = ui.sheets[side];
-  d.unitId = b.actorId;
-  d.openedAt = ++ui.seq;
-  if (ui.logSheets) ui.logSheets[side] = true;
-  else d.open = true;
+}
+
+/**
+ * The record sheet policy, the same for Player and persona units: in the
+ * movement phase the left drawer shows the mover and the right one closes;
+ * in the attack phase the right drawer shows the weapon target and the left
+ * one closes. It applies once per new actor (and per new target), so manual
+ * opens, closes and picks hold until then; pinned drawers are left alone.
+ * While the LOGS drawer is open it sets the state LOGS restores.
+ */
+export function sheetPolicy(): void {
+  const ui = app.battleUi;
+  const b = app.battle!;
+  if (b.phase === "over" || b.actorId === null) return;
+  const key = `${b.state.turn}:${b.phase}:${b.actorId}`;
+  const target = b.phase === "attack" ? (b.attack?.targetId ?? null) : null;
+  const fresh = ui.sheetFor !== key;
+  if (!fresh && ui.sheetTarget === target) return;
+  ui.sheetFor = key;
+  ui.sheetTarget = target;
+  const show = (side: 0 | 1, unitId: string | null) => {
+    const d = ui.sheets[side];
+    if (d.pinned) return;
+    if (unitId !== null) d.unitId = unitId;
+    const open = unitId !== null;
+    if (ui.logSheets) ui.logSheets[side] = open;
+    else d.open = open;
+    if (!open && ui.focus === side) ui.focus = "orders";
+  };
+  if (b.phase === "movement") {
+    show(0, b.actorId);
+    show(1, null);
+  } else {
+    // a new target alone leaves the left drawer as the player set it
+    if (fresh) show(0, null);
+    show(1, target);
+  }
 }
 
 /** Fill behind part of the grid, inset half a cell like a kit box background. */
