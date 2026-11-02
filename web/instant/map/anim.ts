@@ -7,7 +7,16 @@
  */
 import type { Facing, HexCoord, UnitDamageState } from "btlib10x";
 
-import { type Beat, beatTime, legTimes, type Shot, SPEED_K, shotGap, T } from "../battle/beats";
+import {
+  type Beat,
+  beatTime,
+  isReel,
+  legTimes,
+  type Shot,
+  SPEED_K,
+  shotGap,
+  T,
+} from "../battle/beats";
 import { locName, t } from "../i18n";
 import type { Banner, BannerPose, FxContext, FxDraw, MapView } from "./view";
 
@@ -61,6 +70,19 @@ interface Lane {
   end: number;
 }
 
+/** What a clip shows: the attack reel, or one unit moving, jumping or else acting. */
+export type ClipStatus =
+  | { readonly kind: "reel" }
+  | { readonly kind: "move" | "jump" | "other"; readonly unitId: string };
+
+export function clipStatus(beats: readonly Beat[]): ClipStatus | null {
+  if (isReel(beats)) return { kind: "reel" };
+  const m = beats.find((b) => b.kind === "move" || b.kind === "jump");
+  if (m && (m.kind === "move" || m.kind === "jump")) return { kind: m.kind, unitId: m.unitId };
+  const first = beats[0];
+  return first && "unitId" in first ? { kind: "other", unitId: first.unitId } : null;
+}
+
 export class MapAnimator {
   private clip: Lane | null = null;
   private decor: Lane[] = [];
@@ -74,10 +96,36 @@ export class MapAnimator {
   private tickRows = new Map<string, number>();
   private done: (() => void)[] = [];
   private view: MapView | null = null;
+  /** What the playing clip shows, for the orders panel; null when idle. */
+  status: ClipStatus | null = null;
+  /** When the clock stopped (`pause`), else null. */
+  private pausedAt: number | null = null;
 
-  /** A clip is playing (play holds, input skips it). */
+  /** A clip is playing, paused or not (play holds, commit keys skip it). */
   get busy(): boolean {
     return this.clip !== null;
+  }
+
+  /** The clock is stopped: the map keeps the frozen frame until `resume`. */
+  get paused(): boolean {
+    return this.pausedAt !== null;
+  }
+
+  /** Stop the clock (the battle menu is open); nothing moves until `resume`. */
+  pause(): void {
+    if (this.pausedAt !== null || !this.clip) return;
+    this.pausedAt = performance.now();
+  }
+
+  /** Restart the clock where `pause` stopped it. */
+  resume(): void {
+    const at = this.pausedAt;
+    if (at === null) return;
+    this.pausedAt = null;
+    const gap = performance.now() - at;
+    if (this.clip) this.clip.t0 += gap;
+    for (const lane of this.decor) lane.t0 += gap;
+    this.view?.wake(true);
   }
 
   /** The banners the map shows while a clip plays. */
@@ -111,6 +159,7 @@ export class MapAnimator {
       return;
     }
     const end = Math.max(...items.map((i) => i.at + i.dur));
+    this.status = clipStatus(input.beats);
     this.clip = { t0: performance.now(), items, end };
     view.banners = this.shown;
     view.wake(true);
@@ -145,6 +194,8 @@ export class MapAnimator {
 
   private finish(): void {
     this.clip = null;
+    this.status = null;
+    this.pausedAt = null;
     this.shown = [];
     this.poses.clear();
     this.layers = { under: [], mid: [], over: [] };
@@ -186,6 +237,8 @@ export class MapAnimator {
   }
 
   private frame(now: number): boolean {
+    // paused: the frame drawn last stays; `resume` wakes the view again
+    if (this.pausedAt !== null) return false;
     this.poses.clear();
     this.layers = { under: [], mid: [], over: [] };
     const run = (lane: Lane) => {

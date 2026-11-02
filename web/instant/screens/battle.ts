@@ -302,6 +302,17 @@ function orders(): Orders {
     done,
     title,
   });
+  // the map is still catching up: say what it plays, not the prompt already waiting
+  const clip = animator.status;
+  if (animator.busy && clip) {
+    const text =
+      clip.kind === "reel"
+        ? t("anim.status.reel")
+        : t(`anim.status.${clip.kind}`, { id: clip.unitId });
+    const paused = animator.paused ? t("anim.status.paused") : "";
+    const [row, w] = textRow(`${text}${paused}`, "ia-accent", "clip");
+    return out([row], w, false);
+  }
   if (!u) return out([], 0, false);
   if (b.actorPersona !== null) {
     const [ai, w] = textRow(t("orders.aiActing", { id: u.id }), "ia-accent", "ai");
@@ -363,8 +374,9 @@ export function battleScreen(): TuiNode {
   focusMover();
   sheetPolicy();
   const o = orders();
+  const clip = animator.busy;
   // a persona waits for Enter (A) or a click on NEXT
-  const stepping = b.actorPersona !== null && app.aiPace === "step" && b.result === null;
+  const stepping = !clip && b.actorPersona !== null && app.aiPace === "step" && b.result === null;
   app.battleUi.menuBox =
     o.menu.length > 0 ? { cols: Math.min(BODY.cols, o.width + 2), rows: o.menu.length + 2 } : null;
   const map = at(
@@ -377,6 +389,14 @@ export function battleScreen(): TuiNode {
     },
     mapSlot(),
   );
+  const menuKey: StatusKey = [
+    "Esc",
+    "key.menu",
+    () => {
+      openMenu();
+      rerender();
+    },
+  ];
   return H.el(
     "div",
     { class: "ia-root ia-battle" },
@@ -384,36 +404,43 @@ export function battleScreen(): TuiNode {
       title(),
       [
         map,
-        o.done
-          ? doneButton(() => commit())
-          : stepping
-            ? doneButton(() => pumpAi(true), "orders.stepButton")
-            : null,
+        clip
+          ? doneButton(() => skipClip(), "orders.skipButton")
+          : o.done
+            ? doneButton(() => commit())
+            : stepping
+              ? doneButton(() => pumpAi(true), "orders.stepButton")
+              : null,
       ],
       o.menu.length > 0 ? [topMenu(o.menu, o.width, BODY.row, o.title)] : [],
     ),
     statusbar(
-      statusKeys([
-        ...regionKeys(b.actorPersona !== null),
-        // F10 closes an attack dialog instead of committing
-        ...(o.done && !attackDialogOpen() ? [["F10", "key.done", () => commit()] as const] : []),
-        ...(stepping ? [["Enter", "key.step", () => pumpAi(true)] as const] : []),
-        ["Tab", "key.focus", () => cycleFocus(1)],
-        ["[", "key.sheetLeft", () => toggleSheet(0)],
-        ["]", "key.sheetRight", () => toggleSheet(1)],
-        ["L", "key.logs", () => toggleLogs()],
-        [
-          "Esc",
-          "key.menu",
-          () => {
-            openMenu();
-            rerender();
-          },
-        ],
-      ]),
+      statusKeys(
+        clip
+          ? [["Enter", "key.skip", () => skipClip()], menuKey]
+          : [
+              ...regionKeys(b.actorPersona !== null),
+              // F10 closes an attack dialog instead of committing
+              ...(o.done && !attackDialogOpen()
+                ? [["F10", "key.done", () => commit()] as const]
+                : []),
+              ...(stepping ? [["Enter", "key.step", () => pumpAi(true)] as const] : []),
+              ["Tab", "key.focus", () => cycleFocus(1)],
+              ["[", "key.sheetLeft", () => toggleSheet(0)],
+              ["]", "key.sheetRight", () => toggleSheet(1)],
+              ["L", "key.logs", () => toggleLogs()],
+              menuKey,
+            ],
+      ),
     ),
     app.modal ? battleModal() : null,
   );
+}
+
+/** SKIP (or Enter on its hint): the map jumps to the result; play goes on from there. */
+function skipClip(): void {
+  animator.skip();
+  rerender();
 }
 
 function commit(): void {

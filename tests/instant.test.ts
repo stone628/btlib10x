@@ -32,6 +32,8 @@ import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
 import { en } from "../web/instant/i18n/en";
 import { ko } from "../web/instant/i18n/ko";
 import { commitAlias } from "../web/instant/input";
+import { clipStatus, MapAnimator } from "../web/instant/map/anim";
+import type { MapView } from "../web/instant/map/view";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
 import { battleKey } from "../web/instant/screens/battle";
@@ -813,6 +815,65 @@ describe("Instant Action map animation beats", () => {
       }
       const keys = volleys.map((v) => (v.kind === "volley" ? `${v.attackerId}>${v.targetId}` : ""));
       expect(new Set(keys).size).toBe(keys.length);
+    }
+  });
+
+  it("names what a clip plays for the orders panel", () => {
+    let reels = 0;
+    let moves = 0;
+    for (const r of steps(42)) {
+      const beats = buildBeats(r.events, r.move);
+      const st = clipStatus(beats);
+      if (isReel(beats)) {
+        reels++;
+        expect(st).toEqual({ kind: "reel" });
+      } else if (r.move && beats.some((x) => x.kind === "move" || x.kind === "jump")) {
+        moves++;
+        expect(st && st.kind !== "reel" && st.unitId).toBe(r.actorId);
+      }
+    }
+    expect(reels).toBeGreaterThan(0);
+    expect(moves).toBeGreaterThan(0);
+    expect(clipStatus([])).toBeNull();
+  });
+
+  it("pauses a clip's clock and runs it on from there", () => {
+    const r = steps(42).find((x) => x.move && x.events.some((e) => e.kind === "moved"));
+    const beats = buildBeats(r!.events, r!.move);
+    const view = {
+      banners: [],
+      poses: new Map(),
+      fx: {},
+      onFrame: null as ((now: number) => boolean) | null,
+      wake: vi.fn(),
+    };
+    let now = 1000;
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
+    try {
+      const a = new MapAnimator();
+      const input = { banners: [], beats, k: 1, reduced: true, sub: () => null };
+      a.play(view as unknown as MapView, input);
+      expect(a.busy).toBe(true);
+      now = 1050;
+      expect(view.onFrame!(now)).toBe(true);
+      expect(a.status?.kind).toBe(beats.some((x) => x.kind === "jump") ? "jump" : "move");
+      a.pause();
+      now = 60_000; // far past the clip's end, but the clock is stopped
+      expect(view.onFrame!(now)).toBe(false);
+      expect(a.busy && a.paused).toBe(true);
+      a.resume();
+      expect(a.paused).toBe(false);
+      expect(view.wake).toHaveBeenLastCalledWith(true);
+      expect(view.onFrame!(now + 10)).toBe(true); // 60 ms into the clip again
+      expect(view.onFrame!(now + 10_000)).toBe(false);
+      expect(a.busy).toBe(false);
+      expect(a.status).toBeNull();
+      a.play(view as unknown as MapView, input);
+      a.pause();
+      a.skip(); // ends a paused clip too
+      expect(a.busy || a.paused).toBe(false);
+    } finally {
+      clock.mockRestore();
     }
   });
 

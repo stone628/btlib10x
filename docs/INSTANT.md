@@ -361,9 +361,20 @@ and the log are final at once; the map's banners catch up beat by beat.
 - **Pace**: timed waits for the clip, then 0.6 s; step plays it after Enter;
   instant skips persona moves and plays the attack reel at Fast. Player moves
   always play. Persona play holds while a clip runs.
-- **Skip**: any key, pad button or click while a clip plays ends it at once
-  (the map jumps to the result) and does nothing else, so a press meant for
-  the next prompt never lands on the old one.
+- **Skip**: Enter / Space / F10 / Backspace (pad A, Y, B) or a press on the
+  map while a clip plays end it at once (the map jumps to the result) and do
+  nothing else, so a press meant for the next prompt never lands on the old
+  one. Esc opens the battle menu and pauses the clip until the menu closes
+  (Options and Policies opened from it keep it paused); Animations set to Off
+  there ends it. L, Tab, `[` / `]`, zoom, pan, turn and frame (PgUp / PgDn,
+  Shift+arrows, Shift+PgUp / PgDn, Home) work during a clip without ending
+  it; any other key is ignored until it ends. With a dialog open, keys go to
+  the dialog.
+- **Orders panel**: while a clip plays it says what the map shows (`A1
+  moving…`, `A1 jumping…`, `A1 acting…`, `Resolving attacks…`, with
+  `(paused)` while the battle menu is open) instead of the prompt already
+  waiting, with a SKIP button and only Enter Skip / Esc Menu in the status
+  bar; the next prompt comes back when the clip ends or is skipped.
 - **Setting**: Animations in the battle menu, Full / Fast (half the time) /
   Off, kept in localStorage (`bt10x.instant.anim`); Fast by default when the
   OS asks for reduced motion, which also turns travel, shakes and rises into
@@ -460,7 +471,7 @@ space there; pad B leaves the box (a pad cannot type).
 | Choose 'Mech | opens on the list (its cursor row is the one Tab stop); list: ↑ ↓ PgUp PgDn move, Enter / Space use, ↑ past the first row to the filters, → to Use; on a dropdown, the search or a button, arrows move to the nearest control (the list's cursor row too; Enter opens a dropdown); in the search ↑ ↓ leave it, Enter goes to the list; Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Choose Control | opens on the list at the slot's current control; ↑ ↓ move (the detail follows), PgUp / Home first, PgDn / End last, Enter / Space / double-click use, → to Use; on a button or a hint target, arrows move to the nearest control (the weight labels and setting keys too, which show their tooltip while focused; ← back to the list); Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, Options) |
-| Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), Shift+`[` / `]` pin / unpin it, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat); while a map animation plays, any key, pad button or click only skips it |
+| Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), Shift+`[` / `]` pin / unpin it, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat); while a map animation plays, Enter / Space / F10 / Backspace or a press on the map only skip it, Esc opens the menu and pauses it, view keys work and other keys are ignored |
 | Battle, a sheet focused | arrows move to the nearest hint target that way (header, pin, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the pin toggle it, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
 | Movement | ← → along the mode bar; on Hold, Enter / Space open its dropdown on the held choice, ↓ / ↑ open it one choice after / before it, round the list (nothing held: ↓ the first, ↑ the last); Enter / Space on a mode choose it (another mode drops the landing); Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
 | Attack | ↑ ↓ Twist, Weapon Target, weapons button, physical attacks button, Club (hidden and dim rows skipped); ← → previous / next target on Weapon Target, previous / next action on Club, else twist; Enter / Space step the twist, next target or club action, or open the button's dialog; F10 done (with nothing checked, a Pass? confirm) |

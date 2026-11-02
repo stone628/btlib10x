@@ -6,7 +6,7 @@
 import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
 import { animator, applyScreenView, ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
-import { commitAlias, initInput, mapKey, stepFocus } from "./input";
+import { bracket, commitAlias, initInput, isLogsKey, mapKey, stepFocus } from "./input";
 import motdText from "./MOTD.txt";
 import {
   fitFont,
@@ -267,6 +267,28 @@ function syncFontButtons(): void {
 // Esc (pad B) or a click on the backdrop closes it and gives the focus back to
 // the app. A dot on the button marks text this browser has not opened yet
 // (hash kept in localStorage, every access guarded).
+/** Keys that only look (menu, logs, focus, sheets, zoom, pan, turn, frame). */
+const CLIP_PASS = new Set([
+  "Escape",
+  "Tab",
+  "PageUp",
+  "PageDown",
+  "Home",
+  "Shift",
+  "Control",
+  "Alt",
+  "Meta",
+]);
+const CLIP_SKIP = new Set(["Enter", " ", "F10", "Backspace"]);
+const ARROWS = new Set(["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"]);
+
+/** A key pressed while a map clip plays: it passes, skips the clip, or waits (swallowed). */
+function clipKey(e: KeyboardEvent): "pass" | "skip" | "wait" {
+  if (CLIP_PASS.has(e.key) || isLogsKey(e) || bracket(e)) return "pass";
+  if (e.shiftKey && ARROWS.has(e.key)) return "pass";
+  return CLIP_SKIP.has(e.key) ? "skip" : "wait";
+}
+
 const MOTD_SEEN_KEY = "bt10x.ia.motd.seen";
 const motdDialog = document.getElementById("motd") as HTMLDialogElement | null;
 
@@ -407,13 +429,17 @@ async function boot(): Promise<void> {
     const el = e.target;
     if (el instanceof HTMLElement && el.closest("#app") && !el.closest(".ia-modal")) lastFocus = el;
   });
-  // Any key, pad button or click skips a running map animation, and does nothing else.
+  // While a map animation plays: Enter / Space / F10 / Backspace (pad A, Y, B)
+  // or a press on the map skip it and do nothing else; Esc (the battle menu,
+  // which pauses it) and view keys pass; any other key waits for the clip.
   const skipClip = (e: Event) => {
-    if (app.screen !== "battle" || !animator.busy) return;
-    if (e instanceof KeyboardEvent && ["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+    if (app.screen !== "battle" || !animator.busy || app.modal || kitModal.open) return;
+    const k = e instanceof KeyboardEvent ? clipKey(e) : null;
+    if (k === "pass") return;
+    if (!k && !(e.target instanceof Node && app.mapView?.canvas.contains(e.target))) return;
     e.preventDefault();
     e.stopImmediatePropagation();
-    animator.skip();
+    if (k !== "wait") animator.skip();
   };
   document.addEventListener("keydown", skipClip, true);
   document.addEventListener("pointerdown", skipClip, true);

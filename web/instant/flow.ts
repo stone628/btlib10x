@@ -336,6 +336,8 @@ function animateStep(battle: BattleController, step: StepRecord): void {
       return bannerSub(look, battle.totals[id]);
     },
   });
+  // the orders panel shows the clip's status until it ends (step pace has no pump waiting)
+  animator.whenDone(() => rerender());
   pinged = null;
 }
 
@@ -486,8 +488,14 @@ let aiHeld = false;
 export function holdAi(on: boolean): void {
   if (aiHeld === on) return;
   aiHeld = on;
-  if (on) stopAi();
-  else pumpAi();
+  // a map clip freezes with play and runs on when it resumes
+  if (on) {
+    stopAi();
+    animator.pause();
+  } else {
+    animator.resume();
+    pumpAi();
+  }
 }
 
 /** Advance persona prompts at the chosen pace until a Player prompt or the end. */
