@@ -232,3 +232,68 @@ export function nearest(from: HTMLElement, all: HTMLElement[], arrow: string): H
   }
   return best;
 }
+
+/** Focusable controls of the open modal, in screen order (a list counts its cursor row). */
+export function modalFocusables(): HTMLElement[] {
+  return Array.from(
+    document.querySelectorAll<HTMLElement>(
+      "#app .ia-modal button:not(:disabled), #app .ia-modal input:not([type=hidden]), #app .ia-modal [data-listrow][tabindex='0']",
+    ),
+  ).filter((el) => el.offsetParent !== null);
+}
+
+/** Tab / Shift+Tab: the next / previous control of the open dialog, wrapping (Tab keeps inside it). */
+export function cycleModalFocus(dir: number): void {
+  const els = modalFocusables();
+  if (els.length === 0) return;
+  const i = els.indexOf(document.activeElement as HTMLElement);
+  const next = i < 0 ? 0 : (i + (dir < 0 ? els.length - 1 : 1)) % els.length;
+  els[next]!.focus();
+}
+
+/** A dialog list's cursor row (its one Tab stop), if the list has rows. */
+export function listRow(win: ParentNode): HTMLElement | null {
+  return win.querySelector<HTMLElement>('[data-listrow][tabindex="0"]');
+}
+
+/**
+ * Arrows in a dialog with a roving-focus list (Choose 'Mech, Choose
+ * Control): on the list (or with nothing focused) ↑ ↓ move the cursor via
+ * `move`, and ↑ past the first row, ↓ past the last or ← → leave it for the
+ * nearest control that way (→ with none there: the `[data-use]` button). On a
+ * control every arrow moves to the nearest control, the list's cursor row
+ * and the dialog's hint targets included (← with none there: the list).
+ * Hint targets take arrows only, never Tab.
+ */
+export function listArrow(
+  key: string,
+  cursor: number,
+  length: number,
+  move: (to: number) => void,
+): void {
+  const win = document.querySelector<HTMLElement>("#app .ia-modal");
+  if (!win) return;
+  const el = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+  const onList = !el || !win.contains(el) || el.hasAttribute("data-listrow");
+  const vertical = key === "ArrowDown" || key === "ArrowUp";
+  const step = key === "ArrowDown" ? 1 : -1;
+  if (onList && vertical && cursor + step >= 0 && cursor + step < length) {
+    move(cursor + step);
+    return;
+  }
+  const rowEl = listRow(win);
+  const hints = Array.from(win.querySelectorAll<HTMLElement>("[data-hint]")).filter(
+    (h) => h.offsetParent !== null,
+  );
+  const all = [...modalFocusables(), ...hints];
+  const from = onList ? rowEl : el;
+  if (!from) {
+    all[0]?.focus();
+    return;
+  }
+  const next = nearest(from, all, key);
+  if (next) next.focus();
+  else if (onList && key === "ArrowRight")
+    win.querySelector<HTMLElement>("button[data-use]:not(:disabled)")?.focus();
+  else if (!onList && key === "ArrowLeft" && rowEl) rowEl.focus();
+}

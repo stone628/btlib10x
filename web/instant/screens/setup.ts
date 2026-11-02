@@ -1,7 +1,8 @@
 /**
  * Screen 1: New Battle. Both sides, the map preview and the match options on
  * one 100×31 window; ID, seed and turn limit edit in an input dialog, the
- * 'Mech in the Choose 'Mech dialog, policies in their own dialog.
+ * 'Mech in the Choose 'Mech dialog, the control in Choose Control
+ * (`setup.persona.ts`), policies in their own dialog.
  */
 import {
   catalogMaps,
@@ -11,7 +12,6 @@ import {
   heatDissipationMax,
   type Location,
 } from "btlib10x";
-import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../ai/persona.data";
 import { launch, mapSource } from "../flow";
 import { locName, t } from "../i18n";
 import { bracket } from "../input";
@@ -39,8 +39,30 @@ import {
 import { AI_PACES, app, kitModal, type Modal, rerender, setAiPace } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
-import { blank, controls, fit, h, kit, mapSlot, modal, nearest, row, statusbar } from "./common";
+import {
+  blank,
+  controls,
+  cycleModalFocus,
+  fit,
+  h,
+  kit,
+  listArrow,
+  listRow,
+  mapSlot,
+  modal,
+  modalFocusables,
+  nearest,
+  row,
+  statusbar,
+} from "./common";
 import { closesMessage, menuKey, menuWindow, openMenu, prefItems } from "./menu";
+import {
+  controlName,
+  personaArrow,
+  personaBrowser,
+  personaKey,
+  personaModal,
+} from "./setup.persona";
 
 const { GRID: G, MARK: M, ARROW: A } = UI_THEME;
 
@@ -52,16 +74,14 @@ const HIT_MAXES = Array.from(
   { length: PILOT_HIT_MAX - PILOT_HIT_MIN + 1 },
   (_, i) => PILOT_HIT_MIN + i,
 );
-const CONTROLS: (PersonaKey | null)[] = [null, ...PERSONA_KEYS];
 const MODES = [null, "destroyAll", "damageRace"] as const;
+
+/** `data-return` of the button whose dialog is open: it takes the focus back on close. */
+let returnFocus: string | null = null;
 
 /** Width of the map box, and of the config column beside it. */
 const MAP_COLS = 50;
 const CFG = 46;
-
-function controlName(p: PersonaKey | null): string {
-  return p === null ? t("ctl.player") : PERSONAS[p].name;
-}
 
 /** Wrap kit controls and text into one text row. */
 function line(key: string, ...kids: (TuiNode | string)[]): TuiNode {
@@ -69,8 +89,17 @@ function line(key: string, ...kids: (TuiNode | string)[]): TuiNode {
 }
 
 /** `[x]` button; `fit` pads the label to a fixed width first. */
-function tight(key: string, text: string, onClick: () => void, cls?: string): TuiNode {
-  return h().btn({ key, variant: "tight", onClick, ...(cls ? { class: cls } : {}) }, text);
+function tight(
+  key: string,
+  text: string,
+  onClick: () => void,
+  cls?: string,
+  attrs?: Record<string, string>,
+): TuiNode {
+  return h().btn(
+    { key, variant: "tight", onClick, ...(cls ? { class: cls } : {}), ...(attrs ? { attrs } : {}) },
+    text,
+  );
 }
 
 /** `[ x ]` button. */
@@ -231,9 +260,11 @@ function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
       "mech",
       fit(mech, 26, def ? "left" : "center"),
       () => {
+        returnFocus = `mech-${side}-${i}`;
         app.modal = mechModal(side, i);
       },
       "ia-slot-mech",
+      { "data-return": `mech-${side}-${i}` },
     ),
     " ",
     fit(def ? def.bv : "-", 5, "right"),
@@ -244,7 +275,18 @@ function slotRow(side: 0 | 1, i: number, s: Slot): TuiNode {
     "  ",
     select("hit", 6, HIT_MAXES, s.pilotHitMax, String, (v) => (s.pilotHitMax = v)),
     "  ",
-    select("ctl", 18, CONTROLS, s.persona, controlName, (v) => (s.persona = v)),
+    h().btn(
+      {
+        key: "ctl",
+        variant: "tight",
+        attrs: { "data-return": `ctl-${side}-${i}` },
+        onClick: () => {
+          returnFocus = `ctl-${side}-${i}`;
+          app.modal = personaModal(side, i);
+        },
+      },
+      fit(controlName(s.persona), 16),
+    ),
     "  ",
     tight("pol", M.more, () => {
       app.modal = {
@@ -720,7 +762,7 @@ function mechBrowser(m: Extract<Modal, { kind: "mech" }>): TuiNode {
         key: e.model,
         class: `ia-row${i === m.cursor ? " sel" : ""}`,
         // Roving focus: only the cursor row is a Tab stop; ↑ ↓ move it.
-        attrs: { "data-click": "", "data-mechrow": "", tabindex: i === m.cursor ? "0" : "-1" },
+        attrs: { "data-click": "", "data-listrow": "", tabindex: i === m.cursor ? "0" : "-1" },
         onClick: () => {
           m.cursor = i;
         },
@@ -965,45 +1007,13 @@ function mechKey(e: KeyboardEvent, m: Extract<Modal, { kind: "mech" }>): boolean
   return true;
 }
 
-/** The Choose 'Mech list's cursor row (its one Tab stop), if the list has rows. */
-function mechRow(win: ParentNode): HTMLElement | null {
-  return win.querySelector<HTMLElement>('[data-mechrow][tabindex="0"]');
-}
-
-/**
- * Choose 'Mech arrows, as on the deployment unit list: on the list (or with
- * nothing focused) ↑ ↓ move the cursor, and ↑ past the first row, ↓ past the
- * last or ← → leave it for the nearest control that way (→ with none there:
- * Use). On a control (dropdown, search, button) every arrow moves to the
- * nearest control, the list's cursor row included (← with none there: the
- * list).
- */
+/** Choose 'Mech arrows: the shared dialog-list arrows (`listArrow`) over the filtered list. */
 function mechArrow(key: string, m: Extract<Modal, { kind: "mech" }>): void {
-  const win = document.querySelector<HTMLElement>("#app .ia-modal");
-  if (!win) return;
-  const el = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-  const onList = !el || !win.contains(el) || el.hasAttribute("data-mechrow");
-  const vertical = key === "ArrowDown" || key === "ArrowUp";
-  const step = key === "ArrowDown" ? 1 : -1;
-  const list = filterMechs(m.filter);
-  if (onList && vertical && m.cursor + step >= 0 && m.cursor + step < list.length) {
-    m.cursor += step;
+  listArrow(key, m.cursor, filterMechs(m.filter).length, (to) => {
+    m.cursor = to;
     m.reveal = true;
     m.focusList = true;
-    return;
-  }
-  const rowEl = mechRow(win);
-  const all = [...modalFocusables()];
-  const from = onList ? rowEl : el;
-  if (!from) {
-    all[0]?.focus();
-    return;
-  }
-  const next = nearest(from, all, key);
-  if (next) next.focus();
-  else if (onList && key === "ArrowRight")
-    win.querySelector<HTMLElement>("button[data-use]:not(:disabled)")?.focus();
-  else if (!onList && key === "ArrowLeft" && rowEl) rowEl.focus();
+  });
 }
 
 // ------------------------------------------------------------ modals, keys
@@ -1012,6 +1022,8 @@ function modalNode(m: Modal): TuiNode | null {
   switch (m.kind) {
     case "mech":
       return mechBrowser(m);
+    case "persona":
+      return personaBrowser(m);
     case "input":
       return inputWindow(m);
     case "policy":
@@ -1031,24 +1043,6 @@ function modalNode(m: Modal): TuiNode | null {
   }
 }
 
-/** Focusable controls of the open modal, in screen order. */
-function modalFocusables(): HTMLElement[] {
-  return Array.from(
-    document.querySelectorAll<HTMLElement>(
-      "#app .ia-modal button:not(:disabled), #app .ia-modal input:not([type=hidden]), #app .ia-modal [data-mechrow][tabindex='0']",
-    ),
-  ).filter((el) => el.offsetParent !== null);
-}
-
-/** Tab / Shift+Tab: the next / previous control of the open dialog, wrapping (Tab keeps inside it). */
-function cycleModalFocus(dir: number): void {
-  const els = modalFocusables();
-  if (els.length === 0) return;
-  const i = els.indexOf(document.activeElement as HTMLElement);
-  const next = i < 0 ? 0 : (i + (dir < 0 ? els.length - 1 : 1)) % els.length;
-  els[next]!.focus();
-}
-
 export function setupKey(e: KeyboardEvent): boolean {
   const m = app.modal;
   if (m) {
@@ -1063,6 +1057,7 @@ export function setupKey(e: KeyboardEvent): boolean {
       return true;
     }
     if (m.kind === "mech") return mechKey(e, m);
+    if (m.kind === "persona") return personaKey(e, m);
     if (e.key === "Escape" || e.key === "Backspace") {
       app.modal = null;
       return true;
@@ -1137,12 +1132,16 @@ function stepGroup(dir: number): void {
 /**
  * New Battle arrows, ahead of the kit's own keys (capture phase): every arrow
  * moves the focus to the nearest control that way, a dropdown included (Enter
- * opens it to change the value); in Choose 'Mech, `mechArrow`. True when taken.
+ * opens it to change the value); in Choose 'Mech and Choose Control, their list arrows. True when taken.
  */
 export function setupArrow(e: KeyboardEvent): boolean {
   if (e.shiftKey || !e.key.startsWith("Arrow")) return false;
   if (app.modal?.kind === "mech") {
     mechArrow(e.key, app.modal);
+    return true;
+  }
+  if (app.modal?.kind === "persona") {
+    personaArrow(e.key, app.modal);
     return true;
   }
   if (app.modal) return false;
@@ -1162,6 +1161,12 @@ export function setupArrow(e: KeyboardEvent): boolean {
 /** After each setup render: focus a newly opened dialog, keep the list cursor in view. */
 export function setupAfterRender(): void {
   const m = app.modal;
+  // a dialog just closed: back to the button that opened it
+  if (!m && returnFocus !== null) {
+    const opener = document.querySelector<HTMLElement>(`#app [data-return="${returnFocus}"]`);
+    returnFocus = null;
+    opener?.focus();
+  }
   // nothing focused (the screen just opened): start on the first 'Mech, else the first control
   if (!m && (document.activeElement === document.body || !document.activeElement)) {
     const root = document.querySelector<HTMLElement>("#app .ia-root");
@@ -1175,12 +1180,12 @@ export function setupAfterRender(): void {
     if (m?.kind === "input" && inp) {
       inp.focus();
       inp.select();
-    } else if (m?.kind !== "mech") modalFocusables()[0]?.focus();
+    } else if (m?.kind !== "mech" && m?.kind !== "persona") modalFocusables()[0]?.focus();
   }
-  if (m?.kind === "mech" && m.focusList && win) {
+  if ((m?.kind === "mech" || m?.kind === "persona") && m.focusList && win) {
     m.focusList = false;
     // an empty list leaves the focus on the first control (the search)
-    const target = mechRow(win) ?? modalFocusables()[0];
+    const target = listRow(win) ?? modalFocusables()[0];
     target?.focus({ preventScroll: true });
   }
   if (m?.kind === "mech" && m.reveal) {

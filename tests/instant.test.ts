@@ -17,7 +17,7 @@ import {
   type UnitState,
 } from "btlib10x";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { PersonaKey } from "../web/instant/ai/persona.data";
+import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../web/instant/ai/persona.data";
 import { BattleController } from "../web/instant/battle/controller";
 import {
   autoPlace,
@@ -28,6 +28,8 @@ import {
   setupRng,
 } from "../web/instant/battle/deploy";
 import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
+import { en } from "../web/instant/i18n/en";
+import { ko } from "../web/instant/i18n/ko";
 import { commitAlias } from "../web/instant/input";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
@@ -47,6 +49,13 @@ import { debriefKey } from "../web/instant/screens/debrief";
 import { closesMessage, menuKey, openMenu, prefItems } from "../web/instant/screens/menu";
 import { openOptions, optionsKey } from "../web/instant/screens/options";
 import { pileTip } from "../web/instant/screens/piles";
+import {
+  CONTROLS,
+  personaFacts,
+  personaKey,
+  personaModal,
+  weightMax,
+} from "../web/instant/screens/setup.persona";
 import { titleItems, titleKey } from "../web/instant/screens/title";
 import {
   addedSlot,
@@ -860,6 +869,80 @@ describe("Instant Action setup", () => {
       expect(bvOf(s.model)).toBeGreaterThanOrEqual(avg * 0.9);
       expect(bvOf(s.model)).toBeLessThanOrEqual(avg * 1.1);
     }
+  });
+
+  describe("Choose Control dialog", () => {
+    const ev = (key: string) => ({ key, code: "", shiftKey: false }) as KeyboardEvent;
+    const open = () => {
+      const l = emptyLoadout();
+      l.sides[0].push(addedSlot(createRng(1), l, 0)!);
+      app.loadout = l;
+      app.modal = personaModal(0, 0);
+      return {
+        slot: l.sides[0][0]!,
+        m: app.modal as Extract<typeof app.modal, { kind: "persona" }>,
+      };
+    };
+    afterEach(() => {
+      app.modal = null;
+    });
+
+    it("opens on the slot's current control and lists Player first", () => {
+      expect(CONTROLS).toEqual([null, ...PERSONA_KEYS]);
+      const { slot, m } = open();
+      expect(CONTROLS[m.cursor]).toBe(slot.persona);
+      expect(m.focusList).toBe(true);
+    });
+
+    it("Enter uses the highlighted control; Esc and Backspace keep the old one", () => {
+      for (const k of ["Escape", "Backspace"]) {
+        const { slot, m } = open();
+        const before = slot.persona;
+        expect(personaKey(ev("End"), m)).toBe(true);
+        expect(personaKey(ev(k), m)).toBe(true);
+        expect(app.modal).toBeNull();
+        expect(slot.persona).toBe(before);
+      }
+      const { slot, m } = open();
+      expect(personaKey(ev("End"), m)).toBe(true);
+      expect(personaKey(ev("Enter"), m)).toBe(true);
+      expect(app.modal).toBeNull();
+      expect(slot.persona).toBe("dispossessed");
+      const again = open();
+      again.slot.persona = "alpha";
+      app.modal = personaModal(0, 0);
+      const m2 = app.modal as Extract<typeof app.modal, { kind: "persona" }>;
+      expect(personaKey(ev("Home"), m2)).toBe(true);
+      expect(personaKey(ev(" "), m2)).toBe(true);
+      expect(again.slot.persona).toBeNull(); // Player
+      expect(personaKey(ev("a"), m2)).toBe(false);
+    });
+
+    it("reads the detail from the persona table", () => {
+      const facts = (k: PersonaKey) =>
+        Object.fromEntries(personaFacts(PERSONAS[k]).map(([label, value]) => [label, value]));
+      expect(facts("hulldown")["Heat limit"]).toBe("4 Cold, 9 Hot within medium range");
+      expect(facts("alpha")["Heat limit"]).toBe("13 Redline (shutdown roll at 14)");
+      expect(facts("alpha")["Jump jets"]).toBe("never");
+      expect(facts("gladiator")["Yields at"]).toBe("never");
+      expect(facts("dispossessed")["Yields at"]).toBe("60% left, 75% while ahead, or no guns left");
+      expect(facts("dispossessed").Ammo).toBe("Miser: TN ≤ 7, keeps 50%, energy first");
+      expect(facts("longtom").Ammo).toBe("Conservative: TN ≤ 8, keeps 25%");
+      expect(facts("pitfighter")["Yields at"]).toBe("20% left");
+      expect(personaFacts(PERSONAS.alpha).every(([, , hint]) => hint !== "")).toBe(true);
+      expect(weightMax("melee")).toBe(4);
+      expect(weightMax("cover")).toBe(3);
+      expect(weightMax("exposed")).toBe(1.5);
+    });
+
+    it("has a role line and a body for Player and every persona in both locales", () => {
+      for (const k of ["player", ...PERSONA_KEYS]) {
+        for (const cat of [en, ko] as Record<string, string>[]) {
+          expect(cat[`persona.tag.${k}`]).toBeTruthy();
+          expect(cat[`persona.body.${k}`]).toBeTruthy();
+        }
+      }
+    });
   });
 
   it("Random battle sets no Player slot", () => {

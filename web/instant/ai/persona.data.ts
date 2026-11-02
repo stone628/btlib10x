@@ -76,16 +76,32 @@ export function isMeleeBiased(persona: Persona): boolean {
   return persona.melee === "seeks" || persona.melee === "first";
 }
 
-const COLD = 4;
-const WARM = 7;
-const HOT = 9;
-const REDLINE = 13;
-const OVERDRIVE = 30;
+/** Heat ceilings by Heat Scale step (see the header). */
+export const HEAT_STEPS = { cold: 4, warm: 7, hot: 9, redline: 13, overdrive: 30 } as const;
+export type HeatStep = keyof typeof HEAT_STEPS;
 
-const FREE: AmmoDiscipline = { maxTn: 12, reserve: 0, energyFirst: false };
-const MEASURED: AmmoDiscipline = { maxTn: 10, reserve: 0, energyFirst: false };
-const CONSERVATIVE: AmmoDiscipline = { maxTn: 8, reserve: 0.25, energyFirst: false };
-const MISER: AmmoDiscipline = { maxTn: 7, reserve: 0.5, energyFirst: true };
+const COLD = HEAT_STEPS.cold;
+const WARM = HEAT_STEPS.warm;
+const HOT = HEAT_STEPS.hot;
+const REDLINE = HEAT_STEPS.redline;
+const OVERDRIVE = HEAT_STEPS.overdrive;
+
+/** Ammo discipline levels; personas share these objects. */
+export const AMMO_LEVELS = {
+  free: { maxTn: 12, reserve: 0, energyFirst: false },
+  measured: { maxTn: 10, reserve: 0, energyFirst: false },
+  conservative: { maxTn: 8, reserve: 0.25, energyFirst: false },
+  miser: { maxTn: 7, reserve: 0.5, energyFirst: true },
+} as const satisfies Record<string, AmmoDiscipline>;
+export type AmmoLevel = keyof typeof AMMO_LEVELS;
+
+const FREE: AmmoDiscipline = AMMO_LEVELS.free;
+const MEASURED: AmmoDiscipline = AMMO_LEVELS.measured;
+const CONSERVATIVE: AmmoDiscipline = AMMO_LEVELS.conservative;
+const MISER: AmmoDiscipline = AMMO_LEVELS.miser;
+
+/** Dispossessed yields this much earlier while ahead on the judges' points. */
+export const AHEAD_YIELD_BONUS = 0.15;
 
 // Parameter levels (§9.2) as weights.
 const COVER = { low: 0.5, medium: 1, high: 2, veryHigh: 3 } as const;

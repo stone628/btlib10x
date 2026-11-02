@@ -1,8 +1,10 @@
 /**
- * The fixed 100×32 cell screen at the player's font size: whole px
- * in [MIN_FS, MAX_FS], changed only by the header's A− / A+ / Fit and kept in
- * localStorage. A window resize never changes it; CSS centres the screen and
- * clips or scrolls what doesn't fit. A first visit starts at the Fit size.
+ * The fixed 100×32 cell screen at the player's font size: whole px in
+ * [MIN_FS, MAX_FS], set by the header's A− / A+ / Fit and kept in
+ * localStorage. Fit is a mode, stored as "fit": the size is fitted again on
+ * every load and window resize. A− / A+ store a fixed size, which a resize
+ * never changes; CSS centres the screen and clips or scrolls what doesn't
+ * fit. A first visit starts in Fit mode.
  */
 export const COLS = 100;
 export const ROWS = 32;
@@ -32,28 +34,38 @@ export function fitFontSize(): number {
   });
 }
 
-function load(): number | null {
+/** "fit", or the size the player chose with A− / A+. */
+type Stored = number | "fit";
+
+let mode: Stored = "fit";
+
+function load(): Stored | null {
   try {
-    const n = Number.parseInt(localStorage.getItem(STORAGE_KEY) ?? "", 10);
+    const v = localStorage.getItem(STORAGE_KEY);
+    if (v === "fit") return "fit";
+    const n = Number.parseInt(v ?? "", 10);
     return Number.isFinite(n) ? n : null;
   } catch {
     return null;
   }
 }
 
-function save(px: number): void {
+function save(v: Stored): void {
   try {
-    localStorage.setItem(STORAGE_KEY, String(px));
+    localStorage.setItem(STORAGE_KEY, String(v));
   } catch {
     // private mode or blocked storage: the size lasts for this visit
   }
 }
 
-/** Set, save and announce a font size (clamped to the range). */
-export function setFontSize(px: number): number {
+/** True while the size follows the window (the Fit mode). */
+export function fitMode(): boolean {
+  return mode === "fit";
+}
+
+function apply(px: number): number {
   const size = Math.min(MAX_FS, Math.max(MIN_FS, Math.round(px)));
   const old = fontSize();
-  save(size);
   if (size !== old) {
     window.TUI.setFontSize(size);
     onChange(size, old);
@@ -61,20 +73,43 @@ export function setFontSize(px: number): number {
   return size;
 }
 
+/** Set, save and announce a fixed font size (clamped to the range); leaves Fit mode. */
+export function setFontSize(px: number): number {
+  const size = apply(px);
+  mode = size;
+  save(size);
+  return size;
+}
+
+/** Enter Fit mode: fit now, and again on every resize. */
+export function fitFont(): number {
+  mode = "fit";
+  save("fit");
+  return apply(fitFontSize());
+}
+
 /**
- * Boot: the stored size, else the Fit size. A first visit fits again once the
- * web font has loaded (the fallback font's cell shape may differ), then keeps it.
+ * Boot: the stored size, else Fit mode. Fit mode fits again once the web
+ * font has loaded (the fallback font's cell shape may differ) and on every
+ * window resize.
  */
 export function initFontSize(): void {
   window.TUI.autoFit(false);
   const stored = load();
-  if (stored !== null) {
-    setFontSize(stored);
-    return;
-  }
-  setFontSize(fitFontSize());
+  if (typeof stored === "number") setFontSize(stored);
+  else fitFont();
   void document.fonts?.ready.then(() => {
+    if (mode !== "fit") return;
     window.TUI.refresh();
-    setFontSize(fitFontSize());
+    apply(fitFontSize());
+  });
+  let pending = false;
+  window.addEventListener("resize", () => {
+    if (mode !== "fit" || pending) return;
+    pending = true;
+    requestAnimationFrame(() => {
+      pending = false;
+      if (mode === "fit") apply(fitFontSize());
+    });
   });
 }

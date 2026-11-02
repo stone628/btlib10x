@@ -47,7 +47,7 @@ import {
   type TraceNote,
   usableWeapons,
 } from "./persona.common";
-import { PERSONAS, type Persona, type PersonaKey } from "./persona.data";
+import { AHEAD_YIELD_BONUS, PERSONAS, type Persona, type PersonaKey } from "./persona.data";
 import { scoreMoves } from "./persona.move";
 
 export type TraceLevel = "off" | "brief" | "full";
@@ -92,8 +92,6 @@ export interface PersonaContext {
 const PERSONA_SEED_SALT = 0x9e3779b9;
 /** A new target must score this much better before the committed one is dropped. */
 const RETARGET_FACTOR = 1.5;
-/** Dispossessed yields this much earlier while ahead on the judges' points. */
-const AHEAD_YIELD_BONUS = 0.15;
 /** Tie-break jitter scale: far below any displayed score difference. */
 const JITTER = 0.001;
 /** Quiet turns tolerated before the unit starts to press in. */

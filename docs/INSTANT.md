@@ -75,7 +75,7 @@ Two sides (Side 1 = team 1, ids `A1…`; Side 2 = team 2, ids `B1…`), each 1�
 | 'Mech | any catalog model (base pack + SW season pack), picked in the Choose 'Mech dialog; a new slot gets a random one (below) | `add … <model>`, `set <id> model` |
 | Gunnery / Piloting | 0–7 (defaults 4 / 5) | `set <id> gunnery\|piloting` |
 | MaxHit | 4–8 pilot hits (default 6, TW pp. 41–42; 7–8 a house rule with a scaled consciousness table) | `set <id> pilotHitMax` |
-| Control | Player, or one of the seven personas (a new slot gets a random persona, never Player) | `pp <id> <persona\|off>` |
+| Control | Player, or one of the seven personas, picked in the Choose Control dialog (a new slot gets a random persona, never Player) | `pp <id> <persona\|off>` |
 | Policy | ammo policy (exposed, core, spread, least first), auto-eject on/off, flamers deal heat on/off, AMS (expected, first hit, priority, off); Defaults resets | `set <id> ammoPolicy\|autoEject\|heatFlamer\|amsPolicy` |
 
 Slots are added one at a time up to four per side and removed individually.
@@ -121,6 +121,26 @@ seven-row paper doll of internal structure and armor:
 ```
 
 (I internal, A armor, F / R torso front / rear, HS heat dissipation.)
+
+### Choose Control
+
+A slot's Control button opens it, an 80-column window in three rows:
+
+1. The control list (Player and the seven personas; `•` marks the slot's
+   current one) beside a scrolling description of the highlighted one: role
+   line, how it plays and the stall-pressure note (docs/PERSONA.md §2.4, §7).
+2. Move Weights and Settings, half the width each. Each weight is a kit
+   progress bar, full at the largest value any persona gives that weight,
+   with `value/max` beside it. Settings (range band, heat limit with its
+   Heat Scale step, ammo discipline, melee preference, jump jets, when it
+   yields) are read from the persona table and scroll when a value wraps.
+   Weight labels and setting keys are hint targets: a tooltip says what each
+   one does, on hover or when the arrow keys reach it (Tab skips them).
+3. Cancel and Use.
+
+Jump jets read "used" for both `reposition` and `hit-and-run`, which the AI
+does not yet tell apart. Nothing changes until Use; closing either dialog
+puts the focus back on the button that opened it.
 
 ### Random battle
 
@@ -389,6 +409,7 @@ space there; pad B leaves the box (a pad cannot type).
 | Title | ↑ ↓ select, Enter run (New battle, Random battle, Options); no Esc menu |
 | New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Esc menu (Launch, Discard, Options) |
 | Choose 'Mech | opens on the list (its cursor row is the one Tab stop); list: ↑ ↓ PgUp PgDn move, Enter / Space use, ↑ past the first row to the filters, → to Use; on a dropdown, the search or a button, arrows move to the nearest control (the list's cursor row too; Enter opens a dropdown); in the search ↑ ↓ leave it, Enter goes to the list; Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
+| Choose Control | opens on the list at the slot's current control; ↑ ↓ move (the detail follows), PgUp / Home first, PgDn / End last, Enter / Space / double-click use, → to Use; on a button or a hint target, arrows move to the nearest control (the weight labels and setting keys too, which show their tooltip while focused; ← back to the list); Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, Options) |
 | Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
 | Battle, a sheet focused | arrows move to the nearest hint target that way (header, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
@@ -431,7 +452,10 @@ RB, View, Menu, D-pad, LS) after pad input, and keys again after a key or a
 mouse move.
 
 **Font size** is the player's (10–40 px, header A− / A+ / Fit, kept in
-localStorage); a window resize never changes it.
+localStorage `bt10x.ia.fontSize`). Fit is a mode, stored as `fit` and shown
+lit: the size is fitted again on every load and window resize. A− / A+
+leave it and store a fixed size, which a resize never changes. A first
+visit starts in Fit mode.
 
 ## i18n
 

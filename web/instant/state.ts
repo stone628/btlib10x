@@ -80,6 +80,15 @@ export type Modal =
       focusList: boolean;
     }
   | {
+      kind: "persona";
+      side: 0 | 1;
+      index: number;
+      /** Index into the control list: 0 Player, then `PERSONA_KEYS`. */
+      cursor: number;
+      /** Give the cursor row the focus after the next render (opening, list keys). */
+      focusList: boolean;
+    }
+  | {
       kind: "input";
       title: string;
       label: string;

@@ -183,19 +183,30 @@ function letterhead(b: BattleController, r: BattleResult): TuiNode[] {
       ? run(t("debrief.drawTitle"), "ia-bright")
       : run(t("debrief.victory", { side: r.winnerTeam }), `ia-team${r.winnerTeam} ia-bright`);
   const rule = dim(F.h.repeat(7));
-  const sides: TuiChild[] = [];
-  for (const s of r.sides) {
-    if (sides.length) sides.push("      ");
-    sides.push(
-      run(t("debrief.sideN", { side: s.team }), `ia-team${s.team} ia-bright`),
-      "  ",
-      t("debrief.lostOf", { n: s.lost, of: s.units }),
-      dim(` ${M.sep} `),
-      t("debrief.dmg", { n: s.dealt }),
-      dim(` ${M.sep} BV `),
-      run(signed(s.score), "ia-bright"),
-    );
-  }
+  // One line per side, the fields in aligned columns: the damage the result
+  // counts (whole totals for units out of play), then what the side's hits did.
+  const cols = r.sides.map((s) => {
+    let hits = 0;
+    for (const u of units(b)) if (u.team === s.team) hits += b.chronicle.units[u.id]?.dealt ?? 0;
+    return {
+      s,
+      lost: t("debrief.lostOf", { n: s.lost, of: s.units }),
+      dmg: t("debrief.dmg", { n: s.dealt, d: hits }),
+      bv: signed(s.score),
+    };
+  });
+  const wide = (k: "lost" | "dmg" | "bv") => Math.max(...cols.map((c) => cells(c[k])));
+  const [wl, wd, wb] = [wide("lost"), wide("dmg"), wide("bv")];
+  const sideLines = cols.map((c) => [
+    run(t("debrief.sideN", { side: c.s.team }), `ia-team${c.s.team} ia-bright`),
+    "  ",
+    fit(c.lost, wl),
+    dim(` ${M.sep} `),
+    fit(c.dmg, wd),
+    dim(` ${M.sep} BV `),
+    run(fit(c.bv, wb, "right"), "ia-bright"),
+  ]);
+  const pad = " ".repeat(Math.max(0, (W - Math.max(...sideLines.map(width))) >> 1));
   return [
     blank(1)[0]!,
     centered("lh1", [rule, "  ", verdict, "  ", rule]),
@@ -207,8 +218,7 @@ function letterhead(b: BattleController, r: BattleResult): TuiNode[] {
       t("debrief.ended", { turn: r.turn }),
     ]),
     centered("lh3", [dim(reasonShort(r))]),
-    row(" ", { key: "lh4" }),
-    centered("lh5", sides),
+    ...sideLines.map((kids, i) => line(`lh${4 + i}`, [pad, ...kids])),
     row(G.th.repeat(W), { cls: "ia-dim", key: "lh6" }),
   ];
 }
@@ -291,7 +301,9 @@ function resultTab(b: BattleController, r: BattleResult): TuiNode[] {
   }
   out.push(
     row(" ", { key: "bb" }),
-    line("bv0", ["  ", run(t("debrief.bvTitle"), "ia-accent"), "  ", dim(t("debrief.bvRule"))]),
+    // the longer title leaves no room for the rule beside it
+    line("bv0", ["  ", run(t("debrief.bvTitle"), "ia-accent")]),
+    line("bv0r", ["  ", dim(t("debrief.bvRule"))]),
   );
   const report = scoreReport(b.state);
   const term = (u: { unitId: string; value: number; lost: number }) =>

@@ -142,6 +142,13 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 - A 12 on the Determining roll blows off a limb or head even if the same hit
   destroyed it. *Why:* more excitement and a club for physical attacks; the
   location is lost either way.
+- **Partial losses in the BV score (extends TW p.257).** `scoreReport` keeps
+  TW's weights (+2 × enemy value, −1 × own value) but counts each unit's
+  value times a lost share instead of only destroyed units: 1.0 out of play,
+  0.5 crippled (TW p.258 conditions), else 0.5 × the damaged fraction.
+  *Why:* a score read mid-battle or at a turn limit must reflect crippling
+  and damage, or a turn-limit match with no kills always ties. Details:
+  `docs/SCORING.md` §3.
 
 ### 2.5 Omissions (permanent)
 

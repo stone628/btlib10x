@@ -9,7 +9,8 @@ import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
 import { commitAlias, initInput, mapKey, stepFocus } from "./input";
 import motdText from "./MOTD.txt";
 import {
-  fitFontSize,
+  fitFont,
+  fitMode,
   fontSize,
   initFontSize,
   MAX_FS,
@@ -256,7 +257,8 @@ function syncFontButtons(): void {
   const out = document.getElementById("fontsize-value");
   if (out) out.textContent = String(size);
   document.querySelectorAll<HTMLButtonElement>("#fontsize button").forEach((b) => {
-    if (b.dataset.fs === "-1") b.disabled = size <= MIN_FS;
+    if (b.dataset.fs === "fit") b.toggleAttribute("data-on", fitMode());
+    else if (b.dataset.fs === "-1") b.disabled = size <= MIN_FS;
     else if (b.dataset.fs === "1") b.disabled = size >= MAX_FS;
   });
 }
@@ -368,7 +370,9 @@ function initHeader(): void {
   document.querySelectorAll<HTMLButtonElement>("#fontsize button").forEach((b) => {
     b.addEventListener("click", () => {
       const step = b.dataset.fs;
-      setFontSize(step === "fit" ? fitFontSize() : fontSize() + Number(step));
+      if (step === "fit") fitFont();
+      else setFontSize(fontSize() + Number(step));
+      syncFontButtons();
     });
   });
   onFontSize((size, old) => {
@@ -389,8 +393,9 @@ async function boot(): Promise<void> {
   TUI.prefab("ia-app", { tick: 0 }, () => rootView());
   scene = TUI.mount(document.getElementById("app")!, TUI.h.use("ia-app", { tick: 0 }));
   setRerender(rerender);
-  // The font size stays put on resize; the map repaints (browser zoom changes
-  // devicePixelRatio). The kit re-measures on its own.
+  // A fixed font size stays put on resize (Fit mode refits, see screen.ts);
+  // the map repaints (browser zoom changes devicePixelRatio). The kit
+  // re-measures on its own.
   window.addEventListener("resize", () => rerender());
   void document.fonts?.ready.then(() => rerender());
   // Popups and tips are placed in the viewport once: a scrolled stage drops them.

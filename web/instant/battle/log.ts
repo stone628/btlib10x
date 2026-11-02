@@ -69,7 +69,7 @@ export function formatEvents(events: readonly GameEvent[], _state: BattleState):
                 attack: e.pendingCharge.attack,
                 target: e.pendingCharge.targetId,
               })
-            : t("log.moved", {
+            : t(e.mode === "standStill" ? "log.movedStill" : "log.moved", {
                 id: e.unitId,
                 mode: t(`mode.${e.mode}`),
                 col: e.position.col,

@@ -570,15 +570,17 @@
   background: #335533;
   cursor: pointer;
 }
-/* the key cursor on a record sheet (Tab / X gave it the focus): reverse video */
+/* the key cursor on a record sheet (Tab / X gave it the focus) or a dialog hint: reverse video */
 .ia-drawer [data-hint]:focus,
-.ia-tab-edge[data-hint]:focus {
+.ia-tab-edge[data-hint]:focus,
+.ia-modal [data-hint]:focus {
   outline: none;
   background: var(--tui-sel-bg);
   color: var(--tui-sel-fg);
 }
 .ia-drawer [data-hint]:focus *,
-.ia-tab-edge[data-hint]:focus * {
+.ia-tab-edge[data-hint]:focus *,
+.ia-modal [data-hint]:focus * {
   color: inherit;
 }
 
