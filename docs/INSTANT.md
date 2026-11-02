@@ -194,28 +194,49 @@ in the terminal). Each choice shows its MP budget after any posture cost.
 
 ### Attack orders
 
-- **Target** — the fireable targets come from `suggestFireTargets` for the
-  current twist; the best one is preselected. ← → on the Target row (or
+The Attack Command panel holds selectors and two buttons, top to bottom:
+Twist, Weapon Target, the weapons button, the physical attacks button, Club,
+and the heat estimate. The cursor starts on the weapons button
+(`web/instant/screens/battle.attack.ts`).
+
+- **Twist** — shown Left / Front / Right, Front by default (← → on any row
+  but Weapon Target and Club turn toward that side; Enter on the Twist row
+  steps one to the right, round again; a click takes that twist; terminal
+  `torso`). Changing it drops weapon and physical checks the new twist
+  cannot make.
+- **Weapon Target** — the fireable targets come from `suggestFireTargets`
+  for the current twist; the best one is preselected. ← → on the row (or
   Enter there, or a click on it) cycle them, or click a target unit on the
-  map. One target per activation, as in the
-  terminal (TW p. 108 multi-target fire stays engine-only).
-- **Twist** — shown Left / Front / Right, Front by default (← → off the
-  Target row turn toward that side; Enter on the Twist row steps one to
-  the right, round again; a click takes that twist; terminal `torso`). Changing it
-  drops weapon checks the new twist cannot fire.
-- **Weapons** — one row per weapon with TN, hit chance, damage and heat;
-  weapons that cannot fire show their reason (jammed, destroyed, out of
-  range, no arc, no LOS, no ammo, auto-miss, prone, sensors out, club held,
-  leg in cover). Checking a weapon validates the whole declaration with the
-  engine, so illegal combinations (e.g. a prone unit mixing prop arms) are
-  refused.
-- **Physical attacks** — punch (each arm), kick (each leg), club and strike
-  (per physical weapon) against every adjacent targetable unit, with TN and
-  damage, when the engine validates them for the current twist. One type per
-  turn, except both punches (TW p. 144).
-- **Clubs** — Pick up (limb, tree, girder, when legal) excludes every other
-  attack that turn (TW p. 146); Drop the club clears the weapon and physical
-  checks.
+  map. One weapon target per activation, as in the terminal (TW p. 108
+  multi-target fire stays engine-only). Changing it clears the weapon checks
+  only.
+- **Weapons button** — "N selected out of M available weapons", hidden with
+  no weapon target. Enter or a click opens the weapon dialog: one row per
+  weapon with TN, hit chance, damage and heat, and a check box. A weapon that
+  cannot fire shows its reason in place of those columns (jammed,
+  destroyed, out of range, no arc, no LOS, no ammo, auto-miss, prone,
+  sensors out, club held, leg in cover, or a checked physical attack using
+  its limb: arm punches, arm strikes, leg kicks, club swing), and the cursor
+  skips it. Checking a weapon validates the whole declaration with the
+  engine, so illegal combinations are refused.
+- **Physical attacks button** — "N selected out of M available physical
+  attacks", shown when any is legal. Its dialog lists punch (each arm), kick
+  (each leg), club and strike (per physical weapon) against every adjacent
+  targetable unit, with a Target column (unit id, models on the legend line);
+  attacks the engine refuses for the current twist are left out. One type per
+  turn, except two punches, which may go to two different targets (TW
+  pp. 144-145). An attack that conflicts with what is already checked shows
+  why (one type only, one per turn, arm in use, arm fires, leg fires, arm guns
+  fire) and the cursor skips it. The hex of the unit under the dialog cursor
+  is outlined on the map.
+- **Dialogs** — ↑ ↓ move through the rows that can be checked, Enter / Space
+  (or a click) toggle one and move on to the next (A A A checks a volley);
+  Esc / Backspace / F10, CLOSE or a click outside close the dialog. Checks
+  apply as they are toggled.
+- **Club** — shown when a club action is possible: none, pick up (limb,
+  tree, girder, when legal) or drop the club; ← → or Enter cycle it. Picking
+  up excludes every other attack that turn (TW p. 146), so both buttons go
+  dim; dropping clears the weapon and physical checks.
 - Done (F10) runs `declareAttacks`; with nothing checked it asks first
   (Pass? Yes / No, No by default), then an empty draft passes.
   Resolution is simultaneous once the phase's last unit has declared, and the
@@ -355,7 +376,8 @@ space there; pad B leaves the box (a pad cannot type).
 | Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
 | Battle, a sheet focused | arrows move to the nearest hint target that way (header, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
 | Movement | ← → along the mode bar; on Hold, Enter / Space open its dropdown on the held choice, ↓ / ↑ open it one choice after / before it, round the list (nothing held: ↓ the first, ↑ the last); Enter / Space on a mode choose it (another mode drops the landing); Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
-| Attack | ↑ ↓ Twist row, Target row, then the weapon rows; ← → previous / next target on the Target row, else twist; Enter / Space step the twist, next target, or toggle the row and move on to the next row that can be checked (A A A checks a volley); F10 done (with nothing checked, a Pass? confirm) |
+| Attack | ↑ ↓ Twist, Weapon Target, weapons button, physical attacks button, Club (hidden and dim rows skipped); ← → previous / next target on Weapon Target, previous / next action on Club, else twist; Enter / Space step the twist, next target or club action, or open the button's dialog; F10 done (with nothing checked, a Pass? confirm) |
+| Attack dialog | ↑ ↓ rows that can be checked; Enter / Space toggle the row and move on to the next (A A A checks a volley); Esc / Backspace / F10 close, the checks kept |
 | Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (↑ ↓ pick, Enter / Space run) |
 | Menus, dialogs | opening one takes the focus off the control behind it; ↑ ↓ / Tab move, Enter / Space run, Esc / Backspace close; a message closes on Enter, Space, Esc or Backspace. A dialog opened from a control gives the focus back to it on closing. The Esc menus end with Language, under a separator |
 

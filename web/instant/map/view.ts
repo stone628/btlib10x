@@ -63,6 +63,8 @@ export interface Overlays {
   chosen?: { readonly hex: string; readonly facing: Facing } | null;
   targets?: ReadonlySet<string>;
   target?: string | null;
+  /** "col,row" drawn with an outline in the target colour (the physical dialog's row). */
+  outline?: string | null;
   selected?: string | null;
   los?: readonly [HexCoord, HexCoord] | null;
   wreckage?: ReadonlySet<string>;
@@ -966,11 +968,37 @@ export class MapView {
       if (s.top) this.drawMarks(v, s, k, d);
     });
     this.drawn = list;
+    this.drawOutline(list);
     this.drawLos(v);
     this.drawFacings(v);
     this.drawBanners(v);
     this.drawHud(v);
     if (this.reticle) this.drawReticle();
+  }
+
+  /** The `outline` hex: its top face traced in the target colour, edged in black. */
+  private drawOutline(list: readonly Shape[]): void {
+    const k = this.overlays.outline;
+    const s = k ? list.find((x) => x.top && `${x.hex.col},${x.hex.row}` === k) : undefined;
+    const p = s?.polys[0];
+    if (!p) return;
+    const ctx = this.ctx;
+    ctx.save();
+    for (const [w, c] of [
+      [5, "#000"],
+      [3, css("--ia-target", "#ffd24a")],
+    ] as const) {
+      ctx.lineWidth = w;
+      ctx.strokeStyle = c;
+      ctx.beginPath();
+      p.forEach(([x, y], j) => {
+        if (j) ctx.lineTo(x, y);
+        else ctx.moveTo(x, y);
+      });
+      ctx.closePath();
+      ctx.stroke();
+    }
+    ctx.restore();
   }
 
   /** The reticle: a ring with four ticks, outlined to read over any terrain. */

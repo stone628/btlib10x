@@ -1,25 +1,26 @@
 /** Screen 3: the battle HUD (full map, frame, drawers, orders) and its windows. */
-import {
-  type Facing,
-  type FireTarget,
-  heatDissipation,
-  hitProbability,
-  isHull,
-  isUnitOnBoard,
-  mechDefFor,
-  type PhysicalAttackDecl,
-  type RevealedLanding,
-  type Twist,
-  weaponDefFor,
-} from "btlib10x";
+import { type Facing, isHull, isUnitOnBoard, type RevealedLanding } from "btlib10x";
 import type { MoveChoice } from "../battle/controller";
 import { tallies } from "../battle/victory";
 import { battleBanners, holdAi, pumpAi, stopAi } from "../flow";
-import { locName, t } from "../i18n";
+import { t } from "../i18n";
 import { bracket, isLogsKey } from "../input";
-import { AI_PACES, type AttackRow, app, kitModal, rerender, setAiPace } from "../state";
+import { AI_PACES, app, kitModal, rerender, setAiPace } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
+import {
+  ATTACK_W,
+  act,
+  attackDialog,
+  attackDialogOpen,
+  attackKey,
+  attackKeys,
+  attackPanel,
+  dialogKey,
+  physicalOutline,
+  pickTarget,
+  showTargetSheet,
+} from "./battle.attack";
 import {
   BODY,
   battleFrame,
@@ -30,7 +31,6 @@ import {
   openSheetFor,
   setLogs,
   sheetKey,
-  sheetSideOf,
   toggleLogs,
   toggleSheet,
 } from "./battle.hud";
@@ -42,12 +42,6 @@ import { policyWindow } from "./setup";
 
 const { MARK: M, ARROW: A, GRID: G } = UI_THEME;
 
-const ATTACK_W = 45;
-/** Attack cursor rows above the weapon list (`app.orderCursor`; 0 is the first weapon row). */
-const TWIST_ROW = -2;
-const TARGET_ROW = -1;
-/** Twists from left to right, as the Twist row shows them and ← → step them. */
-const SIDEWAYS: Twist[] = ["leftSide", "front", "rightSide"];
 /** Modes with no hex or facing to pick: they live under the Hold dropdown. */
 const STATIONARY = new Set<MoveChoice>([
   "standStill",
@@ -62,19 +56,6 @@ const STATIONARY = new Set<MoveChoice>([
 type StatusKey = readonly [string, string, (() => void)?];
 /** Id of the Hold dropdown on the mode bar, where Enter opens its menu. */
 const HOLD_ID = "ia-hold";
-
-function setError(e: unknown): void {
-  app.error = e instanceof Error ? e.message : String(e);
-}
-
-function act(fn: () => void): void {
-  try {
-    fn();
-    app.error = null;
-  } catch (e) {
-    setError(e);
-  }
-}
 
 // ------------------------------------------------------------ movement orders
 
@@ -218,240 +199,6 @@ function moveHint(): { width: number; row: (width: number) => TuiNode } | null {
   };
 }
 
-// ------------------------------------------------------------ attack orders
-
-export function attackRows(): AttackRow[] {
-  const b = app.battle!;
-  const target = currentTarget();
-  const rows: AttackRow[] = [];
-  if (target) {
-    for (const w of target.weapons)
-      rows.push({ kind: "weapon", weaponIndex: w.weaponIndex, enabled: true });
-    for (const w of target.blocked)
-      rows.push({ kind: "weapon", weaponIndex: w.weaponIndex, enabled: false });
-  }
-  for (const o of b.physicalOptions()) rows.push({ kind: "physical", decl: o.decl });
-  for (const s of b.pickupOptions()) rows.push({ kind: "pickup", source: s });
-  if (b.actor?.club) rows.push({ kind: "drop" });
-  return rows;
-}
-
-function currentTarget(): FireTarget | null {
-  const b = app.battle!;
-  const id = b.attack?.targetId;
-  return b.fireSuggestion()?.targets.find((x) => x.targetId === id) ?? null;
-}
-
-function samePhys(a: PhysicalAttackDecl, d: PhysicalAttackDecl): boolean {
-  return a.type === d.type && a.targetId === d.targetId && a.limb === d.limb;
-}
-
-function limbWord(limb: string | undefined): string {
-  return limb ? t(`limb.${limb}`) : "";
-}
-
-function attackOrders(width: number): TuiNode[] {
-  const b = app.battle!;
-  const draft = b.attack!;
-  const unit = b.actor!;
-  const def = mechDefFor(unit);
-  const sugg = b.fireSuggestion();
-  const target = currentTarget();
-  // Left / Front / Right, each a click target
-  const twistKids: TuiChild[] = [t("orders.twist")];
-  for (const x of SIDEWAYS)
-    twistKids.push(
-      " ",
-      span(`${draft.twist === x ? `(${M.on})` : "( )"} ${t(`twist.${x}`)}`, {
-        key: x,
-        onClick: () => act(() => b.setTwist(x)),
-      }),
-    );
-  const tu = target ? b.state.units[target.targetId] : null;
-  const targetLine = tu
-    ? `${A.prev} ${tu.id} ${tu.model} ${M.sep} ${t("orders.hexes", { n: target!.distance })} ${A.next}`
-    : sugg && sugg.targets.length === 0
-      ? t("orders.noTargets")
-      : t("orders.pickTarget");
-  const out: TuiNode[] = [
-    h().el(
-      "div",
-      { class: `ia-row${app.orderCursor === TWIST_ROW ? " sel" : ""}`, key: "twist" },
-      ...twistKids,
-    ),
-    row(fit(`${t("orders.target")} ${targetLine}`, width), {
-      key: "target",
-      cls: "ia-bright",
-      sel: app.orderCursor === TARGET_ROW,
-      onClick: () => cycleTarget(1),
-    }),
-    row(
-      ` ${fit("", 3)} ${fit(t("mech.weapon"), 13)}${fit(t("mech.loc"), 4)}${fit("TN", 3, "right")}${fit(t("orders.hit"), 5, "right")}${fit(t("mech.dmg"), 5, "right")}${fit(t("mech.heat"), 4, "right")}`,
-      { cls: "ia-dim", key: "th" },
-    ),
-  ];
-  const rows = attackRows();
-  let heat = 0;
-  const list: TuiNode[] = [];
-  rows.forEach((r, i) => {
-    const sel = i === app.orderCursor;
-    if (r.kind === "weapon") {
-      const mount = def.weapons[r.weaponIndex]!;
-      const checked = draft.weapons.includes(r.weaponIndex);
-      const wd = weaponDefFor(mount);
-      if (checked) heat += wd.heat ?? 0;
-      if (r.enabled) {
-        const fw = target!.weapons.find((w) => w.weaponIndex === r.weaponIndex)!;
-        const dmg = fw.cluster
-          ? `${fw.cluster.shots}${M.times}${fw.cluster.perMissile}`
-          : String(Math.round(fw.expectedDamage * 10) / 10);
-        list.push(
-          row(
-            ` ${checked ? "[x]" : "[ ]"} ${fit(mount.weapon, 13)}${fit(locName(mount.location), 4)}${fit(fw.tn, 3, "right")}${fit(`${Math.round(hitProbability(fw.tn) * 100)}%`, 5, "right")}${fit(dmg, 5, "right")}${fit(fw.heat, 4, "right")}`,
-            {
-              sel,
-              key: `w${r.weaponIndex}`,
-              cls: checked ? "hot" : "",
-              onClick: () => toggleRow(i),
-            },
-          ),
-        );
-      } else {
-        const why = target!.blocked.find((w) => w.weaponIndex === r.weaponIndex)?.reason ?? "";
-        list.push(
-          row(
-            fit(
-              `  -  ${fit(mount.weapon, 13)}${fit(locName(mount.location), 4)} ${t(`block.${why}`)}`,
-              width,
-            ),
-            { sel, cls: "dim", key: `b${r.weaponIndex}` },
-          ),
-        );
-      }
-    } else if (r.kind === "physical") {
-      const opt = b.physicalOptions().find((o) => samePhys(o.decl, r.decl));
-      const checked = draft.physical.some((d) => samePhys(d, r.decl));
-      list.push(
-        row(
-          fit(
-            ` ${checked ? "[x]" : "[ ]"} ${t(`phys.${r.decl.type}`)} ${r.decl.targetId} ${limbWord(r.decl.limb)}  TN ${opt?.toHit ?? "-"} ${opt ? Math.round(hitProbability(opt.toHit) * 100) : 0}%  ${opt?.damage ?? 0} ${t("mech.dmg")}`,
-            width,
-          ),
-          {
-            sel,
-            key: `p${r.decl.type}${r.decl.targetId}${r.decl.limb ?? ""}`,
-            cls: checked ? "hot" : "",
-            onClick: () => toggleRow(i),
-          },
-        ),
-      );
-    } else if (r.kind === "pickup") {
-      const checked = draft.pickup?.source === r.source;
-      list.push(
-        row(
-          fit(
-            ` ${checked ? "[x]" : "[ ]"} ${t("orders.pickup", { source: t(`club.${r.source}`) })}`,
-            width,
-          ),
-          { sel, key: `pk${r.source}`, onClick: () => toggleRow(i) },
-        ),
-      );
-    } else {
-      list.push(
-        row(fit(` ${draft.dropClub ? "[x]" : "[ ]"} ${t("orders.drop")}`, width), {
-          sel,
-          key: "drop",
-          onClick: () => toggleRow(i),
-        }),
-      );
-    }
-  });
-  const VISIBLE = 13;
-  const start = Math.max(0, Math.min(app.orderCursor - 6, rows.length - VISIBLE));
-  out.push(...list.slice(start, start + VISIBLE));
-  if (rows.length > VISIBLE)
-    out.push(
-      row(fit(`  ${start + 1}-${Math.min(rows.length, start + VISIBLE)} / ${rows.length}`, width), {
-        cls: "ia-dim",
-        key: "more",
-      }),
-    );
-  const now = unit.heat + unit.heatPending;
-  const sinks = heatDissipation(def, unit.damage, unit.critSlotsDestroyed);
-  out.push(
-    row(
-      fit(
-        t("orders.heatAfter", { now, fire: heat, sinks, after: Math.max(0, now + heat - sinks) }),
-        width,
-      ),
-      { cls: "ia-dim", key: "heat" },
-    ),
-  );
-  return out;
-}
-
-/** The Twist row's Enter: one twist to the right (Left, Front, Right), round again. */
-function cycleTwist(): void {
-  const b = app.battle!;
-  act(() => b.setTwist(SIDEWAYS[(SIDEWAYS.indexOf(b.attack!.twist) + 1) % 3]!));
-}
-
-/** A row Enter / Space can check: a weapon that can fire, a physical attack, a club action. */
-function checkable(r: AttackRow): boolean {
-  return r.kind !== "weapon" || r.enabled;
-}
-
-function toggleRow(i: number): void {
-  const b = app.battle!;
-  const r = attackRows()[i];
-  app.orderCursor = i;
-  if (!r) return;
-  act(() => {
-    if (r.kind === "weapon") {
-      if (r.enabled) b.toggleWeapon(r.weaponIndex);
-    } else if (r.kind === "physical") b.togglePhysical(r.decl);
-    else if (r.kind === "pickup") b.togglePickup(r.source);
-    else b.toggleDrop();
-  });
-  rerender();
-}
-
-function cycleTarget(dir: number): void {
-  const b = app.battle!;
-  const list = b.fireSuggestion()?.targets ?? [];
-  if (list.length === 0) return;
-  const i = list.findIndex((x) => x.targetId === b.attack?.targetId);
-  const next = list[(i + dir + list.length) % list.length]!;
-  pickTarget(next.targetId);
-}
-
-/** Aim at a unit and show its record sheet in the right drawer. */
-function pickTarget(id: string): void {
-  const b = app.battle!;
-  act(() => b.setTarget(id));
-  // the Target row keeps the cursor while ← → cycle; a pick elsewhere goes to the first row
-  if (app.orderCursor !== TARGET_ROW) app.orderCursor = 0;
-  showTargetSheet();
-  rerender();
-}
-
-/** The attack target's sheet in the right drawer, once per new target. */
-function showTargetSheet(): void {
-  const b = app.battle;
-  const id = b?.attack?.targetId ?? null;
-  const ui = app.battleUi;
-  const key = `${b?.actorId}>${id}`;
-  if (id === null || key === ui.sheetTarget) return;
-  ui.sheetTarget = key;
-  ui.framePending = true;
-  const side = sheetSideOf(id);
-  const d = ui.sheets[side];
-  d.unitId = id;
-  d.openedAt = ++ui.seq;
-  if (ui.logSheets) ui.logSheets[side] = true;
-  else d.open = true;
-}
-
 /**
  * The biggest clear part of the map, in canvas px: inside the open drawers'
  * tabs (or the closed edge tabs), and below or beside the orders box.
@@ -565,18 +312,14 @@ function orders(): Orders {
     return out(hint ? [...m.rows, hint.row(width)] : m.rows, width, moveReady(), title);
   }
   showTargetSheet();
-  return out(attackOrders(ATTACK_W), ATTACK_W, true, t("orders.attackTitle"));
+  const panel = attackPanel(ATTACK_W);
+  return out(panel.rows, panel.width, true, t("orders.attackTitle"));
 }
 
 const MOVE_KEYS: StatusKey[] = [
   ["←→", "key.mode"],
   ["Shift+←→", "key.aim"],
   ["Bksp", "key.clear"],
-];
-const ATTACK_KEYS: StatusKey[] = [
-  ["↑↓", "key.row"],
-  ["←→", "key.twist"],
-  ["Enter", "key.weapon"],
 ];
 const SHEET_KEYS: StatusKey[] = [
   ["←↑↓→", "key.hint"],
@@ -607,7 +350,7 @@ function statusKeys(keys: StatusKey[]): StatusKey[] {
 function regionKeys(persona: boolean): StatusKey[] {
   if (app.battleUi.focus !== "orders") return SHEET_KEYS;
   if (persona) return [];
-  return app.battle!.phase === "movement" ? MOVE_KEYS : ATTACK_KEYS;
+  return app.battle!.phase === "movement" ? MOVE_KEYS : attackKeys();
 }
 
 export function battleScreen(): TuiNode {
@@ -647,7 +390,8 @@ export function battleScreen(): TuiNode {
     statusbar(
       statusKeys([
         ...regionKeys(b.actorPersona !== null),
-        ...(o.done ? [["F10", "key.done", () => commit()] as const] : []),
+        // F10 closes an attack dialog instead of committing
+        ...(o.done && !attackDialogOpen() ? [["F10", "key.done", () => commit()] as const] : []),
         ...(stepping ? [["Enter", "key.step", () => pumpAi(true)] as const] : []),
         ["Tab", "key.focus", () => cycleFocus(1)],
         ["[", "key.sheetLeft", () => toggleSheet(0)],
@@ -743,6 +487,8 @@ export function battleOverlays(): void {
       o.target = keyOf(tu.position);
       o.los = [actor.position, tu.position];
     }
+    const melee = physicalOutline();
+    o.outline = melee ? keyOf(melee) : null;
   }
   v.overlays = o;
   v.tipFor = pileTipFor(b.state);
@@ -881,6 +627,7 @@ function battleModal(): TuiNode | null {
     );
   }
   if (m.kind === "policy") return policyWindow(m);
+  if (m.kind === "fire" || m.kind === "physical") return attackDialog(m);
   if (m.kind === "message")
     return modal(
       { cols: 60, title: m.title },
@@ -953,6 +700,7 @@ export function battleKey(e: KeyboardEvent): boolean {
       else return false;
       return true;
     }
+    if (m.kind === "fire" || m.kind === "physical") return dialogKey(e);
     // The policy dialog's kit controls keep their keys; Esc / Backspace cancel it.
     if (m.kind === "policy") {
       if (e.key !== "Escape" && e.key !== "Backspace") return false;
@@ -976,6 +724,7 @@ export function battleKey(e: KeyboardEvent): boolean {
   else if (select && b.actorPersona !== null) pumpAi(true);
   else if (b.actorPersona !== null) return false;
   else if (b.phase === "movement") return moveKey(e);
+  else if (b.phase === "attack" && e.key === "F10") commit();
   else if (b.phase === "attack") return attackKey(e);
   else return false;
   return true;
@@ -1002,39 +751,6 @@ function moveKey(e: KeyboardEvent): boolean {
   } else if (e.key === "Backspace") {
     if (b.move?.landing) act(() => b.clearLanding());
   } else if (e.key === "F10" && moveReady()) commit();
-  else return false;
-  return true;
-}
-
-function attackKey(e: KeyboardEvent): boolean {
-  const b = app.battle!;
-  const rows = attackRows();
-  const n = rows.length - TWIST_ROW;
-  const move = (d: number) => {
-    app.orderCursor = ((app.orderCursor - TWIST_ROW + d + n) % n) + TWIST_ROW;
-  };
-  // ← → twist toward that side, stopping at the full twist
-  const twist = (d: number) => {
-    const i = SIDEWAYS.indexOf(b.attack!.twist) + d;
-    const to = SIDEWAYS[Math.max(0, Math.min(2, i))]!;
-    if (to !== b.attack!.twist) act(() => b.setTwist(to));
-  };
-  const side = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-  if (side && app.orderCursor === TARGET_ROW) cycleTarget(side);
-  else if (side) twist(side);
-  else if (e.key === "ArrowDown") move(1);
-  else if (e.key === "ArrowUp") move(-1);
-  else if (e.key === "Enter" || e.key === " ") {
-    if (app.orderCursor === TWIST_ROW) cycleTwist();
-    else if (app.orderCursor === TARGET_ROW) cycleTarget(1);
-    else {
-      // check (or uncheck) the row, then go on to the next checkable one: A A A fires a volley
-      const i = app.orderCursor;
-      toggleRow(i);
-      const next = attackRows().findIndex((r, j) => j > i && checkable(r));
-      if (next >= 0) app.orderCursor = next;
-    }
-  } else if (e.key === "F10") commit();
   else return false;
   return true;
 }

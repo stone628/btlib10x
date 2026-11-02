@@ -503,37 +503,147 @@ describe("Instant Action battle keys", () => {
     expect(app.orderCursor).toBe(0);
   });
 
-  it("puts Twist and Target rows above the weapons: ← → twist there, cycle the target row", () => {
-    const b = attackBattle();
-    setUp(b);
-    expect(b.phase).toBe("attack");
-    const target = b.attack!.targetId;
-    expect(key("ArrowUp")).toBe(true);
-    expect(app.orderCursor).toBe(-1); // Target row
-    expect(key("ArrowRight")).toBe(true);
-    expect(b.attack!.twist).toBe("front"); // cycles the target, not the twist
-    expect(b.attack!.targetId).toBe(target); // only one target
-    expect(key("ArrowUp")).toBe(true);
-    expect(app.orderCursor).toBe(-2); // Twist row
-    expect(key("ArrowLeft")).toBe(true); // Left, Front, Right as shown
-    expect(b.attack!.twist).toBe("leftSide");
-    expect(key("Enter")).toBe(true); // one to the right
-    expect(b.attack!.twist).toBe("front");
-    expect(key("ArrowUp")).toBe(true); // wraps to the last row
-    expect(app.orderCursor).toBeGreaterThanOrEqual(0);
-    expect(key("ArrowRight")).toBe(true);
-    expect(b.attack!.twist).toBe("rightSide");
-  });
+  /** A1 with B1 and B2 both adjacent in its front arc, at A1's attack. */
+  const meleeBattle = () => {
+    const units: [string, string, 1 | 2, HexCoord, Facing][] = [
+      ["A1", "HBK-4G", 1, { col: 7, row: 9 }, "n"],
+      ["B1", "GRF-1N", 2, { col: 7, row: 8 }, "s"],
+      ["B2", "ENF-4R", 2, { col: 8, row: 9 }, "sw"],
+    ];
+    const b = battle({ kind: "destroyAll" }, { A1: null, B1: null, B2: null }, 7, units);
+    for (let i = 0; i < 12 && !(b.phase === "attack" && b.actorId === "A1"); i++) {
+      if (b.phase === "movement") {
+        b.chooseMove("standStill");
+        b.commitMove();
+      } else b.commitAttack();
+    }
+    expect(b.actorId).toBe("A1");
+    return b;
+  };
+  const dialog = () => app.modal as { kind: "fire" | "physical"; cursor: number };
 
-  it("checks a weapon with Enter and moves on to the next one that can fire", () => {
-    const b = attackBattle();
-    setUp(b);
-    const fireable = b.fireSuggestion()!.targets[0]!.weapons.map((w) => w.weaponIndex);
-    expect(fireable.length).toBeGreaterThan(1);
-    expect(key("Enter")).toBe(true);
-    expect(app.orderCursor).toBe(1);
-    expect(key(" ")).toBe(true);
-    expect(b.attack!.weapons).toEqual(fireable.slice(0, 2));
+  describe("Attack Command panel", () => {
+    it("starts on the weapons button; ↑ reaches Weapon Target and Twist, ← → act per row", () => {
+      const b = attackBattle();
+      setUp(b);
+      expect(b.phase).toBe("attack");
+      const target = b.attack!.targetId;
+      expect(app.battleUi.attackRow).toBeNull();
+      expect(key("ArrowRight")).toBe(true); // weapons button: twist
+      expect(b.attack!.twist).toBe("rightSide");
+      expect(key("ArrowLeft")).toBe(true);
+      expect(b.attack!.twist).toBe("front");
+      expect(key("ArrowUp")).toBe(true);
+      expect(app.battleUi.attackRow?.row).toBe("target");
+      expect(key("ArrowRight")).toBe(true);
+      expect(b.attack!.twist).toBe("front"); // cycles the target, not the twist
+      expect(b.attack!.targetId).toBe(target); // only one target
+      expect(key("ArrowUp")).toBe(true);
+      expect(app.battleUi.attackRow?.row).toBe("twist");
+      expect(key("ArrowLeft")).toBe(true); // Left, Front, Right as shown
+      expect(b.attack!.twist).toBe("leftSide");
+      expect(key("Enter")).toBe(true); // one to the right
+      expect(b.attack!.twist).toBe("front");
+      expect(key("ArrowUp")).toBe(true); // wraps to the last row
+      expect(app.battleUi.attackRow?.row).toBe("weapons"); // nobody adjacent: no physical row
+    });
+
+    it("opens the weapon dialog; Enter checks and moves on, Esc keeps the checks", () => {
+      const b = attackBattle();
+      setUp(b);
+      const fireable = b.fireSuggestion()!.targets[0]!.weapons.map((w) => w.weaponIndex);
+      expect(fireable.length).toBeGreaterThan(1);
+      expect(key("Enter")).toBe(true);
+      expect(dialog()).toEqual({ kind: "fire", cursor: 0 });
+      expect(key("Enter")).toBe(true);
+      expect(dialog().cursor).toBe(1);
+      expect(key(" ")).toBe(true);
+      expect(b.attack!.weapons).toEqual(fireable.slice(0, 2));
+      expect(key("Escape")).toBe(true);
+      expect(app.modal).toBeNull();
+      expect(b.attack!.weapons).toEqual(fireable.slice(0, 2));
+    });
+
+    it("skips blocked weapon rows with ↑ ↓", () => {
+      const b = attackBattle();
+      setUp(b);
+      const t0 = b.fireSuggestion()!.targets[0]!;
+      expect(key("Enter")).toBe(true);
+      expect(key("ArrowUp")).toBe(true); // wraps past any blocked rows to the last fireable one
+      expect(dialog().cursor).toBe(t0.weapons.length - 1);
+    });
+
+    it("lists physical attacks on every adjacent enemy: a punch at each of two targets", () => {
+      const b = meleeBattle();
+      setUp(b);
+      const opts = b.physicalOptions();
+      const punches = ["B1", "B2"].map((id) =>
+        opts.find((o) => o.decl.type === "punch" && o.decl.targetId === id),
+      );
+      expect(punches.every((p) => p !== undefined)).toBe(true);
+      const [p1, p2] = punches as [(typeof opts)[number], (typeof opts)[number]];
+      // two arms, two targets
+      const other = opts.find(
+        (o) => o.decl.type === "punch" && o.decl.targetId === "B2" && o.decl.limb !== p1.decl.limb,
+      );
+      expect(other).toBeDefined();
+      b.togglePhysical(p1.decl);
+      expect(b.physicalConflict(other!.decl)).toBeNull();
+      b.togglePhysical(other!.decl);
+      expect(b.attack!.physical).toHaveLength(2);
+      // the same arm again, a kick: they show why not
+      const sameArm = opts.find(
+        (o) =>
+          o.decl.type === "punch" &&
+          o.decl.limb === other!.decl.limb &&
+          o.decl.targetId !== other!.decl.targetId,
+      );
+      expect(sameArm).toBeDefined();
+      expect(b.physicalConflict(sameArm!.decl)).toBe("armInUse");
+      const kick = opts.find((o) => o.decl.type === "kick");
+      expect(kick).toBeDefined();
+      expect(b.physicalConflict(kick!.decl)).toBe("oneType");
+      expect(p2).toBeDefined();
+      expect(() => b.commitAttack()).not.toThrow();
+    });
+
+    it("opens the physical dialog from its button; a checked punch blocks its arm's weapons", () => {
+      const b = meleeBattle();
+      setUp(b);
+      expect(key("ArrowDown")).toBe(true); // weapons → physical
+      expect(app.battleUi.attackRow?.row).toBe("physical");
+      expect(key("Enter")).toBe(true);
+      expect(dialog().kind).toBe("physical");
+      const opts = b.physicalOptions();
+      const punch = opts.find((o) => o.decl.type === "punch")!;
+      b.togglePhysical(punch.decl);
+      const def = mechDefFor(b.actor!);
+      const armGun = Object.entries(def.weapons).find(([, w]) => w.location === punch.decl.limb);
+      expect(armGun).toBeDefined();
+      expect(b.weaponConflict(Number(armGun![0]))).toBe("punching");
+      expect(key("Backspace")).toBe(true);
+      expect(app.modal).toBeNull();
+      expect(b.attack!.physical).toHaveLength(1);
+    });
+
+    it("changing the weapon target keeps the physical checks", () => {
+      const b = meleeBattle();
+      setUp(b);
+      const punch = b.physicalOptions().find((o) => o.decl.type === "punch")!;
+      b.togglePhysical(punch.decl);
+      const ids = b.fireSuggestion()!.targets.map((x) => x.targetId);
+      const other = ids.find((id) => id !== b.attack!.targetId);
+      expect(other).toBeDefined();
+      b.setTarget(other!);
+      expect(b.attack!.physical).toHaveLength(1);
+    });
+
+    it("hides the Club row with no club action", () => {
+      const b = attackBattle();
+      setUp(b);
+      expect(b.clubActions()).toEqual([]);
+      expect(b.clubAction()).toBe("none");
+    });
   });
 
   it("lists Policies for an acting Player unit and Language last; ← → step the pace", () => {

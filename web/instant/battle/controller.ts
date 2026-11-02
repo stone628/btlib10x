@@ -130,6 +130,24 @@ export interface PhysicalOption {
   readonly damage: number;
 }
 
+/** The attack panel's Club row: nothing, pick up a club from that source, or drop the held one. */
+export type ClubAction = "none" | "drop" | ClubKind;
+
+/** Why a fireable weapon cannot join the checked physical attacks (TW pp.145-147). */
+export type WeaponConflict = "punching" | "striking" | "kicking" | "clubbing";
+
+/** Why a legal physical attack cannot join what is already checked. */
+export type PhysicalConflict =
+  | "oneType"
+  | "onePerTurn"
+  | "armInUse"
+  | "armFires"
+  | "legFires"
+  | "armWeapons"
+  | "other";
+
+const isArm = (loc: string | undefined) => loc === "leftArm" || loc === "rightArm";
+
 type WeaponAttackDecl = Parameters<typeof validateAttacks>[2][number];
 
 export class BattleController {
@@ -656,6 +674,96 @@ export class BattleController {
       dropClub: draft.dropClub,
     });
     draft.physical = next;
+  }
+
+  /** The checked physical attack that bars this weapon's location from firing, or null. */
+  weaponConflict(weaponIndex: number): WeaponConflict | null {
+    const unit = this.actor;
+    const draft = this.attack;
+    if (unit === null || draft === null || draft.weapons.includes(weaponIndex)) return null;
+    const loc = mechDefFor(unit).weapons[weaponIndex]?.location;
+    for (const p of draft.physical) {
+      if (p.type === "club" && isArm(loc)) return "clubbing";
+      if (p.limb === undefined || p.limb !== loc) continue;
+      if (p.type === "punch") return "punching";
+      if (p.type === "strike") return "striking";
+      if (p.type === "kick") return "kicking";
+    }
+    return null;
+  }
+
+  /**
+   * Why a legal physical attack (`physicalOptions`) cannot be checked with
+   * what is already checked: one type per turn with two punches the exception
+   * (TW p.144), each limb once, and no punch, strike or kick with a limb whose
+   * weapons fire. Null when it can be checked, or already is.
+   */
+  physicalConflict(decl: PhysicalAttackDecl): PhysicalConflict | null {
+    const unit = this.actor;
+    const draft = this.attack;
+    if (unit === null || draft === null) return null;
+    const same = (d: PhysicalAttackDecl) =>
+      d.type === decl.type && d.targetId === decl.targetId && d.limb === decl.limb;
+    if (draft.physical.some(same)) return null;
+    for (const p of draft.physical) {
+      if (p.type !== decl.type) return "oneType";
+      if (decl.type !== "punch") return "onePerTurn";
+      if (p.limb === decl.limb) return "armInUse";
+    }
+    const def = mechDefFor(unit);
+    for (const w of draft.weapons) {
+      const loc = def.weapons[w]?.location;
+      if (decl.type === "club" && isArm(loc)) return "armWeapons";
+      if (decl.limb === undefined || decl.limb !== loc) continue;
+      return decl.type === "kick" ? "legFires" : "armFires";
+    }
+    try {
+      validateAttacks(
+        this.state,
+        unit.id,
+        this.weaponDecls(draft.weapons),
+        [...draft.physical, decl],
+        {
+          twist: draft.twist,
+          dropClub: draft.dropClub,
+        },
+      );
+    } catch {
+      return "other";
+    }
+    return null;
+  }
+
+  /** The Club row's choices, "none" first; empty when there is no club action to take. */
+  clubActions(): ClubAction[] {
+    const unit = this.actor;
+    if (unit === null || this.attack === null) return [];
+    const out: ClubAction[] = ["none", ...this.pickupOptions()];
+    if (unit.club !== null) out.push("drop");
+    return out.length > 1 ? out : [];
+  }
+
+  clubAction(): ClubAction {
+    const draft = this.attack;
+    return draft?.pickup?.source ?? (draft?.dropClub ? "drop" : "none");
+  }
+
+  /**
+   * Set the Club row. A pick-up is the turn's only action (TW p.146), so it
+   * clears the weapon and physical checks; dropping (or no longer dropping)
+   * clears them as `toggleDrop` does.
+   */
+  setClubAction(a: ClubAction): void {
+    const { draft } = this.requireAttack();
+    if (this.clubAction() === a) return;
+    draft.pickup = null;
+    if (draft.dropClub) this.toggleDrop();
+    if (a === "drop") this.toggleDrop();
+    else if (a !== "none") {
+      draft.weapons = [];
+      draft.physical = [];
+      draft.pickup = { source: a };
+    }
   }
 
   /** Club sources the unit could pick up now (TW p.146). */

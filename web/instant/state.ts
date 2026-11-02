@@ -2,7 +2,7 @@
  * Application state shared by every screen. Screens are TUI prefabs that read
  * this object; any change calls `rerender()`, which updates the mounted scene.
  */
-import type { ClubKind, Facing, HexCoord, PhysicalAttackDecl, UnitPolicy } from "btlib10x";
+import type { Facing, HexCoord, UnitPolicy } from "btlib10x";
 import type { BattleController } from "./battle/controller";
 import type { Edge, RollOff } from "./battle/deploy";
 import type { MapView } from "./map/view";
@@ -81,6 +81,7 @@ export type Modal =
       back?: Modal;
     }
   | { kind: "battleMenu"; cursor: number }
+  | AttackDialog
   | { kind: "debriefMenu"; cursor: number }
   | { kind: "message"; title: string; text: string }
   | { kind: "menu"; title: string; items: readonly MenuItem[]; cursor: number };
@@ -96,12 +97,14 @@ export interface MenuItem {
   readonly sepAbove?: boolean;
 }
 
-/** One row of the attack panel: a weapon, a physical attack, a club action. */
-export type AttackRow =
-  | { kind: "weapon"; weaponIndex: number; enabled: boolean }
-  | { kind: "physical"; decl: PhysicalAttackDecl }
-  | { kind: "pickup"; source: ClubKind }
-  | { kind: "drop" };
+/** One row of the Attack Command panel (`battle.attack.ts`). */
+export type AttackPanelRow = "twist" | "target" | "weapons" | "physical" | "club";
+
+/** The weapon or physical check-box dialog; `cursor` is its row, -1 when none can be checked. */
+export interface AttackDialog {
+  kind: "fire" | "physical";
+  cursor: number;
+}
 
 /** One record-sheet drawer of the battle screen (left or right edge). */
 export interface SheetDrawer {
@@ -136,6 +139,8 @@ export interface BattleUi {
   focus: BattleFocus;
   /** Hint target (`data-hint`) the focused sheet's cursor sits on; null = its first. */
   hint: string | null;
+  /** Attack panel row under the cursor, for the turn and actor `for`; null = the default. */
+  attackRow: { for: string; row: AttackPanelRow } | null;
 }
 
 export type BattleFocus = 0 | "orders" | 1;
@@ -157,6 +162,7 @@ export function newBattleUi(): BattleUi {
     seq: 0,
     focus: "orders",
     hint: null,
+    attackRow: null,
   };
 }
 
