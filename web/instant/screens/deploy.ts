@@ -84,7 +84,7 @@ export function deployScreen(): TuiNode {
       ],
       app.error ? `! ${app.error}` : t(unset ? "deploy.pickEdge" : "deploy.mouse"),
     ),
-    app.modal?.kind === "menu" ? menuWindow(app.modal) : null,
+    app.modal ? menuWindow(app.modal) : null,
   );
 }
 
@@ -442,7 +442,7 @@ export function deployAfterRender(): void {
   if (u) document.querySelector<HTMLElement>(`#app [data-unit="${CSS.escape(u.id)}"]`)?.focus();
 }
 
-/** Esc menu: Done, Discard, then the language. */
+/** Esc menu: Done, Discard, then Options. */
 function openDeployMenu(): void {
   openMenu(t("deployMenu.title"), [
     { label: () => t("deploy.done"), run: done },
@@ -454,7 +454,7 @@ function openDeployMenu(): void {
 export function deployKey(e: KeyboardEvent): boolean {
   const d = app.deploy!;
   const m = app.modal;
-  if (m?.kind === "menu") return menuKey(e, m);
+  if (m?.kind === "menu" || m?.kind === "options") return menuKey(e, m);
   if (e.key === "Escape") {
     openDeployMenu();
     return true;

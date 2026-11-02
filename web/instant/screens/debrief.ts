@@ -44,6 +44,7 @@ import {
   tabBar,
 } from "./common";
 import { closesMessage } from "./menu";
+import { openOptions, optionsKey, optionsWindow } from "./options";
 import { pileTipFor } from "./piles";
 
 const { GRID: G, MARK: M, ARROW: A, BAR: B, FRAME: F } = UI_THEME;
@@ -916,29 +917,35 @@ export function debriefOverlays(): void {
 
 // ------------------------------------------------------------ menu
 
-/** Esc menu: the debrief's actions, which have no keys of their own. */
-const MENU: readonly { label: string; run: () => void }[] = [
+/**
+ * Esc menu: the debrief's actions, which have no keys of their own, then
+ * Options under a separator (closing it comes back to this menu on its row).
+ */
+const MENU: readonly { label: string; run: () => void; sepAbove?: boolean }[] = [
   { label: "debriefMenu.rematch", run: () => confirmRematch() },
   { label: "debriefMenu.setup", run: () => confirmSetup() },
   { label: "debriefMenu.toTitle", run: () => (app.screen = "title") },
+  { label: "menu.options", run: () => openOptions(app.modal), sepAbove: true },
 ];
 
 function menuModal(cursor: number): TuiNode {
   const cols = 40;
   return modal(
     { cols, title: t("debriefMenu.title"), footer: t("dialog.footer") },
-    ...MENU.map((it, i) =>
+    ...MENU.flatMap((it, i) => [
+      ...(it.sepAbove ? [row(G.th.repeat(cols - 4), { key: `s${it.label}`, cls: "ia-dim" })] : []),
       row(`${i === cursor ? A.cursor : " "} ${fit(t(it.label), cols - 6)}`, {
         sel: i === cursor,
         key: it.label,
         onClick: () => runMenu(i),
       }),
-    ),
+    ]),
   );
 }
 
 function runMenu(i: number): void {
-  app.modal = null;
+  // Options opens over the menu, which stays on its row
+  app.modal = MENU[i]?.label === "menu.options" ? { kind: "debriefMenu", cursor: i } : null;
   MENU[i]?.run();
   rerender();
 }
@@ -1021,6 +1028,7 @@ export function debriefScreen(): TuiNode {
       ["Esc", "key.menu", () => (app.modal = { kind: "debriefMenu", cursor: 0 })],
     ]),
     m?.kind === "debriefMenu" ? menuModal(m.cursor) : null,
+    m?.kind === "options" ? optionsWindow(m) : null,
   );
 }
 
@@ -1034,6 +1042,7 @@ export function debriefKey(e: KeyboardEvent): boolean {
     else return false;
     return true;
   }
+  if (m?.kind === "options") return optionsKey(e, m);
   if (m) {
     if (!closesMessage(e)) return false;
     app.modal = null;

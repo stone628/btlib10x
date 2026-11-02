@@ -1,14 +1,15 @@
 /**
- * Esc menus of the title, New Battle and deployment screens (the battle and
+ * Esc menus of the New Battle and deployment screens (the battle and
  * debrief keep their own): a modal list run with ↑ ↓ and Enter / Space,
- * closed with Esc or Backspace. Each also carries the header's language
- * switch, so a gamepad reaches it.
+ * closed with Esc or Backspace. Each ends with Options (language, pace,
+ * reasoning log), so a gamepad reaches them.
  */
-import { locale, t } from "../i18n";
+import { t } from "../i18n";
 import { app, type MenuItem, type Modal } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { modal, row } from "./common";
+import { openOptions, optionsKey, optionsWindow } from "./options";
 
 const { ARROW: A, GRID: G } = UI_THEME;
 /** Menu window width in cells; a separator spans the inside. */
@@ -21,25 +22,22 @@ export function openMenu(title: string, items: readonly MenuItem[]): void {
   app.modal = { kind: "menu", title, items, cursor: 0 };
 }
 
-/** The language switch, as in the page header: last, under a separator. */
+/** Options, last, under a separator; closing it comes back to this menu on its row. */
 export function prefItems(): MenuItem[] {
   return [
     {
-      label: () => `${t("menu.language")}: ${locale() === "en" ? "English" : "한국어"}`,
-      // the header button keeps the page title and its own pressed state in step
-      run: () =>
-        document
-          .querySelector<HTMLButtonElement>(
-            `#lang button[data-lang="${locale() === "en" ? "ko" : "en"}"]`,
-          )
-          ?.click(),
+      label: () => t("menu.options"),
+      run: () => openOptions(app.modal),
       keep: true,
       sepAbove: true,
     },
   ];
 }
 
-export function menuWindow(m: MenuModal): TuiNode {
+/** An open Esc menu, or the Options window it opened; null for other modals. */
+export function menuWindow(m: Modal): TuiNode | null {
+  if (m.kind === "options") return optionsWindow(m);
+  if (m.kind !== "menu") return null;
   return modal(
     { cols: COLS, title: m.title, footer: t("dialog.footer") },
     ...m.items.flatMap((it, i) => [
@@ -63,8 +61,12 @@ function runItem(m: MenuModal, i: number): void {
   it.run();
 }
 
-/** Keys of an open Esc menu; true when taken. */
-export function menuKey(e: KeyboardEvent, m: MenuModal): boolean {
+/** Keys of an open Esc menu, or of the Options window it opened; true when taken. */
+export function menuKey(
+  e: KeyboardEvent,
+  m: MenuModal | Extract<Modal, { kind: "options" }>,
+): boolean {
+  if (m.kind === "options") return optionsKey(e, m);
   const n = Math.max(1, m.items.length);
   if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % n;
   else if (e.key === "ArrowUp") m.cursor = (m.cursor + n - 1) % n;

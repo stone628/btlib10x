@@ -169,15 +169,18 @@ function onKey(raw: KeyboardEvent): void {
   }
   // Kit controls own their keys: menus, and Enter / Space / arrows on a focused
   // button or select (the browser presses it, the kit opens it), except a
-  // commit button, which takes only F10 or a click, and an open Esc menu.
+  // commit button, which takes only F10 or a click, and an open Esc menu or
+  // Options. A kit menu always keeps its key: the title menu's Enter that opens
+  // Options must not reach Options too.
   const nav = ["Enter", " ", "ArrowUp", "ArrowDown", "Home", "End"].includes(e.key);
   // Deployment keeps ↑ ↓ for its unit list while one of its buttons has the focus.
   const unitKeys = app.screen === "deploy" && (e.key === "ArrowUp" || e.key === "ArrowDown");
+  const escMenu = app.modal?.kind === "menu" || app.modal?.kind === "options";
   if (
     nav &&
     !unitKeys &&
-    app.modal?.kind !== "menu" &&
-    target?.matches('button, [data-tui="menu"]')
+    target?.matches('button, [data-tui="menu"]') &&
+    (!escMenu || target.matches('[data-tui="menu"]'))
   ) {
     if ((e.key === "Enter" || e.key === " ") && target.closest("[data-commit]"))
       raw.preventDefault();

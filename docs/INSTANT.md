@@ -24,7 +24,9 @@ covers what Instant Action adds or does differently.
 
 - **Title** — *New battle* opens New Battle empty (no units, map or
   engagement, a fresh seed); *Random battle* builds a random loadout and
-  opens it in New Battle for review (it never starts the battle).
+  opens it in New Battle for review (it never starts the battle);
+  *Options* opens the Options window (see "Options"). The title has no Esc
+  menu.
 - **New Battle** — edit the loadout; Launch (F10) goes to Deployment,
   Discard (button, or the Esc menu) asks first, then clears the setup and
   returns to the title.
@@ -277,18 +279,33 @@ Persona units are played by a copy of the terminal's persona player
 (`web/instant/ai/`; scoring as in [PERSONA.md](PERSONA.md)). Its decision is
 applied through the same controller calls a Player uses, so atomic commits
 apply. A persona command that fails is logged and the unit passes, so the
-battle never stalls. Persona pace (New Battle, or the battle menu):
+battle never stalls. Persona pace (New Battle, the battle menu or Options):
 **instant**, **step** (default; Enter / Space / A, or the NEXT PERSONA
 button in the DONE button's place, plays the next persona activation, even
 with the reticle showing) or
 **timed** (about 0.6 s per activation). The choice is kept in localStorage
 (`bt10x.instant.pace`).
 
+### Options
+
+The title menu's *Options* and the last row of every Esc menu (New Battle,
+Deployment, Battle, Debrief, under a separator) open it. Three rows:
+**Language** (English / 한국어, the same switch as the header buttons),
+**Persona pace** (above) and **Persona reasoning log** (off by default, kept
+in localStorage `bt10x.instant.reasoning`: `on` / `off`). With the log on,
+each persona decision adds a dim battle-log line: unit, persona, posture,
+the top-scored choice and how many candidates were weighed. ↑ ↓ pick a row,
+← → step its value either way, Enter / Space (or a click on the row) step it
+forward, a click on ◀ / ▶ steps that way; a change applies and is kept at
+once. Esc / Backspace close it, back to the menu that opened it on its
+Options row (from the title, back to the title menu on Options). In battle,
+persona play stays on hold until the battle menu itself closes.
+
 ### Battle menu
 
 Esc opens it: Resume, Persona pace (Enter or → cycles instant / step /
 timed, ← the other way), Policies (while a Player unit acts), Withdraw to
-setup (confirm; the battle is discarded), then Language under a separator.
+setup (confirm; the battle is discarded), then Options under a separator.
 There is no undo. Persona play
 holds while the menu (or its Withdraw confirm) is open and resumes when it
 closes.
@@ -369,17 +386,18 @@ space there; pad B leaves the box (a pad cannot type).
 
 | scope | keys |
 |---|---|
-| Title | ↑ ↓ select, Enter run, Esc menu (language) |
-| New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Esc menu (Launch, Discard, language) |
+| Title | ↑ ↓ select, Enter run (New battle, Random battle, Options); no Esc menu |
+| New Battle | arrows move to the nearest control (dropdowns too; Enter opens one to change it), `[` / `]` Side 1 / Side 2 / settings, Enter open, F10 launch, Esc menu (Launch, Discard, Options) |
 | Choose 'Mech | opens on the list (its cursor row is the one Tab stop); list: ↑ ↓ PgUp PgDn move, Enter / Space use, ↑ past the first row to the filters, → to Use; on a dropdown, the search or a button, arrows move to the nearest control (the list's cursor row too; Enter opens a dropdown); in the search ↑ ↓ leave it, Enter goes to the list; Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
-| Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, language) |
+| Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, Options) |
 | Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
 | Battle, a sheet focused | arrows move to the nearest hint target that way (header, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
 | Movement | ← → along the mode bar; on Hold, Enter / Space open its dropdown on the held choice, ↓ / ↑ open it one choice after / before it, round the list (nothing held: ↓ the first, ↑ the last); Enter / Space on a mode choose it (another mode drops the landing); Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
 | Attack | ↑ ↓ Twist, Weapon Target, weapons button, physical attacks button, Club (hidden and dim rows skipped); ← → previous / next target on Weapon Target, previous / next action on Club, else twist; Enter / Space step the twist, next target or club action, or open the button's dialog; F10 done (with nothing checked, a Pass? confirm) |
 | Attack dialog | ↑ ↓ rows that can be checked; Enter / Space toggle the row and move on to the next (A A A checks a volley); Esc / Backspace / F10 close, the checks kept |
-| Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (↑ ↓ pick, Enter / Space run) |
-| Menus, dialogs | opening one takes the focus off the control behind it; ↑ ↓ / Tab move, Enter / Space run, Esc / Backspace close; a message closes on Enter, Space, Esc or Backspace. A dialog opened from a control gives the focus back to it on closing. The Esc menus end with Language, under a separator |
+| Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (Rematch, Edit battle setup, Back to title, Options; ↑ ↓ pick, Enter / Space run) |
+| Options | ↑ ↓ row, ← → step the value, Enter / Space step it forward, Esc / Backspace back to the opener |
+| Menus, dialogs | opening one takes the focus off the control behind it; ↑ ↓ / Tab move, Enter / Space run, Esc / Backspace close; a message closes on Enter, Space, Esc or Backspace. A dialog opened from a control gives the focus back to it on closing. The Esc menus end with Options, under a separator |
 
 **Picking a hex.** A click on a banded hex (a landing, a deployment hex)
 takes the available facing triangle under the pointer, else the available
@@ -421,7 +439,7 @@ Own catalog in `web/instant/i18n/` (`en` canonical, `ko`; `kr` aliases `ko`),
 compile-checked against `en`; no keys are shared with the terminal. Locale
 precedence follows the site: `?lang=`, then localStorage `bt10x.lang`, then
 English, so the landing page, terminal and Instant Action stay in step; the
-header switch re-renders every screen. Engine error text stays English.
+header switch (or Options' Language row) re-renders every screen. Engine error text stays English.
 
 ## Feature parity with the terminal
 
@@ -430,7 +448,7 @@ header switch re-renders every screen. Engine error text stays English.
 | `map`, `add`, `set`, `rm`, `seed`, `status` (setup) | New Battle options and dialogs; Deployment for position and facing |
 | `start` | Launch → Deployment → Done |
 | `pp <id> <persona>`, `pp setup` | Control per unit, Random battle |
-| `pp go`, `pp trace`, `pp why` | Personas act automatically (Enter / Space in step pace); no reasoning display |
+| `pp go`, `pp trace`, `pp why` | Personas act automatically (Enter / Space in step pace); Options' Persona reasoning log shows each decision's pick (no full `pp trace`) |
 | `mode …`, `place`, `done`, `cancel` | movement choices, map pick + facing, Done, Backspace |
 | `torso`, `fire`, `candidate` | twist, weapon rows, target cycling |
 | `punch`, `kick`, `club`, `strike`, `pickup`, `drop` | physical and club rows |

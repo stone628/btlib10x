@@ -5,7 +5,7 @@ import { app, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { blank, h, kit, row, statusbar } from "./common";
-import { menuKey, menuWindow, openMenu, prefItems } from "./menu";
+import { openOptions, optionsKey, optionsWindow } from "./options";
 
 const { ARROW: A } = UI_THEME;
 
@@ -35,6 +35,7 @@ export function titleItems(): TitleItem[] {
   return [
     { label: "title.new", info: "title.info.new", run: newBattle },
     { label: "title.random", info: "title.info.random", run: randomBattle },
+    { label: "title.options", info: "title.info.options", run: () => openOptions(null) },
   ];
 }
 
@@ -84,29 +85,22 @@ export function titleScreen(): TuiNode {
       [
         [`${A.up}${A.down}`, "key.select"],
         ["Enter", "key.ok"],
-        ["Esc", "key.menu", openTitleMenu],
       ],
       `v${app.version}`,
     ),
-    app.modal?.kind === "menu" ? menuWindow(app.modal) : null,
+    app.modal?.kind === "options" ? optionsWindow(app.modal) : null,
   );
 }
 
-function openTitleMenu(): void {
-  openMenu(t("titleMenu.title"), prefItems());
-}
-
-/** Title keys outside the kit menu: Esc opens the menu; an open menu takes its keys. */
+/** Title keys outside the kit menu: an open Options window takes its keys. */
 export function titleKey(e: KeyboardEvent): boolean {
   const m = app.modal;
-  if (m?.kind === "menu") return menuKey(e, m);
+  if (m?.kind === "options") return optionsKey(e, m);
   if (m) {
     app.modal = null;
     return true;
   }
-  if (e.key !== "Escape") return false;
-  openTitleMenu();
-  return true;
+  return false;
 }
 
 /** The kit menu's own cursor (arrows); read once its handler has run. */
@@ -134,7 +128,7 @@ export function titleAfterRender(): void {
   const el = document.querySelector<HTMLElement>('#app [data-tui="menu"]');
   const ctl = menuCtl(el);
   if (!el || !ctl) return;
-  // an open Esc menu takes the keys: the title menu gives up the focus
+  // an open Options window takes the keys: the title menu gives up the focus
   if (app.modal) {
     if (document.activeElement === el) el.blur();
     return;

@@ -1017,6 +1017,7 @@ function modalNode(m: Modal): TuiNode | null {
     case "policy":
       return policyWindow(m);
     case "menu":
+    case "options":
       return menuWindow(m);
     case "message":
       return modal(
@@ -1056,7 +1057,7 @@ export function setupKey(e: KeyboardEvent): boolean {
       app.modal = null;
       return true;
     }
-    if (m.kind === "menu") return menuKey(e, m);
+    if (m.kind === "menu" || m.kind === "options") return menuKey(e, m);
     if (e.key === "Tab") {
       cycleModalFocus(e.shiftKey ? -1 : 1);
       return true;

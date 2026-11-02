@@ -36,7 +36,8 @@ import {
 } from "./battle.hud";
 import { SHEET_W } from "./battle.sheet";
 import { at, blank, cells, fit, h, kit, mapSlot, modal, row, span, statusbar } from "./common";
-import { closesMessage, prefItems } from "./menu";
+import { closesMessage } from "./menu";
+import { openOptions, optionsKey, optionsWindow } from "./options";
 import { pileTipFor } from "./piles";
 import { policyWindow } from "./setup";
 
@@ -561,11 +562,10 @@ interface BattleMenuItem {
 
 /**
  * Battle menu entries: Resume, Persona pace, Policies (a Player unit
- * acting), Withdraw, then the language under a separator.
+ * acting), Withdraw, then Options under a separator.
  */
 function menuItems(): BattleMenuItem[] {
   const b = app.battle!;
-  const lang = prefItems()[0]!;
   const items: BattleMenuItem[] = [
     { key: "resume", label: () => t("menu.resume"), run: () => closeMenu() },
     {
@@ -585,7 +585,13 @@ function menuItems(): BattleMenuItem[] {
     });
   items.push(
     { key: "withdraw", label: () => t("menu.withdraw"), run: () => withdraw() },
-    { key: "lang", label: lang.label, run: lang.run, sepAbove: true },
+    {
+      key: "options",
+      label: () => t("menu.options"),
+      // closing Options comes back to this menu, play still on hold
+      run: () => openOptions(app.modal),
+      sepAbove: true,
+    },
   );
   return items;
 }
@@ -627,6 +633,7 @@ function battleModal(): TuiNode | null {
     );
   }
   if (m.kind === "policy") return policyWindow(m);
+  if (m.kind === "options") return optionsWindow(m);
   if (m.kind === "fire" || m.kind === "physical") return attackDialog(m);
   if (m.kind === "message")
     return modal(
@@ -640,8 +647,8 @@ function battleModal(): TuiNode | null {
 
 function runMenu(i: number): void {
   const it = menuItems()[i];
-  // pace and language keep the menu open on their row
-  if (it?.key === "pace" || it?.key === "lang") app.modal = { kind: "battleMenu", cursor: i };
+  // pace and Options keep the menu open on their row
+  if (it?.key === "pace" || it?.key === "options") app.modal = { kind: "battleMenu", cursor: i };
   it?.run();
   rerender();
 }
@@ -701,6 +708,7 @@ export function battleKey(e: KeyboardEvent): boolean {
       return true;
     }
     if (m.kind === "fire" || m.kind === "physical") return dialogKey(e);
+    if (m.kind === "options") return optionsKey(e, m);
     // The policy dialog's kit controls keep their keys; Esc / Backspace cancel it.
     if (m.kind === "policy") {
       if (e.key !== "Escape" && e.key !== "Backspace") return false;

@@ -12,6 +12,7 @@ export type ScreenId = "loading" | "title" | "setup" | "deploy" | "battle" | "de
 export type AiPace = "instant" | "step" | "timed";
 export const AI_PACES: readonly AiPace[] = ["instant", "step", "timed"];
 const PACE_KEY = "bt10x.instant.pace";
+const REASONING_KEY = "bt10x.instant.reasoning";
 
 /** Persona pace kept between visits (New Battle and the battle menu); "step" by default. */
 function loadPace(): AiPace {
@@ -29,6 +30,24 @@ export function setAiPace(p: AiPace): void {
     localStorage.setItem(PACE_KEY, p);
   } catch {
     // private mode or blocked storage: the pace lasts for this visit
+  }
+}
+
+/** Persona reasoning log kept between visits (Options); off by default. */
+function loadReasoning(): boolean {
+  try {
+    return localStorage.getItem(REASONING_KEY) === "on";
+  } catch {
+    return false;
+  }
+}
+
+export function setAiReasoning(on: boolean): void {
+  app.aiReasoning = on;
+  try {
+    localStorage.setItem(REASONING_KEY, on ? "on" : "off");
+  } catch {
+    // private mode or blocked storage: the setting lasts for this visit
   }
 }
 
@@ -84,10 +103,16 @@ export type Modal =
   | AttackDialog
   | { kind: "debriefMenu"; cursor: number }
   | { kind: "message"; title: string; text: string }
-  | { kind: "menu"; title: string; items: readonly MenuItem[]; cursor: number };
+  | { kind: "menu"; title: string; items: readonly MenuItem[]; cursor: number }
+  | {
+      kind: "options";
+      cursor: number;
+      /** The window closing goes back to (the Esc menu it was opened from); null = none. */
+      back: Modal | null;
+    };
 
 /**
- * An Esc menu entry (title, New Battle, deployment): label, action, keep the
+ * An Esc menu entry (New Battle, deployment): label, action, keep the
  * menu open, a separator line above it.
  */
 export interface MenuItem {
@@ -207,7 +232,7 @@ export const app: App = {
   orderCursor: 0,
   battleUi: newBattleUi(),
   aiPace: loadPace(),
-  aiReasoning: false,
+  aiReasoning: loadReasoning(),
   mapView: null,
   error: null,
   version: "",

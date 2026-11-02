@@ -16,7 +16,7 @@ import {
   setSlotDestroyed,
   type UnitState,
 } from "btlib10x";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { PersonaKey } from "../web/instant/ai/persona.data";
 import { BattleController } from "../web/instant/battle/controller";
 import {
@@ -44,8 +44,10 @@ import {
 } from "../web/instant/screens/battle.hints";
 import { critTip } from "../web/instant/screens/battle.sheet";
 import { debriefKey } from "../web/instant/screens/debrief";
-import { closesMessage, menuKey, openMenu } from "../web/instant/screens/menu";
+import { closesMessage, menuKey, openMenu, prefItems } from "../web/instant/screens/menu";
+import { openOptions, optionsKey } from "../web/instant/screens/options";
 import { pileTip } from "../web/instant/screens/piles";
+import { titleItems, titleKey } from "../web/instant/screens/title";
 import {
   addedSlot,
   bvOf,
@@ -56,7 +58,7 @@ import {
   loadoutProblem,
   randomLoadout,
 } from "../web/instant/setup/loadout";
-import { app, newBattleUi, setAiPace } from "../web/instant/state";
+import { app, newBattleUi, setAiPace, setAiReasoning } from "../web/instant/state";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
 
@@ -256,7 +258,8 @@ describe("Instant Action debrief keys", () => {
       app.screen = "debrief";
       expect(key("Escape")).toBe(true);
       expect(app.modal).toEqual({ kind: "debriefMenu", cursor: 0 });
-      expect(key("ArrowUp")).toBe(true); // wraps to Back to title
+      expect(key("ArrowUp")).toBe(true); // wraps to Options
+      expect(key("ArrowUp")).toBe(true); // Back to title
       expect(key(k)).toBe(true);
       expect(app.modal).toBeNull();
       expect(app.screen).toBe("title");
@@ -660,7 +663,7 @@ describe("Instant Action battle keys", () => {
     });
   });
 
-  it("lists Policies for an acting Player unit and Language last; ← → step the pace", () => {
+  it("lists Policies for an acting Player unit and Options last; ← → step the pace", () => {
     const pace = app.aiPace;
     setUp(battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null }));
     expect(key("Escape")).toBe(true);
@@ -676,8 +679,108 @@ describe("Instant Action battle keys", () => {
     expect(app.modal?.kind).toBe("policy");
     expect(key("Escape")).toBe(true); // back to the menu, on Policies
     expect(app.modal).toEqual({ kind: "battleMenu", cursor: 2 });
+    expect(key("ArrowUp")).toBe(true);
+    expect(key("ArrowUp")).toBe(true);
+    expect(key("ArrowUp")).toBe(true); // wraps to Options, after Withdraw
+    expect(key("Enter")).toBe(true);
+    expect(app.modal).toEqual({
+      kind: "options",
+      cursor: 0,
+      back: { kind: "battleMenu", cursor: 4 },
+    });
+    expect(key("Backspace")).toBe(true); // back to the menu, on Options
+    expect(app.modal).toEqual({ kind: "battleMenu", cursor: 4 });
     app.modal = null;
     setAiPace(pace);
+  });
+});
+
+describe("Instant Action Options", () => {
+  const ev = (key: string) => ({ key, code: "", shiftKey: false }) as KeyboardEvent;
+  const opts = () => app.modal as Extract<typeof app.modal, { kind: "options" }>;
+  const store = new Map<string, string>();
+  beforeEach(() => {
+    store.clear();
+    vi.stubGlobal("localStorage", {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => store.set(k, v),
+    });
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    app.modal = null;
+  });
+
+  it("is the title menu's third item and opens over nothing", () => {
+    const items = titleItems();
+    expect(items.map((it) => it.label)).toEqual(["title.new", "title.random", "title.options"]);
+    items[2]!.run();
+    expect(app.modal).toEqual({ kind: "options", cursor: 0, back: null });
+    expect(titleKey(ev("Escape"))).toBe(true);
+    expect(app.modal).toBeNull();
+    expect(titleKey(ev("Escape"))).toBe(false); // no title Esc menu any more
+    expect(app.modal).toBeNull();
+  });
+
+  it("steps pace with ← → and toggles the reasoning log with Enter, keeping both", () => {
+    const pace = app.aiPace;
+    const reasoning = app.aiReasoning;
+    openOptions(null);
+    expect(optionsKey(ev("ArrowDown"), opts())).toBe(true); // Persona pace
+    expect(optionsKey(ev("ArrowRight"), opts())).toBe(true);
+    expect(app.aiPace).not.toBe(pace);
+    expect(store.get("bt10x.instant.pace")).toBe(app.aiPace);
+    expect(optionsKey(ev("ArrowLeft"), opts())).toBe(true);
+    expect(app.aiPace).toBe(pace);
+    expect(optionsKey(ev("ArrowDown"), opts())).toBe(true); // reasoning log
+    expect(optionsKey(ev("Enter"), opts())).toBe(true);
+    expect(app.aiReasoning).toBe(!reasoning);
+    expect(store.get("bt10x.instant.reasoning")).toBe(reasoning ? "off" : "on");
+    expect(optionsKey(ev(" "), opts())).toBe(true);
+    expect(app.aiReasoning).toBe(reasoning);
+    expect(optionsKey(ev("ArrowDown"), opts())).toBe(true); // wraps to Language
+    expect(opts().cursor).toBe(0);
+    expect(optionsKey(ev("a"), opts())).toBe(false);
+    setAiPace(pace);
+    setAiReasoning(reasoning);
+  });
+
+  it("ends each Esc menu, and closing it returns to that menu on its row", () => {
+    openMenu("M", [{ label: () => "Done", run: () => {} }, ...prefItems()]);
+    const menu = app.modal;
+    expect(menuKey(ev("ArrowDown"), menu as Extract<typeof menu, { kind: "menu" }>)).toBe(true);
+    expect(menuKey(ev("Enter"), menu as Extract<typeof menu, { kind: "menu" }>)).toBe(true);
+    expect(opts().back).toBe(menu);
+    for (const k of ["Escape", "Backspace"]) {
+      app.modal = { kind: "options", cursor: 2, back: menu };
+      expect(menuKey(ev(k), opts())).toBe(true);
+      expect(app.modal).toBe(menu);
+      expect(menu).toMatchObject({ kind: "menu", cursor: 1 });
+    }
+  });
+
+  it("ends the debrief menu too", () => {
+    app.screen = "debrief";
+    app.modal = { kind: "debriefMenu", cursor: 3 };
+    expect(debriefKey(ev("Enter"))).toBe(true);
+    expect(app.modal).toEqual({
+      kind: "options",
+      cursor: 0,
+      back: { kind: "debriefMenu", cursor: 3 },
+    });
+    expect(debriefKey(ev("Escape"))).toBe(true);
+    expect(app.modal).toEqual({ kind: "debriefMenu", cursor: 3 });
+  });
+
+  it("logs each persona decision only with the reasoning log on", () => {
+    const reasoned = (on: boolean) => {
+      const b = battle({ kind: "destroyAll" }, ALL_AI);
+      b.reasoning = on;
+      expect(b.stepAi()).toBe(true);
+      return b.log.filter((l) => l.text.startsWith("Persona "));
+    };
+    expect(reasoned(false)).toEqual([]);
+    expect(reasoned(true)).toHaveLength(1);
   });
 });
 

@@ -55,6 +55,8 @@ export const ko: Catalog = {
     "최대 4대4 전투를 직접 구성합니다.\n'Mech를 추가하고 조종할 유닛, 지도, 교전 방식을 정한 뒤 출격합니다.",
   "title.info.random":
     "BV 균형을 맞춘 무작위 전투를 무작위 지도에 구성합니다.\n새 전투 화면에서 확인하고 조종할 유닛을 고른 뒤 출격합니다.",
+  "title.options": "옵션",
+  "title.info.options": "언어, 페르소나 속도, 페르소나 판단 기록을 설정합니다.",
   "setup.title": "새 전투",
   "setup.side1": "1진영",
   "setup.side2": "2진영",
@@ -358,7 +360,17 @@ export const ko: Catalog = {
   "debriefMenu.setup": "전투 설정 수정",
   "debriefMenu.toTitle": "타이틀로",
   "menu.language": "언어",
-  "titleMenu.title": "메뉴",
+  "menu.options": "옵션…",
+  "options.title": "옵션",
+  "options.reasoning": "페르소나 판단 기록",
+  "options.on": "켬",
+  "options.off": "끔",
+  "options.footer": "↑↓ 선택  ←→ 변경  Esc 닫기",
+  "options.info.language": "화면 언어. 상단의 EN / 한국어 버튼과\n같습니다.",
+  "options.info.pace":
+    "페르소나가 차례를 진행하는 방식:\n즉시, Enter마다 한 단계,\n또는 시간 간격.",
+  "options.info.reasoning":
+    "전투 기록에 각 페르소나의 선택과 태세,\n검토한 선택지 수를 표시합니다.",
   "setupMenu.title": "새 전투",
   "setup.discardTitle": "전투 설정 버리기",
   "setup.discardText": "이 전투 설정을 버리고 타이틀 화면으로 돌아갈까요?",

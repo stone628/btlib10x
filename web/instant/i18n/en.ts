@@ -55,6 +55,8 @@ export const en = {
     "Build your own match of up to 4 vs 4.\nAdd 'Mechs, choose who you control, pick a map and engagement, then launch.",
   "title.info.random":
     "Roll a random BV-matched match on a random map.\nReview it in New Battle, pick your units, then launch.",
+  "title.options": "Options",
+  "title.info.options": "Language, persona pace and the persona reasoning log.",
 
   "setup.title": "New Battle",
   "setup.side1": "Side 1",
@@ -375,7 +377,18 @@ export const en = {
   "debriefMenu.setup": "Edit battle setup",
   "debriefMenu.toTitle": "Back to title",
   "menu.language": "Language",
-  "titleMenu.title": "Menu",
+  "menu.options": "Options…",
+  "options.title": "Options",
+  "options.reasoning": "Persona reasoning log",
+  "options.on": "on",
+  "options.off": "off",
+  "options.footer": "↑↓ select  ←→ change  Esc close",
+  "options.info.language":
+    "Interface language. The EN / 한국어\nbuttons in the header do the same.",
+  "options.info.pace":
+    "How personas take their turns: at once,\none step per Enter, or on a timer.",
+  "options.info.reasoning":
+    "Adds each persona's pick, its posture\nand how many options it weighed to the\nbattle log.",
   "setupMenu.title": "New Battle",
   "setup.discardTitle": "Discard battle setup",
   "setup.discardText": "Discard this battle setup and return to the title screen?",
