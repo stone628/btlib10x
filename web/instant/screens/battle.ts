@@ -1,11 +1,12 @@
 /** Screen 3: the battle HUD (full map, frame, drawers, orders) and its windows. */
 import { type Facing, isHull, isUnitOnBoard, type RevealedLanding } from "btlib10x";
+import { ANIM_SPEEDS } from "../battle/beats";
 import type { MoveChoice } from "../battle/controller";
 import { tallies } from "../battle/victory";
-import { battleBanners, holdAi, pumpAi, stopAi } from "../flow";
+import { animateOverlays, animator, battleBanners, holdAi, pumpAi, stopAi } from "../flow";
 import { t } from "../i18n";
 import { bracket, isLogsKey } from "../input";
-import { AI_PACES, app, kitModal, rerender, setAiPace } from "../state";
+import { AI_PACES, app, kitModal, rerender, setAiPace, setAnimSpeed } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
 import {
@@ -465,6 +466,14 @@ export function battleOverlays(): void {
     Object.keys(b.state.clubs).filter((k) => (b.state.clubs[k]?.length ?? 0) > 0),
   );
   const o: typeof v.overlays = { wreckage, clubs };
+  v.tipFor = pileTipFor(b.state);
+  v.onPick = (hex, facing) => onMapPick(hex, facing);
+  v.reframe = reframe;
+  // A clip on the map shows the step catching up: no prompt overlays yet.
+  if (animateOverlays(v)) {
+    v.overlays = o;
+    return;
+  }
   const actor = b.actor;
   if (b.move && actor && b.actorPersona === null) {
     const reach = new Map<string, string>();
@@ -576,6 +585,11 @@ function menuItems(): BattleMenuItem[] {
       label: () => `${t("menu.pace")}: ${t(`pace.${app.aiPace}`)}`,
       run: () => stepPace(1),
     },
+    {
+      key: "anim",
+      label: () => `${t("menu.anim")}: ${t(`anim.speed.${app.anim}`)}`,
+      run: () => stepAnim(1),
+    },
   ];
   const id = b.actorId;
   const at = items.length;
@@ -616,6 +630,13 @@ function stepPace(d: number): void {
   setAiPace(AI_PACES[(AI_PACES.indexOf(app.aiPace) + d + n) % n]!);
 }
 
+/** Map animations one step along full / fast / off, either way, round again. */
+function stepAnim(d: number): void {
+  const n = ANIM_SPEEDS.length;
+  setAnimSpeed(ANIM_SPEEDS[(ANIM_SPEEDS.indexOf(app.anim) + d + n) % n]!);
+  if (app.anim === "off") animator.skip();
+}
+
 const MENU_COLS = 40;
 
 function battleModal(): TuiNode | null {
@@ -650,8 +671,9 @@ function battleModal(): TuiNode | null {
 
 function runMenu(i: number): void {
   const it = menuItems()[i];
-  // pace and Options keep the menu open on their row
-  if (it?.key === "pace" || it?.key === "options") app.modal = { kind: "battleMenu", cursor: i };
+  // pace, animations and Options keep the menu open on their row
+  if (it?.key === "pace" || it?.key === "anim" || it?.key === "options")
+    app.modal = { kind: "battleMenu", cursor: i };
   it?.run();
   rerender();
 }
@@ -672,6 +694,7 @@ function withdraw(): void {
       kitModal.open = false;
       if (r === t("yes")) {
         stopAi();
+        animator.skip();
         app.battle = null;
         app.screen = "setup";
       } else holdAi(false);
@@ -700,11 +723,14 @@ export function battleKey(e: KeyboardEvent): boolean {
   if (m) {
     if (m.kind === "battleMenu") {
       const n = menuItems().length;
-      const pace = menuItems()[m.cursor]?.key === "pace";
+      const row = menuItems()[m.cursor]?.key;
+      const pace = row === "pace";
       if (e.key === "ArrowDown") m.cursor = (m.cursor + 1) % n;
       else if (e.key === "ArrowUp") m.cursor = (m.cursor + n - 1) % n;
       else if (pace && (e.key === "ArrowLeft" || e.key === "ArrowRight"))
         stepPace(e.key === "ArrowLeft" ? -1 : 1);
+      else if (row === "anim" && (e.key === "ArrowLeft" || e.key === "ArrowRight"))
+        stepAnim(e.key === "ArrowLeft" ? -1 : 1);
       else if (e.key === "Enter" || e.key === " ") runMenu(m.cursor);
       else if (e.key === "Escape" || e.key === "Backspace") closeMenu();
       else return false;

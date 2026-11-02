@@ -328,10 +328,52 @@ once. Esc / Backspace close it, back to the menu that opened it on its
 Options row (from the title, back to the title menu on Options). In battle,
 persona play stays on hold until the battle menu itself closes.
 
+### Map animations
+
+The map replays each committed step after the engine has applied it
+(`web/instant/battle/beats.ts` reads the step's game events and the committed
+move; `web/instant/map/anim.ts` plays them). Presentation only: state, dice
+and the log are final at once; the map's banners catch up beat by beat.
+
+- **Acting unit**: a dashed ring inside its hex in the team colour, the dashes
+  marching round (about 30 frames a second); when the turn passes to another
+  unit, a ring grows out of the new actor's hex once (450 ms).
+- **Movement**: the unit slides along the path it actually took, hex by hex
+  (walk 160 ms a hex, run 110 ms, 90 ms a 60° turn; a move never takes more
+  than 1.6 s), leaving fading footprints (three a hex when running). A jump
+  arcs straight to the landing with the triangle as a ground shadow and a
+  dust ring on touchdown (300 ms + 60 ms a hex). A move cut short by a fall
+  stops where the unit fell.
+- **Attack reel**: attacks resolve together at the phase's end, so the map
+  plays one volley per attacker and target in event order: weapons fire
+  110 ms apart (closer for big volleys; a volley ≤ 1.5 s); energy weapons
+  draw a beam, ballistic a shell, missiles a spread of four. A hit sparks,
+  flashes the hex, shakes the sign and drops its armor pips, and adds a
+  ticker line beside the sign (`−5 CT`, `✶CRIT` in orange); a miss veers
+  past the target as a dim dashed line and ticks MISS (or JAMMED). Physical
+  attacks lunge at the target with the attack named over the attacker; self
+  damage ticks on the attacker. AMS ticks on the defender.
+- **Penalties**: a piloting roll shows a chip over the sign (`PSR 7+ · 9 ✓`
+  green, ✗ red; a pass wobbles the sign); a fall drops the pole, tips the
+  sign, turns the triangle to the new facing and ticks FALL; pilot hits tick
+  PILOT +n (KO on a failed consciousness roll); an ammo explosion throws two
+  orange rings; heat shutdown, hulls and destroyed units show on the sign.
+- **Pace**: timed waits for the clip, then 0.6 s; step plays it after Enter;
+  instant skips persona moves and plays the attack reel at Fast. Player moves
+  always play. Persona play holds while a clip runs.
+- **Skip**: any key, pad button or click while a clip plays ends it at once
+  (the map jumps to the result) and does nothing else, so a press meant for
+  the next prompt never lands on the old one.
+- **Setting**: Animations in the battle menu, Full / Fast (half the time) /
+  Off, kept in localStorage (`bt10x.instant.anim`); Fast by default when the
+  OS asks for reduced motion, which also turns travel, shakes and rises into
+  cuts and short fades, and stills the marching ring.
+
 ### Battle menu
 
 Esc opens it: Resume, Persona pace (Enter or → cycles instant / step /
-timed, ← the other way), Policies (while a Player unit acts), Withdraw to
+timed, ← the other way), Animations (full / fast / off, the same keys),
+Policies (while a Player unit acts), Withdraw to
 setup (confirm; the battle is discarded), then Options under a separator.
 There is no undo. Persona play
 holds while the menu (or its Withdraw confirm) is open and resumes when it
@@ -418,7 +460,7 @@ space there; pad B leaves the box (a pad cannot type).
 | Choose 'Mech | opens on the list (its cursor row is the one Tab stop); list: ↑ ↓ PgUp PgDn move, Enter / Space use, ↑ past the first row to the filters, → to Use; on a dropdown, the search or a button, arrows move to the nearest control (the list's cursor row too; Enter opens a dropdown); in the search ↑ ↓ leave it, Enter goes to the list; Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Choose Control | opens on the list at the slot's current control; ↑ ↓ move (the detail follows), PgUp / Home first, PgDn / End last, Enter / Space / double-click use, → to Use; on a button or a hint target, arrows move to the nearest control (the weight labels and setting keys too, which show their tooltip while focused; ← back to the list); Tab / Shift+Tab cycle the dialog; Esc / Backspace cancel |
 | Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, Options) |
-| Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), Shift+`[` / `]` pin / unpin it, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat) |
+| Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), Shift+`[` / `]` pin / unpin it, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat); while a map animation plays, any key, pad button or click only skips it |
 | Battle, a sheet focused | arrows move to the nearest hint target that way (header, pin, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the pin toggle it, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
 | Movement | ← → along the mode bar; on Hold, Enter / Space open its dropdown on the held choice, ↓ / ↑ open it one choice after / before it, round the list (nothing held: ↓ the first, ↑ the last); Enter / Space on a mode choose it (another mode drops the landing); Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
 | Attack | ↑ ↓ Twist, Weapon Target, weapons button, physical attacks button, Club (hidden and dim rows skipped); ← → previous / next target on Weapon Target, previous / next action on Club, else twist; Enter / Space step the twist, next target or club action, or open the button's dialog; F10 done (with nothing checked, a Pass? confirm) |
@@ -501,13 +543,15 @@ header switch (or Options' Language row) re-renders every screen. Engine error t
     web/instant/rng.ts            mulberry32-seeded Rng (copy of the terminal's)
     web/instant/setup/loadout.ts  pure loadout model: slots, validation, 'Mech filters, random sides, [+] picks
     web/instant/battle/
-      controller.ts               owns BattleState + Rng + persona context + the actor's draft; atomic commits
+      controller.ts               owns BattleState + Rng + persona context + the actor's draft; atomic commits; `onStep` per commit
+      beats.ts                    map animation beats from a step's game events and committed move; timing
       deploy.ts                   TW p. 256 roll-off, home edges, auto-placement
       victory.ts                  Annihilation / Attrition stoppers, tallies, battle result
       chronicle.ts                debrief record folded from game events
       log.ts                      GameEvent → localized log entries
     web/instant/ai/               persona player (copied from web/terminal/persona*.ts)
-    web/instant/map/view.ts       vector hex map: canvas renderer, overlays, unit banners, hit testing
+    web/instant/map/view.ts       vector hex map: canvas renderer, overlays, unit banners, hit testing, poses and effect layers
+    web/instant/map/anim.ts       map animation clips: tweens and banner changes from beats, skip, hand-off ring
     web/instant/screens/          one module per screen (title, setup, deploy, battle, debrief) + shared parts
     web/instant/i18n/             string catalogs
     web/instant/maps/             Instant-Action-only map sources (see its README)

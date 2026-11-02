@@ -43,6 +43,61 @@ export interface Banner {
   readonly ghost?: boolean;
 }
 
+/**
+ * A unit's animated pose (map animations, `map/anim.ts`), keyed by banner id.
+ * Every part is optional; a banner without a pose stands on its hex.
+ */
+export interface BannerPose {
+  /** Ground position part way from `from` to `to` (0..1); levels blend too. */
+  readonly from?: HexCoord;
+  readonly to?: HexCoord;
+  readonly t?: number;
+  /** Height above the ground, in hex circumradii (a jump). */
+  readonly lift?: number;
+  /** Facing angle in radians (0 = north, clockwise), overriding `facing`. */
+  readonly angle?: number;
+  /** Sideways nudge of the sign, CSS px (a shake). */
+  readonly dx?: number;
+  /** White frame flash on the sign, 0..1. */
+  readonly flash?: number;
+  /** Pole length factor (a fall drops it). */
+  readonly poleK?: number;
+  /** Sign tilt, radians, about the pole top. */
+  readonly tilt?: number;
+  /** Draw the facing triangle as a half-alpha shadow (in the air). */
+  readonly shadow?: boolean;
+}
+
+/** What an effect draw gets: the canvas and the view's projection helpers. */
+export interface FxContext {
+  readonly ctx: CanvasRenderingContext2D;
+  /** Hex circumradius on screen, CSS px. */
+  readonly R: number;
+  /** Banner text size and line height, CSS px. */
+  readonly fs: number;
+  readonly chh: number;
+  readonly font: string;
+  /** Path of a hex's top face, scaled about its centre by `k`. */
+  hexPath(hex: HexCoord, k?: number): void;
+  /** A hex's top-face centre on screen. */
+  ground(hex: HexCoord): [number, number];
+  /** A banner's unit on screen, raised to torso height, pose included. */
+  torso(id: string): [number, number] | null;
+  /** A banner's sign box on screen (drawn this frame). */
+  box(id: string): { x0: number; y0: number; x1: number; y1: number } | null;
+  /** A CSS colour token. */
+  color(name: string, fallback: string): string;
+}
+
+export type FxDraw = (f: FxContext) => void;
+
+/** Effects for one frame: under the units, between triangles and signs, over the signs. */
+export interface FxLayers {
+  readonly under: FxDraw[];
+  readonly mid: FxDraw[];
+  readonly over: FxDraw[];
+}
+
 /** One banded hex: the team colour and the facings drawn (one trapezoid each). */
 export interface BandHex {
   readonly team: number;
@@ -130,8 +185,14 @@ interface Shape {
   top?: boolean;
 }
 
+/** Token values, read once per paint (a frame can ask hundreds of times). */
+const cssCache = new Map<string, string>();
 function css(name: string, fallback: string): string {
-  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  let v = cssCache.get(name);
+  if (v === undefined) {
+    v = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    cssCache.set(name, v);
+  }
   return v || fallback;
 }
 
@@ -148,6 +209,24 @@ export class MapView {
   panY = 0;
   overlays: Overlays = {};
   banners: Banner[] = [];
+  /** Animated poses by banner id (map animations); empty = every unit at rest. */
+  poses: ReadonlyMap<string, BannerPose> = new Map();
+  /** Effects drawn this frame (map animations). */
+  fx: FxLayers = { under: [], mid: [], over: [] };
+  /**
+   * The acting unit's hex ring: "march" (a dashed ring whose dashes crawl
+   * round the hex), "static" (the same ring, still: reduced motion) or null
+   * (none; screens other than the battle).
+   */
+  activeRing: "march" | "static" | null = null;
+  /**
+   * Called on every animation frame while it returns true (a clip plays),
+   * before the paint; `wake()` starts the frames.
+   */
+  onFrame: ((now: number) => boolean) | null = null;
+  private raf = 0;
+  private lastMarch = 0;
+  private animating = false;
   /** Draw every hex's CCRR coordinate on its face; off, only the hovered hex's. */
   showCoords = false;
   /**
@@ -163,7 +242,14 @@ export class MapView {
   /** The last Home / R3 took the screen's framing: the next one fits the whole map. */
   framed = false;
   private drawn: Shape[] = [];
-  private bannerBoxes: { hex: HexCoord; x0: number; y0: number; x1: number; y1: number }[] = [];
+  private bannerBoxes: {
+    id: string;
+    hex: HexCoord;
+    x0: number;
+    y0: number;
+    x1: number;
+    y1: number;
+  }[] = [];
   private world = { cx: 0, cy: 0 };
   private hover: string | null = null;
   /** Canvas point (CSS px) over the hovered hex: the pointer, or the reticle. */
@@ -909,6 +995,7 @@ export class MapView {
     const W = this.canvas.clientWidth;
     const H = this.canvas.clientHeight;
     if (W === 0 || H === 0) return;
+    cssCache.clear();
     if (this.canvas.width !== Math.round(W * d)) this.canvas.width = Math.round(W * d);
     if (this.canvas.height !== Math.round(H * d)) this.canvas.height = Math.round(H * d);
     const v = this.view();
@@ -970,10 +1057,136 @@ export class MapView {
     this.drawn = list;
     this.drawOutline(list);
     this.drawLos(v);
+    const fx = this.fxContext(v);
+    for (const f of this.fx.under) f(fx);
+    this.drawActiveRing(v);
     this.drawFacings(v);
+    for (const f of this.fx.mid) f(fx);
     this.drawBanners(v);
+    for (const f of this.fx.over) f(fx);
     this.drawHud(v);
     if (this.reticle) this.drawReticle();
+    if (this.marching()) this.wake();
+  }
+
+  /** Start animation frames: `clip` when a clip began (`onFrame` runs), else for the marching ring. */
+  wake(clip = false): void {
+    if (clip) this.animating = true;
+    if (this.raf || !this.canvas.isConnected) return;
+    this.raf = requestAnimationFrame((now) => this.frameTick(now));
+  }
+
+  private marching(): boolean {
+    return this.activeRing === "march" && this.banners.some((b) => b.active);
+  }
+
+  private frameTick(now: number): void {
+    this.raf = 0;
+    if (!this.canvas.isConnected || !this.src) {
+      this.animating = false;
+      return;
+    }
+    if (this.animating) {
+      this.animating = this.onFrame?.(now) ?? false;
+      this.render();
+      if (this.animating) this.wake();
+      return;
+    }
+    // the marching ring alone: about 30 frames a second
+    if (now - this.lastMarch >= 33) {
+      this.lastMarch = now;
+      this.render();
+    } else if (this.marching()) this.wake();
+  }
+
+  /** A banner's ground point (world, relative to the map centre) and level, pose included. */
+  private unitGround(b: Banner): { w: [number, number]; level: number } {
+    const p = this.poses.get(b.id);
+    const src = this.src!;
+    const at = (h: HexCoord) => {
+      const c = worldCenter(h.col, h.row);
+      return [c[0] - this.world.cx, c[1] - this.world.cy] as const;
+    };
+    if (p?.from && p.to && p.t !== undefined) {
+      const a = at(p.from);
+      const c = at(p.to);
+      const t = p.t;
+      return {
+        w: [a[0] + (c[0] - a[0]) * t, a[1] + (c[1] - a[1]) * t],
+        level: src.levelAt(p.from) + (src.levelAt(p.to) - src.levelAt(p.from)) * t,
+      };
+    }
+    const a = at(b.hex);
+    return { w: [a[0], a[1]], level: src.levelAt(b.hex) };
+  }
+
+  private fxContext(v: ReturnType<MapView["view"]>): FxContext {
+    const m = bannerMetrics(v.fs);
+    const src = this.src!;
+    const ctx = this.ctx;
+    const hexW = (h: HexCoord) => {
+      const c = worldCenter(h.col, h.row);
+      return [c[0] - this.world.cx, c[1] - this.world.cy] as const;
+    };
+    return {
+      ctx,
+      R: v.R,
+      fs: m.fs,
+      chh: m.chh,
+      font: FONT,
+      hexPath: (hex, k = 1) => {
+        const [x, y] = hexW(hex);
+        const lv = src.levelAt(hex);
+        ctx.beginPath();
+        CORNERS.forEach(([dx, dy], j) => {
+          const [px, py] = v.proj(v.rot([x + dx * k, y + dy * k]), lv);
+          if (j) ctx.lineTo(px, py);
+          else ctx.moveTo(px, py);
+        });
+        ctx.closePath();
+      },
+      ground: (hex) => v.proj(v.rot(hexW(hex)), src.levelAt(hex)),
+      torso: (id) => {
+        const b = this.banners.find((x) => x.id === id);
+        if (!b) return null;
+        const g = this.unitGround(b);
+        const p = this.poses.get(id);
+        const [x, y] = v.proj(v.rot(g.w), g.level);
+        return [x + (p?.dx ?? 0), y - v.R * 0.3 - (p?.lift ?? 0) * v.R];
+      },
+      box: (id) => this.bannerBoxes.find((b) => b.id === id) ?? null,
+      color: css,
+    };
+  }
+
+  /**
+   * The acting unit's ring: a dashed hex outline inset a little from the
+   * edges, in its team colour; the dashes crawl clockwise ("march").
+   */
+  private drawActiveRing(v: ReturnType<MapView["view"]>): void {
+    if (!this.activeRing || !this.src) return;
+    const b = this.banners.find((x) => x.active && !x.ghost);
+    if (!b) return;
+    const g = this.unitGround(b);
+    const ctx = this.ctx;
+    const color = css(`--ia-team${b.team}`, "#4fa3ff");
+    ctx.save();
+    ctx.beginPath();
+    CORNERS.forEach(([dx, dy], j) => {
+      const [px, py] = v.proj(v.rot([g.w[0] + dx * 0.88, g.w[1] + dy * 0.88]), g.level);
+      if (j) ctx.lineTo(px, py);
+      else ctx.moveTo(px, py);
+    });
+    ctx.closePath();
+    const dash = Math.max(3, v.R * 0.35);
+    ctx.setLineDash([dash, dash * 0.7]);
+    ctx.lineDashOffset =
+      this.activeRing === "march" ? -(performance.now() * 0.03) % (dash * 1.7) : 0;
+    ctx.lineWidth = Math.max(2, v.fs * 0.09 * 2.1);
+    ctx.lineJoin = "miter";
+    ctx.strokeStyle = color;
+    ctx.stroke();
+    ctx.restore();
   }
 
   /** The `outline` hex: its top face traced in the target colour, edged in black. */
@@ -1176,25 +1389,27 @@ export class MapView {
     const hw = h * 0.26;
     const nudge = SQ3 / 16; // shifted 1/16 hex toward the facing edge
     const items = this.banners.map((b) => {
-      const w = worldCenter(b.hex.col, b.hex.row);
-      return { b, w, y: v.rot([w[0] - this.world.cx, w[1] - this.world.cy])[1] };
+      const g = this.unitGround(b);
+      return { b, g, y: v.rot(g.w)[1] };
     });
     items.sort((a, b) => a.y - b.y);
-    for (const { b, w } of items) {
-      const t = (FACINGS.indexOf(b.facing) * Math.PI) / 3;
+    for (const { b, g } of items) {
+      const w = g.w;
+      const pose = this.poses.get(b.id);
+      const t = pose?.angle ?? (FACINGS.indexOf(b.facing) * Math.PI) / 3;
       const f = [Math.sin(t), -Math.cos(t)] as const; // world y points south
       const pt = (along: number, across: number) =>
         v.proj(
           v.rot([
-            w[0] - this.world.cx + f[0] * (along + nudge) - f[1] * across,
-            w[1] - this.world.cy + f[1] * (along + nudge) + f[0] * across,
+            w[0] + f[0] * (along + nudge) - f[1] * across,
+            w[1] + f[1] * (along + nudge) + f[0] * across,
           ]),
-          this.src!.levelAt(b.hex),
+          g.level,
         );
       const color =
         b.team === 0 ? css("--ia-hull", "#8a8a8a") : css(`--ia-team${b.team}`, "#4fa3ff");
       ctx.save();
-      if (b.ghost) ctx.globalAlpha = 0.55;
+      if (b.ghost || pose?.shadow) ctx.globalAlpha = 0.55;
       const tri = [pt(h / 2, 0), pt(-h / 2, hw), pt(-h / 2, -hw)];
       const path = () => {
         ctx.beginPath();
@@ -1239,15 +1454,16 @@ export class MapView {
     ctx.font = `${fs}px ${FONT}`;
     const cw = fs * 0.6;
     const items = this.banners.map((b) => {
-      const w = worldCenter(b.hex.col, b.hex.row);
-      const p = v.rot([w[0] - this.world.cx, w[1] - this.world.cy]);
-      return { b, p, base: v.proj(p, this.src!.levelAt(b.hex)) };
+      const g = this.unitGround(b);
+      const p = v.rot(g.w);
+      return { b, p, base: v.proj(p, g.level) };
     });
     items.sort((a, b) => a.p[1] - b.p[1]);
     this.bannerBoxes = [];
     /** Signs already on each hex: a later one stands on a taller pole above them. */
     const stacked = new Map<string, number>();
-    for (const { b, base } of items) {
+    for (const { b, base: ground } of items) {
+      const pose = this.poses.get(b.id);
       const k = key(b.hex);
       const tier = stacked.get(k) ?? 0;
       stacked.set(k, tier + 1);
@@ -1255,8 +1471,9 @@ export class MapView {
       const l2 = ` ${b.sub} `;
       const cols = Math.max(l1.length, l2.length);
       const bw = cols * cw;
+      const base = [ground[0] + (pose?.dx ?? 0), ground[1] - (pose?.lift ?? 0) * v.R] as const;
       const x0 = base[0] - bw / 2;
-      const y0 = base[1] - pole - bh - tier * (bh + chh * 0.3);
+      const y0 = base[1] - pole * (pose?.poleK ?? 1) - bh - tier * (bh + chh * 0.3);
       const color =
         b.team === 0 ? css("--ia-hull", "#8a8a8a") : css(`--ia-team${b.team}`, "#4fa3ff");
       ctx.save();
@@ -1266,6 +1483,11 @@ export class MapView {
       ctx.moveTo(base[0], base[1]);
       ctx.lineTo(base[0], y0 + bh);
       ctx.stroke();
+      if (pose?.tilt) {
+        ctx.translate(base[0], y0 + bh);
+        ctx.rotate(pose.tilt);
+        ctx.translate(-base[0], -(y0 + bh));
+      }
       ctx.fillStyle = css("--ia-banner-bg", "#0d0d0d");
       ctx.fillRect(x0, y0, bw, bh);
       if (b.team === 0 || b.ghost) ctx.setLineDash([fs * 0.25, fs * 0.2]);
@@ -1279,8 +1501,13 @@ export class MapView {
       ctx.fillText(l1, x0, y0 + chh / 2 + 1);
       ctx.fillStyle = color;
       ctx.fillText(l2, x0, y0 + chh * 1.55);
+      if (pose?.flash) {
+        ctx.lineWidth = Math.max(2, fs * 0.18);
+        ctx.strokeStyle = `color-mix(in srgb, ${css("--ia-select", "#ffffff")} ${Math.round(pose.flash * 100)}%, transparent)`;
+        ctx.strokeRect(x0 - 1, y0 - 1, bw + 2, bh + 2);
+      }
       ctx.restore();
-      this.bannerBoxes.push({ hex: b.hex, x0, y0, x1: x0 + bw, y1: y0 + bh });
+      this.bannerBoxes.push({ id: b.id, hex: b.hex, x0, y0, x1: x0 + bw, y1: y0 + bh });
     }
   }
 

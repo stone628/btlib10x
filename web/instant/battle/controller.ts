@@ -77,6 +77,7 @@ import { decide, newPersonaContext, type PersonaContext } from "../ai/persona";
 import type { PersonaKey } from "../ai/persona.data";
 import { t } from "../i18n";
 import { createRng } from "../rng";
+import type { CommittedMove } from "./beats";
 import { type Chronicle, digest, newChronicle } from "./chronicle";
 import { formatEvents, type LogEntry } from "./log";
 import {
@@ -150,6 +151,20 @@ const isArm = (loc: string | undefined) => loc === "leftArm" || loc === "rightAr
 
 type WeaponAttackDecl = Parameters<typeof validateAttacks>[2][number];
 
+/** One committed step, for the map animations (`battle/beats.ts`). */
+export interface StepRecord {
+  /** The battle as the step found it. */
+  readonly before: BattleState;
+  /** The actor that committed. */
+  readonly actorId: string | null;
+  /** Every game event of the step: the commit's and the phase loop's up to the next prompt. */
+  readonly events: readonly GameEvent[];
+  /** The move the step committed, replayed into engine steps; null for anything else. */
+  readonly move: CommittedMove | null;
+  /** A persona committed it (`stepAi`). */
+  readonly persona: boolean;
+}
+
 export class BattleController {
   state: BattleState;
   readonly rng = createRng(0);
@@ -167,6 +182,10 @@ export class BattleController {
   result: BattleResult | null = null;
   /** Log a one-line summary of each persona decision. */
   reasoning = false;
+  /** Called after every successful commit (map animations). */
+  onStep: ((step: StepRecord) => void) | null = null;
+  private committing: CommittedMove | null = null;
+  private aiStepping = false;
 
   constructor(
     map: MapDef,
@@ -203,7 +222,7 @@ export class BattleController {
     return this.state.phase === "attack" ? "attack" : "movement";
   }
 
-  private drive(): void {
+  private drive(): GameEvent[] {
     const events: GameEvent[] = [];
     let stopped = false;
     const r = gameLoop(this.state, this.rng, makeStopper(this.mode), events);
@@ -219,11 +238,11 @@ export class BattleController {
       this.actorId = null;
       this.result = battleResult(this.state, this.mode, this.totals);
       this.log.push({ text: t("log.over"), cls: "banner" });
-      return;
+      return events;
     }
     this.actorId = r.actorId;
     const actor = this.actor;
-    if (actor === null) return;
+    if (actor === null) return events;
     if (this.state.phase === "movement") {
       this.move = { choice: null, landings: [], landing: null };
     } else {
@@ -245,6 +264,7 @@ export class BattleController {
       }),
       cls: "prompt",
     });
+    return events;
   }
 
   /** Run an engine commit atomically: on a throw, state, dice and log roll back. */
@@ -255,12 +275,16 @@ export class BattleController {
     const chronicle = structuredClone(this.chronicle);
     const move = structuredClone(this.move);
     const attack = structuredClone(this.attack);
+    const actorId = this.actorId;
+    const committed = this.committing;
+    this.committing = null;
+    let events: GameEvent[];
     try {
       const sink: GameEvent[] = [];
       fn(sink);
       this.log.push(...formatEvents(sink, this.state));
       digest(this.chronicle, sink, this.state);
-      this.drive();
+      events = [...sink, ...this.drive()];
     } catch (e) {
       this.state = battle;
       this.rng.load(rng);
@@ -270,6 +294,13 @@ export class BattleController {
       this.attack = attack;
       throw e;
     }
+    this.onStep?.({
+      before: battle,
+      actorId,
+      events,
+      move: committed,
+      persona: this.aiStepping,
+    });
   }
 
   // ------------------------------------------------------------ movement
@@ -481,6 +512,17 @@ export class BattleController {
             choice === "standupWalk" || choice === "standupRun",
           );
     const opts = finalFacing === null ? { rng } : { finalFacing, rng };
+    this.committing =
+      steps.length > 0 || finalFacing !== null
+        ? {
+            unitId: id,
+            mode: locomotion,
+            from: unit.position,
+            facing: unit.facing,
+            steps,
+            finalFacing,
+          }
+        : null;
     this.commit((sink) => {
       switch (choice) {
         case "shutdown":
@@ -842,6 +884,15 @@ export class BattleController {
 
   /** Let the persona play the current prompt. Returns false when a player acts. */
   stepAi(): boolean {
+    this.aiStepping = true;
+    try {
+      return this.playPersona();
+    } finally {
+      this.aiStepping = false;
+    }
+  }
+
+  private playPersona(): boolean {
     const key = this.actorPersona;
     const actor = this.actor;
     if (key === null || actor === null || this.result !== null) return false;

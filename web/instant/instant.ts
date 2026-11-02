@@ -4,7 +4,7 @@
  * (`btlib10x`) and the TUI kit (`window.TUI`).
  */
 import { appendCatalog, ensureMapRegistered, loadCatalog, VERSION } from "btlib10x";
-import { applyScreenView, ensureMapView, pumpAi } from "./flow";
+import { animator, applyScreenView, ensureMapView, pumpAi } from "./flow";
 import { initLocale, type LocaleId, locale, setLocale, t } from "./i18n";
 import { commitAlias, initInput, mapKey, stepFocus } from "./input";
 import motdText from "./MOTD.txt";
@@ -407,6 +407,16 @@ async function boot(): Promise<void> {
     const el = e.target;
     if (el instanceof HTMLElement && el.closest("#app") && !el.closest(".ia-modal")) lastFocus = el;
   });
+  // Any key, pad button or click skips a running map animation, and does nothing else.
+  const skipClip = (e: Event) => {
+    if (app.screen !== "battle" || !animator.busy) return;
+    if (e instanceof KeyboardEvent && ["Shift", "Control", "Alt", "Meta"].includes(e.key)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    animator.skip();
+  };
+  document.addEventListener("keydown", skipClip, true);
+  document.addEventListener("pointerdown", skipClip, true);
   document.addEventListener("keydown", onArrowCapture, true);
   document.addEventListener("keydown", onKey);
   initInput();

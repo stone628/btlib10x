@@ -3,6 +3,7 @@
  * this object; any change calls `rerender()`, which updates the mounted scene.
  */
 import type { Facing, HexCoord, UnitPolicy } from "btlib10x";
+import { ANIM_SPEEDS, type AnimSpeed } from "./battle/beats";
 import type { BattleController } from "./battle/controller";
 import type { Edge, RollOff } from "./battle/deploy";
 import type { MapView } from "./map/view";
@@ -46,6 +47,37 @@ export function setAiReasoning(on: boolean): void {
   app.aiReasoning = on;
   try {
     localStorage.setItem(REASONING_KEY, on ? "on" : "off");
+  } catch {
+    // private mode or blocked storage: the setting lasts for this visit
+  }
+}
+
+const ANIM_KEY = "bt10x.instant.anim";
+
+/** The OS asks for less motion: travel, shakes and rises become cuts and fades. */
+export function reducedMotion(): boolean {
+  try {
+    return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  } catch {
+    return false;
+  }
+}
+
+/** Map animations kept between visits; Full by default, Fast under reduced motion. */
+function loadAnim(): AnimSpeed {
+  const fallback: AnimSpeed = typeof window !== "undefined" && reducedMotion() ? "fast" : "full";
+  try {
+    const v = localStorage.getItem(ANIM_KEY);
+    return ANIM_SPEEDS.find((p) => p === v) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function setAnimSpeed(a: AnimSpeed): void {
+  app.anim = a;
+  try {
+    localStorage.setItem(ANIM_KEY, a);
   } catch {
     // private mode or blocked storage: the setting lasts for this visit
   }
@@ -218,6 +250,8 @@ export interface App {
   orderCursor: number;
   battleUi: BattleUi;
   aiPace: AiPace;
+  /** Map animations: Full, Fast or Off (battle menu). */
+  anim: AnimSpeed;
   aiReasoning: boolean;
   /** Persistent map views: battle board and setup / deploy preview. */
   mapView: MapView | null;
@@ -241,6 +275,7 @@ export const app: App = {
   orderCursor: 0,
   battleUi: newBattleUi(),
   aiPace: loadPace(),
+  anim: loadAnim(),
   aiReasoning: loadReasoning(),
   mapView: null,
   error: null,

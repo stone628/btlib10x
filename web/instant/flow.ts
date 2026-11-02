@@ -1,5 +1,6 @@
 /** Screen-to-screen flow: launch, deployment, battle start, AI pacing, rematch. */
 import {
+  type BattleState,
   buildUnitInit,
   catalogMaps,
   cellAt,
@@ -14,6 +15,8 @@ import {
   type UnitSkillRange,
 } from "btlib10x";
 import type { PersonaKey } from "./ai/persona.data";
+import { buildBeats, isReel, SPEED_K } from "./battle/beats";
+import type { StepRecord } from "./battle/controller";
 import { BattleController } from "./battle/controller";
 import {
   autoPlace,
@@ -25,6 +28,7 @@ import {
   setupRng,
 } from "./battle/deploy";
 import { t } from "./i18n";
+import { MapAnimator } from "./map/anim";
 import type { Banner, MapSource, MapViewInit } from "./map/view";
 import { MapView } from "./map/view";
 import {
@@ -35,11 +39,11 @@ import {
   newSeed,
   randomLoadout,
 } from "./setup/loadout";
-import { app, newBattleUi, type Placement, rerender, type ScreenId } from "./state";
+import { app, newBattleUi, type Placement, reducedMotion, rerender, type ScreenId } from "./state";
 
 import { UI_THEME } from "./theme";
 
-const { BAR: B } = UI_THEME;
+const { BAR: B, MARK: M } = UI_THEME;
 
 export interface DeployUnit {
   id: string;
@@ -286,7 +290,74 @@ export function beginBattle(): void {
   const view = ensureMapView();
   const battle = app.battle;
   view.setMap(battleMapSource(battle));
+  animator.skip();
+  pinged = null;
+  battle.onStep = (step) => animateStep(battle, step);
   pumpAi();
+}
+
+// ------------------------------------------------------------ map animations
+
+/** Plays each committed step on the battle map (`map/anim.ts`). */
+export const animator = new MapAnimator();
+/** The actor the hand-off ring last marked. */
+let pinged: string | null = null;
+
+/** Time factor for a clip, or null for none (Off, or persona moves at instant pace). */
+function clipSpeed(persona: boolean, reel: boolean): number | null {
+  if (app.anim === "off") return null;
+  const k = SPEED_K[app.anim];
+  if (app.aiPace !== "instant" || !persona) return k;
+  // instant pace: persona moves are instant, the attack reel plays at Fast
+  return reel ? Math.min(k, SPEED_K.fast) : null;
+}
+
+function animateStep(battle: BattleController, step: StepRecord): void {
+  const view = app.mapView;
+  if (!view || app.battle !== battle) return;
+  const beats = buildBeats(step.events, step.move);
+  if (beats.length === 0) return;
+  const k = clipSpeed(step.persona, isReel(beats));
+  if (k === null) return;
+  const looks = new Map(Object.values(step.before.units).map((u) => [u.id, lookOf(u)]));
+  animator.play(view, {
+    banners: bannersOf(step.before, step.actorId, battle.totals),
+    beats,
+    k,
+    reduced: reducedMotion(),
+    sub: (id, change) => {
+      const look = looks.get(id);
+      if (!look) return null;
+      if ("damage" in change) look.damage = change.damage;
+      else if ("prone" in change) look.prone = true;
+      else if ("off" in change) look.off = true;
+      else if (change.removed === "hull") look.hull = true;
+      else look.destroyed = true;
+      return bannerSub(look, battle.totals[id]);
+    },
+  });
+  pinged = null;
+}
+
+/**
+ * Battle map wiring for the animations: the shown banners while a clip
+ * plays, the acting unit's ring, and a hand-off ring when the actor changes.
+ */
+export function animateOverlays(view: MapView): boolean {
+  const b = app.battle;
+  view.activeRing = reducedMotion() ? "static" : "march";
+  animator.attach(view);
+  if (animator.busy) {
+    view.banners = animator.banners();
+    return true;
+  }
+  const actor = b?.actor ?? null;
+  if (b && actor && b.result === null && actor.id !== pinged) {
+    pinged = actor.id;
+    if (app.anim !== "off")
+      animator.ping(view, actor.position, actor.team, SPEED_K[app.anim], reducedMotion());
+  }
+  return false;
 }
 
 /** The live battle board, as the map view draws it. */
@@ -319,32 +390,67 @@ export function newBattle(): void {
   app.tab = 0;
 }
 
-/** Banners for every unit on the board; hulls are neutral. */
-export function battleBanners(): Banner[] {
-  const b = app.battle;
-  if (!b) return [];
-  const out: Banner[] = [];
-  for (const u of Object.values(b.state.units)) {
-    if (!isUnitOnBoard(u)) continue;
-    const hull = isHull(u);
-    const left = b.totals[u.id] ? unitLeft(u, b.totals[u.id]!) : 1;
-    const pips = Math.max(0, Math.min(5, Math.ceil(left * 5)));
-    const sub = hull
+/** What a banner's second line says about a unit. */
+export interface BannerLook {
+  damage: { armor: object; armorRear: object; internalStructure: object };
+  prone: boolean;
+  off: boolean;
+  hull: boolean;
+  destroyed: boolean;
+}
+
+/** A banner's second line: armor pips, or a status word. */
+export function bannerSub(look: BannerLook, total: number | undefined): string {
+  const left = total ? unitLeft({ damage: look.damage }, total) : 1;
+  const pips = Math.max(0, Math.min(5, Math.ceil(left * 5)));
+  return look.destroyed
+    ? M.out
+    : look.hull
       ? "HULL"
-      : u.shutdown !== "not"
+      : look.off
         ? "OFF"
-        : u.prone
+        : look.prone
           ? `PRN ${B.mpOn.repeat(Math.min(2, pips))}`
           : `${B.mpOn.repeat(pips)}${B.mpOff.repeat(5 - pips)}`;
+}
+
+export function lookOf(u: BattleState["units"][string]): BannerLook {
+  return {
+    damage: u.damage,
+    prone: u.prone,
+    off: u.shutdown !== "not",
+    hull: isHull(u),
+    destroyed: false,
+  };
+}
+
+/** Banners for every unit on the board of a battle state; hulls are neutral. */
+export function bannersOf(
+  state: BattleState,
+  actorId: string | null,
+  totals: Readonly<Record<string, number>>,
+): Banner[] {
+  const out: Banner[] = [];
+  for (const u of Object.values(state.units)) {
+    if (!isUnitOnBoard(u)) continue;
+    const hull = isHull(u);
     out.push({
       id: hull ? `-${u.id}` : u.id,
       hex: u.position,
       facing: u.facing,
       team: hull ? 0 : u.team,
-      sub,
-      active: u.id === b.actorId,
+      sub: bannerSub(lookOf(u), totals[u.id]),
+      active: u.id === actorId,
     });
   }
+  return out;
+}
+
+/** Banners for every unit on the board, plus the acting unit's landing ghost. */
+export function battleBanners(): Banner[] {
+  const b = app.battle;
+  if (!b) return [];
+  const out = bannersOf(b.state, b.actorId, b.totals);
   const m = b.move;
   if (m?.landing && b.actor) {
     out.push({
@@ -371,6 +477,8 @@ function unitLeft(
 }
 
 let aiTimer: ReturnType<typeof setTimeout> | null = null;
+/** pumpAi waits for the running clip. */
+let pumpWaiting = false;
 /** Persona play is on hold while the battle menu (or its Withdraw confirm) is open. */
 let aiHeld = false;
 
@@ -390,6 +498,20 @@ export function pumpAi(force = false): void {
   }
   const b = app.battle;
   if (!b || app.screen !== "battle") return;
+  // A clip on the map holds play (and the debrief) until it ends or is skipped.
+  if (animator.busy) {
+    if (!pumpWaiting) {
+      pumpWaiting = true;
+      animator.whenDone(() => {
+        pumpWaiting = false;
+        if (app.battle !== b) return;
+        if (b.actorPersona === null) app.playerSince = performance.now();
+        pumpAi();
+      });
+    }
+    rerender();
+    return;
+  }
   b.reasoning = app.aiReasoning;
   if (b.result !== null) {
     app.screen = "debrief";

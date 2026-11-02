@@ -18,7 +18,8 @@ import {
 } from "btlib10x";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../web/instant/ai/persona.data";
-import { BattleController } from "../web/instant/battle/controller";
+import { beatTime, buildBeats, isReel, legTimes } from "../web/instant/battle/beats";
+import { BattleController, type StepRecord } from "../web/instant/battle/controller";
 import {
   autoPlace,
   edgeHexes,
@@ -68,7 +69,7 @@ import {
   loadoutProblem,
   randomLoadout,
 } from "../web/instant/setup/loadout";
-import { app, newBattleUi, setAiPace, setAiReasoning } from "../web/instant/state";
+import { app, newBattleUi, setAiPace, setAiReasoning, setAnimSpeed } from "../web/instant/state";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
 
@@ -714,7 +715,7 @@ describe("Instant Action battle keys", () => {
     });
   });
 
-  it("lists Policies for an acting Player unit and Options last; ← → step the pace", () => {
+  it("lists Policies for an acting Player unit and Options last; ← → step the pace and animations", () => {
     const pace = app.aiPace;
     setUp(battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null }));
     expect(key("Escape")).toBe(true);
@@ -725,11 +726,18 @@ describe("Instant Action battle keys", () => {
     expect(app.aiPace).not.toBe(before);
     expect(key("ArrowLeft")).toBe(true);
     expect(app.aiPace).toBe(before);
+    const anim = app.anim;
+    expect(key("ArrowDown")).toBe(true); // Animations
+    expect(key("ArrowRight")).toBe(true);
+    expect(app.anim).not.toBe(anim);
+    expect(key("ArrowLeft")).toBe(true);
+    expect(app.anim).toBe(anim);
     expect(key("ArrowDown")).toBe(true);
     expect(key("Enter")).toBe(true); // Policies
     expect(app.modal?.kind).toBe("policy");
     expect(key("Escape")).toBe(true); // back to the menu, on Policies
-    expect(app.modal).toEqual({ kind: "battleMenu", cursor: 2 });
+    expect(app.modal).toEqual({ kind: "battleMenu", cursor: 3 });
+    expect(key("ArrowUp")).toBe(true);
     expect(key("ArrowUp")).toBe(true);
     expect(key("ArrowUp")).toBe(true);
     expect(key("ArrowUp")).toBe(true); // wraps to Options, after Withdraw
@@ -737,12 +745,96 @@ describe("Instant Action battle keys", () => {
     expect(app.modal).toEqual({
       kind: "options",
       cursor: 0,
-      back: { kind: "battleMenu", cursor: 4 },
+      back: { kind: "battleMenu", cursor: 5 },
     });
     expect(key("Backspace")).toBe(true); // back to the menu, on Options
-    expect(app.modal).toEqual({ kind: "battleMenu", cursor: 4 });
+    expect(app.modal).toEqual({ kind: "battleMenu", cursor: 5 });
     app.modal = null;
     setAiPace(pace);
+    setAnimSpeed(anim);
+  });
+});
+
+describe("Instant Action map animation beats", () => {
+  function steps(seed: number): StepRecord[] {
+    const b = battle({ kind: "destroyAll" }, ALL_AI, seed);
+    const out: StepRecord[] = [];
+    b.onStep = (s) => out.push(s);
+    runAi(b);
+    return out;
+  }
+
+  it("records every persona commit with the battle it found", () => {
+    const recs = steps(42);
+    expect(recs.length).toBeGreaterThan(10);
+    expect(recs.every((r) => r.persona)).toBe(true);
+    expect(recs.some((r) => r.move !== null)).toBe(true);
+  });
+
+  it("replays a move to where the engine left the unit", () => {
+    for (const r of steps(42)) {
+      const moved = r.events.find((e) => e.kind === "moved");
+      if (!moved || moved.kind !== "moved" || !r.move) continue;
+      const beat = buildBeats(r.events, r.move).find((x) => x.kind === "move" || x.kind === "jump");
+      if (!beat) continue;
+      if (beat.kind === "jump") {
+        expect(beat.to).toEqual(moved.position);
+        expect(beat.facing).toBe(moved.facing);
+        continue;
+      }
+      if (beat.kind !== "move") continue;
+      let hex = r.move.from;
+      let facing = r.move.facing;
+      for (const l of beat.legs) {
+        if (l.kind === "enter") {
+          expect(l.from).toEqual(hex);
+          hex = l.to;
+        } else {
+          expect(l.from).toBe(facing);
+          facing = l.to;
+        }
+      }
+      expect(hex).toEqual(moved.position);
+      expect(facing).toBe(moved.facing);
+    }
+  });
+
+  it("groups the attack resolution into volleys, one per attacker and target", () => {
+    const reels = steps(42)
+      .map((r) => buildBeats(r.events, r.move))
+      .filter(isReel);
+    expect(reels.length).toBeGreaterThan(0);
+    for (const beats of reels) {
+      const volleys = beats.filter((x) => x.kind === "volley");
+      for (const v of volleys) {
+        if (v.kind !== "volley") continue;
+        expect(v.shots.length).toBeGreaterThan(0);
+        for (const s of v.shots) expect(s.hit ? s.damage > 0 : s.damage === 0).toBe(true);
+      }
+      const keys = volleys.map((v) => (v.kind === "volley" ? `${v.attackerId}>${v.targetId}` : ""));
+      expect(new Set(keys).size).toBe(keys.length);
+    }
+  });
+
+  it("caps a move at 1.6 s and a volley at 1.5 s at Full", () => {
+    const legs = Array.from({ length: 30 }, (_, i) => ({
+      kind: "enter" as const,
+      from: { col: 1, row: i + 1 },
+      to: { col: 1, row: i + 2 },
+    }));
+    const total = legTimes(legs, "walk").reduce((a, x) => a + x, 0);
+    expect(total).toBeCloseTo(1600);
+    expect(legTimes(legs.slice(0, 3), "walk")).toEqual([160, 160, 160]);
+    expect(legTimes(legs.slice(0, 3), "run")).toEqual([110, 110, 110]);
+    const shots = Array.from({ length: 20 }, () => ({}));
+    const volley = beatTime({
+      kind: "volley",
+      attackerId: "A1",
+      targetId: "B1",
+      shots: shots as never,
+      after: { armor: {}, armorRear: {}, internalStructure: {} } as never,
+    });
+    expect(volley).toBeLessThanOrEqual(1500);
   });
 });
 
