@@ -39,6 +39,7 @@ import { titleAfterRender, titleKey, titleScreen } from "./screens/title";
 import { emptyLoadout } from "./setup/loadout";
 import { app, kitModal, setRerender } from "./state";
 import type { TuiNode, TuiScene } from "./tui";
+import { APP_VERSION, ENGINE_BUILT_WITH, engineMismatch } from "./version";
 
 let scene: TuiScene | null = null;
 let tick = 0;
@@ -335,13 +336,26 @@ function closeKitOverlays(): void {
   TUI.hideTip();
 }
 
+/** Hover text on the top-bar version: set only while a stale cached engine is loaded. */
+function syncVersionTip(): void {
+  const version = document.getElementById("topbar-version");
+  if (version && engineMismatch(VERSION)) {
+    version.title = t("app.engine.stale", { loaded: VERSION, built: ENGINE_BUILT_WITH });
+  }
+}
+
 function initHeader(): void {
   const version = document.getElementById("topbar-version");
-  if (version) version.textContent = `v${VERSION}`;
+  // App stamp, then the engine stamp it runs on; a "!" flags a stale cached engine.
+  if (version) {
+    version.textContent = `v${APP_VERSION} · engine ${VERSION}${engineMismatch(VERSION) ? " !" : ""}`;
+  }
+  syncVersionTip();
   document.querySelectorAll<HTMLButtonElement>("#lang button").forEach((b) => {
     b.addEventListener("click", () => {
       setLocale(b.dataset.lang as LocaleId);
       syncLangButtons();
+      syncVersionTip();
       rerender();
     });
   });
@@ -363,7 +377,7 @@ function initHeader(): void {
 
 async function boot(): Promise<void> {
   initLocale();
-  app.version = VERSION;
+  app.version = APP_VERSION;
   initHeader();
   initFontSize();
   syncFontButtons();

@@ -57,3 +57,9 @@ declare module "*/mtf.mjs" {
     errors: string[];
   };
 }
+
+declare module "*/build-stamp.mjs" {
+  export const STAMP_PATHS: Record<"engine" | "terminal" | "instant", string[]>;
+  export function buildStamp(paths?: string[]): string;
+  export function componentStamps(): Record<"engine" | "terminal" | "instant", string>;
+}

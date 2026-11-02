@@ -1,6 +1,6 @@
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import * as esbuild from "esbuild";
-import { buildStamp } from "./build-stamp.mjs";
+import { componentStamps } from "./build-stamp.mjs";
 import { stripHomeLink } from "./standalone-strip.mjs";
 
 const html = readFileSync("web/terminal.html", "utf8");
@@ -13,6 +13,7 @@ const css = ["web/bt10x.css", "web/terminal.css"]
     (_, f) => `url("data:font/woff2;base64,${readFileSync(`web/${f}`).toString("base64")}")`,
   );
 
+const stamps = componentStamps();
 const { outputFiles } = await esbuild.build({
   entryPoints: ["web/terminal/terminal.ts"],
   bundle: true,
@@ -20,7 +21,11 @@ const { outputFiles } = await esbuild.build({
   target: "es2022",
   minify: true,
   alias: { btlib10x: "./src/index.ts" },
-  define: { __BTLIB_VERSION__: JSON.stringify(buildStamp()) },
+  define: {
+    __BTLIB_VERSION__: JSON.stringify(stamps.engine),
+    __APP_VERSION__: JSON.stringify(stamps.terminal),
+    __ENGINE_BUILT_WITH__: JSON.stringify(stamps.engine),
+  },
   loader: { ".txt": "text" },
   write: false,
   logLevel: "info",

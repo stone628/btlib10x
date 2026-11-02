@@ -67,8 +67,10 @@ export const en = {
   "cmd.seed.help": "set the dice seed",
   "cmd.seed.arg.n": "integer seed. the same seed reproduces the same rolls",
   "cmd.reset.help": "wipe everything back to empty setup (during a battle: reset !)",
-  "cmd.ver.help": "show the built library version",
-  "version.line": "bt10x {version}",
+  "cmd.ver.help": "show the terminal and engine versions",
+  "version.line": "bt10x terminal {app} · engine {engine}",
+  "app.engine.stale":
+    "engine {loaded} is loaded, but this page was built with {built}; reload to update.",
   "cmd.map.help": "load a bundled rulebook map ({names})",
   "cmd.map.arg.name": "bundled map name: {names}",
   "cmd.add.help": "place a 'Mech on the map",

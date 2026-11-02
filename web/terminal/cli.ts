@@ -77,6 +77,7 @@ import {
   renderHeatScaleTable,
   renderHitLocationTables,
 } from "./table";
+import { APP_VERSION } from "./version";
 
 export interface CmdDef {
   /** Catalog key of the one-line description. */
@@ -228,7 +229,7 @@ const GLOBAL_CMDS: Record<string, CmdDef> = {
   pp: personaCmd((s, raw) => runChunks(s, raw)),
   ver: {
     helpKey: "cmd.ver.help",
-    run: (_s) => cmdRunChunks(i18n("version.line", { version: VERSION })),
+    run: (_s) => cmdRunChunks(i18n("version.line", { app: APP_VERSION, engine: VERSION })),
   },
   table: {
     helpKey: "cmd.table.help",

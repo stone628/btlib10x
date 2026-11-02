@@ -92,6 +92,21 @@ phase modules stay narrow (`game/move.ts` → 12, `game/declare.ts` → 17). Tes
 the module that defines each symbol, never the `src` barrel (Biome `noRestrictedImports`).
 `npm test` and these filtered runs never replace `npm run test:all` before pushing.
 
+## Versioning
+
+The engine, bt10x terminal and Instant Action each carry their own build stamp
+`YYMMDD-<8-char hash>` (UTC committer date): the last commit touching that
+component's files, `-dirty` when they have uncommitted edits. Nothing is bumped
+by hand; `package.json` `version` is unused. Watched paths are `STAMP_PATHS` in
+`scripts/build-stamp.mjs` (engine: `src/` + catalog data; each app: its folder,
+its root HTML/CSS and the shared web assets). `build-web.mjs` /
+`standalone-web.mjs` inject them via esbuild `define` (`__BTLIB_VERSION__` →
+`VERSION` in `src/version.ts`; `__APP_VERSION__` / `__ENGINE_BUILT_WITH__` →
+`web/{terminal,instant}/version.ts`); unbundled runs see `dev`. Both top bars
+show `v<app> · engine <engine>` and flag a cached engine that differs from the
+one the app was built with. Path stamps need full history: a shallow clone
+fails the build.
+
 ## Layout
 
 - `src/core/` — hex geometry (odd-q column-offset coords, flat-top hexes, cube-math line tracing), dice (injectable RNG), terrain, shared types

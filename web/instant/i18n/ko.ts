@@ -11,6 +11,8 @@ export const ko: Catalog = {
   "font.fit": "맞춤",
   "font.fit.tip": "창에 맞는 가장 큰 크기",
   "motd.close": "MOTD 닫기",
+  "app.engine.stale":
+    "로드된 엔진은 {loaded}이지만 이 페이지는 {built}로 빌드되었습니다. 새로고침해서 업데이트하세요.",
   yes: "예",
   no: "아니요",
   on: "켬",

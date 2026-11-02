@@ -67,8 +67,10 @@ export const ko: Catalog = {
   "cmd.seed.help": "주사위 시드 설정",
   "cmd.seed.arg.n": "정수 시드. 같은 시드는 같은 굴림을 재현합니다",
   "cmd.reset.help": "모두 지우고 빈 설정 단계로 초기화 (전투 중에는 reset !)",
-  "cmd.ver.help": "빌드된 라이브러리 버전 표시",
-  "version.line": "bt10x {version}",
+  "cmd.ver.help": "터미널 및 엔진 버전 표시",
+  "version.line": "bt10x 터미널 {app} · 엔진 {engine}",
+  "app.engine.stale":
+    "로드된 엔진은 {loaded}이지만 이 페이지는 {built}로 빌드되었습니다. 새로고침해서 업데이트하세요.",
   "cmd.map.help": "내장 규칙book 맵 불러오기 ({names})",
   "cmd.map.arg.name": "내장 맵 이름: {names}",
   "cmd.add.help": "맵에 메크 배치",

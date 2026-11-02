@@ -1,13 +1,23 @@
 import { copyFileSync, existsSync } from "node:fs";
 import * as esbuild from "esbuild";
-import { buildStamp } from "./build-stamp.mjs";
+import { componentStamps } from "./build-stamp.mjs";
 
 const watch = process.argv.includes("--watch");
 const serve = process.argv.includes("--serve");
 const portArg = process.argv.find((a) => a.startsWith("--port="));
 const port = portArg ? Number(portArg.split("=")[1]) : 8012;
 
-const stamp = buildStamp();
+// Each component is stamped from the last commit touching its own files
+// (scripts/build-stamp.mjs STAMP_PATHS); the apps also carry the engine stamp
+// they were built with, to spot a stale cached engine at runtime.
+const stamps = componentStamps();
+console.log(
+  `stamps: engine ${stamps.engine}, terminal ${stamps.terminal}, instant ${stamps.instant}`,
+);
+const appDefine = (app) => ({
+  __APP_VERSION__: JSON.stringify(app),
+  __ENGINE_BUILT_WITH__: JSON.stringify(stamps.engine),
+});
 
 // The catalog packs ship as static files beside the bundles; the app
 // fetches them once at boot (see web/terminal/terminal.ts). The base pack
@@ -29,7 +39,7 @@ const coreCtx = await esbuild.context({
   bundle: true,
   format: "esm",
   target: "es2022",
-  define: { __BTLIB_VERSION__: JSON.stringify(stamp) },
+  define: { __BTLIB_VERSION__: JSON.stringify(stamps.engine) },
   logLevel: "info",
 });
 
@@ -41,6 +51,7 @@ const appCtx = await esbuild.context({
   target: "es2022",
   external: ["btlib10x"],
   loader: { ".txt": "text" },
+  define: appDefine(stamps.terminal),
   logLevel: "info",
 });
 
@@ -53,6 +64,7 @@ const instantCtx = await esbuild.context({
   target: "es2022",
   external: ["btlib10x"],
   loader: { ".txt": "text" },
+  define: appDefine(stamps.instant),
   logLevel: "info",
 });
 

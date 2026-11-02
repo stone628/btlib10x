@@ -8,6 +8,8 @@ export const en = {
   "font.fit": "Fit",
   "font.fit.tip": "Largest size that fits the window",
   "motd.close": "Close MOTD",
+  "app.engine.stale":
+    "Engine {loaded} is loaded, but this page was built with {built}. Reload to update.",
   yes: "Yes",
   no: "No",
   on: "on",

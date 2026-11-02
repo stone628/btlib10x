@@ -10,8 +10,9 @@ import { runChunks } from "./cli";
 import { i18n, normalizeLocale } from "./i18n/index";
 import motdText from "./MOTD.txt";
 import { configLocale, newSession, promptBody, setConfigLocale } from "./session";
+import { APP_VERSION, ENGINE_BUILT_WITH, engineMismatch } from "./version";
 
-document.title = `bt10x terminal v${VERSION}`;
+document.title = `bt10x terminal v${APP_VERSION}`;
 
 const out = document.getElementById("out") as HTMLDivElement;
 const inrow = document.getElementById("inrow") as HTMLDivElement;
@@ -38,6 +39,11 @@ if (normalizedUrl !== null) {
 }
 
 const homeLink = document.getElementById("home-link") as HTMLAnchorElement | null;
+const topbarVersion = document.getElementById("topbar-version");
+// App stamp, then the engine stamp it runs on; a "!" flags a stale cached engine.
+if (topbarVersion) {
+  topbarVersion.textContent = `v${APP_VERSION} · engine ${VERSION}${engineMismatch(VERSION) ? " !" : ""}`;
+}
 let langStored = savedLang !== null;
 
 /** Keep `<html lang>` and the stored choice in step with the active locale. */
@@ -56,6 +62,9 @@ function syncDocLang(): void {
   }
   // Absent from the standalone build. Storage blocked: carry the choice to
   // the landing page in its URL, as the landing page does for the terminal.
+  if (topbarVersion && engineMismatch(VERSION)) {
+    topbarVersion.title = i18n("app.engine.stale", { loaded: VERSION, built: ENGINE_BUILT_WITH });
+  }
   if (homeLink) {
     homeLink.href = langStored ? "./" : `./?lang=${locale}`;
     homeLink.title = locale === "ko" ? "bt10x 홈" : "bt10x home";
@@ -65,8 +74,6 @@ syncDocLang();
 
 const motdBody = document.getElementById("motd-body");
 if (motdBody) motdBody.innerHTML = motdText;
-const topbarVersion = document.getElementById("topbar-version");
-if (topbarVersion) topbarVersion.textContent = `v${VERSION}`;
 
 const history: string[] = [];
 let historyIdx = -1;
@@ -420,10 +427,18 @@ document.getElementById("term")?.addEventListener("click", (e) => {
 appendChunk(
   buildLinesChunkWith(
     "banner",
-    i18n("app.banner.title", { version: VERSION }),
+    i18n("app.banner.title", { version: APP_VERSION }),
     i18n("app.banner.help"),
   ),
 );
+if (engineMismatch(VERSION)) {
+  appendChunk(
+    buildLinesChunkWith(
+      "banner",
+      i18n("app.engine.stale", { loaded: VERSION, built: ENGINE_BUILT_WITH }),
+    ),
+  );
+}
 
 // The only async step: obtain the catalog packs once, then everything runs
 // synchronously from the in-memory store (sheets decode + register on demand).

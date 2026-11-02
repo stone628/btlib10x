@@ -1,5 +1,7 @@
+import { execFileSync } from "node:child_process";
 import { buildUnitInit, mechDefFor, type Rng, type UnitState } from "btlib10x";
 import { describe, expect, it } from "vitest";
+import { buildStamp, STAMP_PATHS } from "../scripts/build-stamp.mjs";
 import { LOCATIONS } from "../src/core/types";
 import { resolveWeaponAttack } from "../src/rules/attack";
 import type { LocationValue, TorsoLocationValue, UnitDamageState } from "../src/rules/damage";
@@ -22,6 +24,7 @@ import {
 } from "../web/terminal/session";
 import { formatCritEffect } from "../web/terminal/session.attack";
 import { handleSessionGameEvents } from "../web/terminal/session.common";
+import { engineMismatch } from "../web/terminal/version";
 import { scriptedRng } from "./helpers/rng";
 import { disableCritical, execute } from "./helpers/session";
 
@@ -899,5 +902,34 @@ describe("session-stage-box", () => {
       expect(lines[2]?.startsWith("initiative")).toBe(true);
       expect(lines).toHaveLength(3);
     });
+  });
+});
+
+describe("versioning: per-component build stamps", () => {
+  it("stamps a component from the last commit touching its paths", () => {
+    const paths = STAMP_PATHS.terminal;
+    const [ts, hash] = execFileSync(
+      "git",
+      ["log", "-1", "--abbrev=8", "--format=%ct %h", "--", ...paths],
+      {
+        encoding: "utf8",
+      },
+    )
+      .trim()
+      .split(/\s+/);
+    const d = new Date(Number(ts) * 1000);
+    const day = d.toISOString().slice(2, 10).replaceAll("-", "");
+    expect(buildStamp(paths)).toMatch(new RegExp(`^${day}-${hash}(-dirty)?$`));
+  });
+
+  it("ver prints the terminal and engine stamps (dev when unbundled)", () => {
+    const s = newSession(42);
+    expect(execute(s, "ver")).toEqual(["bt10x terminal dev · engine dev"]);
+  });
+
+  it("flags only a real engine mismatch", () => {
+    // unbundled, ENGINE_BUILT_WITH is "dev": the check is skipped
+    expect(engineMismatch("261025-87f60428")).toBe(false);
+    expect(engineMismatch("dev")).toBe(false);
   });
 });
