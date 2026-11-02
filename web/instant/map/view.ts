@@ -1419,23 +1419,6 @@ export class MapView {
       const edge = Math.max(1, v.fs * 0.06); // the hex wireframe's width
       ctx.lineJoin = "miter";
       ctx.strokeStyle = color;
-      if (b.active) {
-        // the acting unit's border doubles, growing outward only: a wide
-        // stroke clipped to outside the triangle
-        ctx.save();
-        ctx.beginPath();
-        ctx.rect(0, 0, v.W, v.H);
-        tri.forEach(([x, y], j) => {
-          if (j) ctx.lineTo(x, y);
-          else ctx.moveTo(x, y);
-        });
-        ctx.closePath();
-        ctx.clip("evenodd");
-        path();
-        ctx.lineWidth = edge * 3;
-        ctx.stroke();
-        ctx.restore();
-      }
       path();
       ctx.fillStyle = `color-mix(in srgb, ${color} 45%, black)`;
       ctx.fill();
