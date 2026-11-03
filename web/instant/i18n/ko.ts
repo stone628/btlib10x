@@ -456,7 +456,7 @@ export const ko: Catalog = {
   "anim.psr": "조종 판정",
   "anim.auto": "자동",
   "anim.fall": "넘어짐",
-  "anim.pilot": "파일럿 +{n}",
+  "anim.pilot": "파일럿 HP −{n}",
   "anim.ko": "기절",
   "anim.ammo": "탄약 폭발",
   "anim.shutdown": "정지",

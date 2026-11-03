@@ -381,7 +381,7 @@ and the log are final at once; the map's banners catch up beat by beat.
 - **Penalties**: a piloting roll shows a chip over the sign (`PSR 7+ · 9 ✓`
   green, ✗ red; a pass wobbles the sign); a fall drops the pole, tips the
   sign, turns the triangle to the new facing and ticks FALL; pilot hits tick
-  PILOT +n and put out that many of the sign's health boxes (KO on a failed
+  PILOT HP −n and put out that many of the sign's health boxes (KO on a failed
   consciousness roll); an ammo explosion throws two
   orange rings; heat shutdown, hulls and destroyed units show on the sign.
 - **Pace**: timed waits for the clip, then 0.6 s; step plays it after Enter;

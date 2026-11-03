@@ -477,7 +477,7 @@ export const en = {
   "anim.psr": "PSR",
   "anim.auto": "auto",
   "anim.fall": "FALL",
-  "anim.pilot": "PILOT +{n}",
+  "anim.pilot": "PILOT HP −{n}",
   "anim.ko": "KO",
   "anim.ammo": "AMMO EXPLOSION",
   "anim.shutdown": "SHUTDOWN",
