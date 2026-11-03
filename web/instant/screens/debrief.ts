@@ -861,12 +861,8 @@ function mapTab(): TuiNode[] {
   const legend = h().el(
     "span",
     { key: "legend" },
-    ...glyph("■", "debrief.lg.inPlay", "a"),
+    ...glyph("┄", "debrief.lg.out", "a"),
     sep("a"),
-    ...glyph("▣", "debrief.lg.hull", "b"),
-    sep("b"),
-    ...glyph(M.out, "debrief.lg.wreck", "c"),
-    sep("c"),
     ...glyph("%", "debrief.lg.wreckage", "d"),
     sep("d"),
     ...glyph("!", "debrief.lg.limb", "e"),
@@ -896,6 +892,7 @@ function debriefBanners(b: BattleController): Banner[] {
     if (!hull && u.destroyed === "not") continue;
     out.push({
       id: hull ? `-${u.id}` : `${M.out}${u.id}`,
+      label: u.id,
       hex: u.position,
       facing: u.facing,
       team: u.team,

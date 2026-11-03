@@ -458,7 +458,7 @@ per side (units lost, damage dealt, BV score), then:
 | Fires | per unit: shots, hits, hit %, damage dealt and taken, kills, peak heat, ammo spent; the picked unit's weapons with their best hit |
 | Timeline | damage each side dealt per turn, the swing turn, and key moments: first blood, falls, heat shutdowns, ammo explosions, pilots knocked out or killed, ejections, abandonments, units destroyed and by whom |
 | Salvage | `salvageReport`: per hull and wreck, the intact weapons, ammo and systems |
-| Map | the board as the battle ended: units in play, hulls, wrecks at each destroyed unit's last hex, wreckage terrain, severed limbs and clubs |
+| Map | the board as the battle ended: units in play, hulls (`HULL`) and the wrecks of destroyed units (`WRECK`) on dashed signs at their last hex, wreckage terrain, severed limbs and clubs |
 | Log | the battle log |
 
 The fire statistics, damage per turn and key moments are folded from each

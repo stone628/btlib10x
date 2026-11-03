@@ -475,6 +475,7 @@ export function bannersOf(state: BattleState, actorId: string | null): Banner[] 
     const hull = isHull(u);
     out.push({
       id: hull ? `-${u.id}` : u.id,
+      label: u.id,
       hex: u.position,
       facing: u.facing,
       team: hull ? 0 : u.team,

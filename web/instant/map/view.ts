@@ -67,8 +67,10 @@ export interface Banner {
   readonly facing: Facing;
   /** 1 / 2, or 0 for a neutral hull. */
   readonly team: number;
-  /** Second line: armor pips or a status word. */
+  /** Second line: pilot health boxes or a status word. */
   readonly sub: string;
+  /** The first line when it is not the id (a hull's id is `-A1`, its sign says A1). */
+  readonly label?: string;
   readonly active?: boolean;
   readonly ghost?: boolean;
 }
@@ -1741,7 +1743,7 @@ export class MapView {
       const k = key(b.hex);
       const tier = stacked.get(k) ?? 0;
       stacked.set(k, tier + 1);
-      const l1 = ` ${b.id} `;
+      const l1 = ` ${b.label ?? b.id} `;
       const l2 = ` ${b.sub} `;
       const cols = Math.max(l1.length, l2.length);
       const bw = cols * cw;
