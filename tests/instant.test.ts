@@ -35,6 +35,7 @@ import { en } from "../web/instant/i18n/en";
 import { ko } from "../web/instant/i18n/ko";
 import { commitAlias } from "../web/instant/input";
 import { clipStatus, JUMP_LIFT, MapAnimator } from "../web/instant/map/anim";
+import { DEFAULT_GLYPH, glyphOf } from "../web/instant/map/avatars";
 import type { MapView } from "../web/instant/map/view";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
@@ -73,7 +74,14 @@ import {
   loadoutProblem,
   randomLoadout,
 } from "../web/instant/setup/loadout";
-import { app, newBattleUi, setAiPace, setAiReasoning, setAnimSpeed } from "../web/instant/state";
+import {
+  app,
+  newBattleUi,
+  setAiPace,
+  setAiReasoning,
+  setAnimSpeed,
+  setGlyphs,
+} from "../web/instant/state";
 import { runChunks } from "../web/terminal/cli";
 import { newSession } from "../web/terminal/session";
 
@@ -1065,9 +1073,10 @@ describe("Instant Action Options", () => {
     expect(app.modal).toBeNull();
   });
 
-  it("steps pace with ← → and toggles the reasoning log with Enter, keeping both", () => {
+  it("steps pace with ← → and toggles the reasoning log and glyph avatars, keeping them", () => {
     const pace = app.aiPace;
     const reasoning = app.aiReasoning;
+    const glyphs = app.glyphs;
     openOptions(null);
     expect(optionsKey(ev("ArrowDown"), opts())).toBe(true); // Persona pace
     expect(optionsKey(ev("ArrowRight"), opts())).toBe(true);
@@ -1081,11 +1090,16 @@ describe("Instant Action Options", () => {
     expect(store.get("bt10x.instant.reasoning")).toBe(reasoning ? "off" : "on");
     expect(optionsKey(ev(" "), opts())).toBe(true);
     expect(app.aiReasoning).toBe(reasoning);
+    expect(optionsKey(ev("ArrowDown"), opts())).toBe(true); // glyph avatars
+    expect(optionsKey(ev("Enter"), opts())).toBe(true);
+    expect(app.glyphs).toBe(!glyphs);
+    expect(store.get("bt10x.instant.glyphs")).toBe(glyphs ? "off" : "on");
     expect(optionsKey(ev("ArrowDown"), opts())).toBe(true); // wraps to Language
     expect(opts().cursor).toBe(0);
     expect(optionsKey(ev("a"), opts())).toBe(false);
     setAiPace(pace);
     setAiReasoning(reasoning);
+    setGlyphs(glyphs);
   });
 
   it("ends each Esc menu, and closing it returns to that menu on its row", () => {
@@ -1408,5 +1422,26 @@ describe("Instant Action record sheet hints (TW pp. 42, 125, 159-160)", () => {
     expect(heatTip(u)).toContain("Restart on 2D6 4+ (92%) in the Heat Phase; automatic below 14.");
     u.heat = 31;
     expect(heatTip(u)).toContain("No restart until heat drops below 30.");
+  });
+});
+
+describe("glyph avatars (map/avatars)", () => {
+  const models = ["data/mechs", "docs/mtf/sw/json"].flatMap((dir) =>
+    readdirSync(dir)
+      .filter((f) => f.endsWith(".json"))
+      .map((f) => (JSON.parse(readFileSync(join(dir, f), "utf8")) as { model: string }).model),
+  );
+
+  it("gives every catalog model its own 10-glyph avatar", () => {
+    expect(models.length).toBeGreaterThan(0);
+    for (const m of models) {
+      expect([...glyphOf(m)], m).toHaveLength(10);
+      expect(glyphOf(m) === DEFAULT_GLYPH, m).toBe(false);
+    }
+  });
+
+  it("falls back to the default avatar for an unknown model", () => {
+    expect(glyphOf("NO-SUCH-MODEL")).toBe(DEFAULT_GLYPH);
+    expect(DEFAULT_GLYPH).toBe(" ╭╮ ╽[]╽╽╽");
   });
 });

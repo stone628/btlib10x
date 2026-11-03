@@ -1,11 +1,19 @@
 /**
- * Options: language, persona pace and the persona reasoning log. Opened from
+ * Options: language, persona pace, the persona reasoning log and glyph avatars. Opened from
  * the title menu and from every Esc menu; ↑ ↓ pick a row, ← → (or Enter /
  * Space, or a click) change its value, which applies and is kept at once.
  * Esc / Backspace close it, back to the menu that opened it.
  */
 import { type LocaleId, locale, t } from "../i18n";
-import { AI_PACES, app, type Modal, rerender, setAiPace, setAiReasoning } from "../state";
+import {
+  AI_PACES,
+  app,
+  type Modal,
+  rerender,
+  setAiPace,
+  setAiReasoning,
+  setGlyphs,
+} from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiNode } from "../tui";
 import { fit, h, modal, row } from "./common";
@@ -64,6 +72,13 @@ const ROWS: readonly OptionRow[] = [
     value: () => t(app.aiReasoning ? "options.on" : "options.off"),
     step: () => setAiReasoning(!app.aiReasoning),
     info: "options.info.reasoning",
+  },
+  {
+    key: "glyphs",
+    label: () => t("options.glyphs"),
+    value: () => t(app.glyphs ? "options.on" : "options.off"),
+    step: () => setGlyphs(!app.glyphs),
+    info: "options.info.glyphs",
   },
 ];
 

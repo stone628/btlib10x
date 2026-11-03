@@ -510,6 +510,9 @@ export const en = {
     "How personas take their turns: at once,\none step per Enter, or on a timer.",
   "options.info.reasoning":
     "Adds each persona's pick, its posture\nand how many options it weighed to the\nbattle log.",
+  "options.glyphs": "Glyph avatars",
+  "options.info.glyphs":
+    "Draws each 'Mech's glyph avatar on the\nmap: standing, or lying on its hex when\nprone.",
   "setupMenu.title": "New Battle",
   "setup.discardTitle": "Discard battle setup",
   "setup.discardText": "Discard this battle setup and return to the title screen?",

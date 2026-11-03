@@ -549,6 +549,18 @@ Hovering a hex shows its coordinates; in battle and on the
 debrief map, a hex holding severed limbs or dropped clubs tips what lies
 there.
 
+**Map marks.** Wreckage (`%`) and severed limbs or dropped clubs (`!`) are
+white signs with a black outline at the glyph avatars' size, whether glyph
+avatars are on or off. Each sign is its own upright plane facing the screen,
+standing on the hex's near edge (the side toward the viewer, opposite the
+edge the CCRR label hangs from), 1/8 of the hex's corner-to-corner width in
+from that edge; a hex holding both spreads them along that edge. They are
+drawn with the hex, so a nearer, taller hex covers them, except on a hex
+with a prone glyph avatar, where they go on after the glyph. The reachable
+MP stays flat on the face below its centre. With glyph avatars on (Options),
+a unit's glyph stands on (prone: lies centred on) the base line of its
+facing triangle, not the hex centre; the sign's pole stays at the centre.
+
 **Status bar.** The battle status bar names pad buttons (A, B, X, Y, LB,
 RB, View, Menu, D-pad, LS) after pad input, and keys again after a key or a
 mouse move.

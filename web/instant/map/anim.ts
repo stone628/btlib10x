@@ -687,7 +687,7 @@ class Builder {
 
   private psr(b: Extract<Beat, { kind: "psr" }>, at: number): void {
     const roll = b.roll === null ? t("anim.auto") : String(b.roll);
-    const text = `${t("anim.psr")} ${b.target}+ · ${roll} ${b.success ? "✓" : "✗"}`;
+    const text = `${t("anim.psr")} ${b.target}+ ${roll} ${b.success ? "√" : "☓"}`;
     this.chip(at, b.unitId, text, b.success ? "--ia-reach" : "--tui-red", 1100);
     if (b.success && !this.reduced) {
       this.tween(at + 120, 360, (p) => {
@@ -711,7 +711,7 @@ class Builder {
       });
     }
     const end = at + T.fall;
-    this.set(end, id, { facing: b.facing });
+    this.set(end, id, { facing: b.facing, prone: true });
     this.look(end, id, { prone: true });
     this.flash(end, id, "--ia-target", 300);
     this.tick(

@@ -73,6 +73,10 @@ export interface Banner {
   readonly label?: string;
   readonly active?: boolean;
   readonly ghost?: boolean;
+  /** Glyph avatar (`map/avatars.ts`): 10 chars, rows of 4, 4 and the 2 legs. */
+  readonly glyph?: string;
+  /** Lying down: the glyph lies flat on the hex face instead of standing. */
+  readonly prone?: boolean;
 }
 
 /**
@@ -164,6 +168,16 @@ const HEX_R = 2.1; // circumradius in font sizes: corner to corner = 7 cells of 
 const LEVEL_H = (SQ3 * 6) / 30;
 const LABEL_FS = 0.62;
 const LABEL_INSET = 0.12;
+/** Pile signs (`%` wreckage, `!` club) stand 1/8 of the hex's corner-to-corner width (2 circumradii) in from its near edge. */
+const PILE_INSET = 2 / 8;
+/** Two pile signs on one hex stand this far apart along that edge (an edge is 1 circumradius). */
+const PILE_GAP = 0.4;
+/** Facing triangle (`drawFacings`): length (1/4 the hex's corner-to-corner width) and its shift toward the facing edge. */
+const TRI_H = 0.5;
+const TRI_NUDGE = SQ3 / 16;
+/** The facing triangle's base, along the facing from the hex centre: where a glyph avatar stands. */
+// const TRI_BASE = TRI_NUDGE - TRI_H / 2;
+const TRI_BASE = 2 * TRI_NUDGE - TRI_H / 2;
 const FONT = '"Bt10x Mono", Consolas, monospace';
 const CORNERS = Array.from(
   { length: 6 },
@@ -183,13 +197,27 @@ const TILT_STEP = 5;
 const HUD_R = 16;
 const HUD_PAD = 6;
 
+/** Glyph avatar cell, in glyph font sizes; the glyph's font size is the coordinate label's. */
+const GLYPH_CW = 0.6;
+const GLYPH_LH = 1;
+const GLYPH_ROWS = 3;
+const GLYPH_COLS = 4;
+/** A prone glyph floats this far above the hex face, CSS px. */
+const GLYPH_LIFT = 3;
+/** Smallest glyph font size drawn, CSS px. */
+const GLYPH_MIN = 4;
+/** An upright glyph keeps this share of its width when its plane turns edge-on to the view. */
+const GLYPH_MIN_W = 0.3;
+
 /** Banner metrics (CSS px) at a map font size: font, line height, box height, pole.
- *  The sign's text keeps one size whatever the zoom; only the pole grows with the hexes. */
-const bannerMetrics = (fs: number) => {
+ *  The sign's text keeps one size whatever the zoom; only the pole grows with the hexes.
+ *  With glyph avatars on, the pole also clears an upright glyph (`drawGlyph`). */
+const bannerMetrics = (fs: number, glyphs: boolean) => {
   // the page's own text size (the kit's --tui-fs), so it follows the A / A buttons
   const bfs = Number.parseFloat(css("--tui-fs", "")) || 14;
   const chh = bfs * 1.175;
-  return { fs: bfs, chh, bh: chh * 2.1, pole: Math.max(chh * 0.9, HEX_R * fs * 0.45) };
+  const glyph = glyphs ? GLYPH_ROWS * GLYPH_LH * fs * LABEL_FS : 0;
+  return { fs: bfs, chh, bh: chh * 2.1, pole: Math.max(chh * 0.9, HEX_R * fs * 0.45) + glyph };
 };
 
 const key = (h: HexCoord) => `${h.col},${h.row}`;
@@ -266,6 +294,8 @@ export class MapView {
   private raf = 0;
   private lastMarch = 0;
   private animating = false;
+  /** Draw the units' glyph avatars (Options); off, the banners stand on their old, shorter poles. */
+  glyphs = true;
   /** Draw every hex's CCRR coordinate on its face; off, only the hovered hex's. */
   showCoords = false;
   /**
@@ -681,7 +711,7 @@ export class MapView {
     });
     const inner = (fs: number) => {
       const R = HEX_R * fs;
-      const m = bannerMetrics(fs);
+      const m = bannerMetrics(fs, this.glyphs);
       return {
         x0: rect.x0 + R,
         x1: rect.x1 - R,
@@ -735,7 +765,7 @@ export class MapView {
   /** Screen box (CSS px) of must-see spots under the current view. */
   private seeBox(needs: readonly MustSee[]): Rect {
     const v = this.view();
-    const m = bannerMetrics(v.fs);
+    const m = bannerMetrics(v.fs, this.glyphs);
     const cw = m.fs * 0.6;
     const src = this.src!;
     let x0 = Infinity;
@@ -978,7 +1008,7 @@ export class MapView {
     const sq = Math.max(Math.sin((this.tilt * Math.PI) / 180), 1e-3);
     const inner = (fs: number) => {
       const R = HEX_R * fs;
-      const m = bannerMetrics(fs);
+      const m = bannerMetrics(fs, this.glyphs);
       return {
         x0: rect.x0 + R,
         x1: rect.x1 - R,
@@ -1156,7 +1186,7 @@ export class MapView {
 
   /** Top of the fitted box (circumradii) at a font size: the map or a banner's top. */
   private fitTop(e: ReturnType<MapView["extent"]>, fs: number): number {
-    const m = bannerMetrics(fs);
+    const m = bannerMetrics(fs, this.glyphs);
     return Math.min(e.y0, e.banner - (m.pole + m.bh) / (HEX_R * fs));
   }
 
@@ -1299,6 +1329,11 @@ export class MapView {
       for (const g of s.segs) segOwner.set(g.key, i);
     });
     const team = (n: number) => css(`--ia-team${n}`, n === 1 ? "#4fa3ff" : "#ff6b5a");
+    // hexes whose prone glyph avatar is drawn: their pile signs go on after it
+    const prone = new Set(
+      this.glyphs ? this.banners.filter((b) => b.prone && b.glyph).map((b) => key(b.hex)) : [],
+    );
+    const proneTops = new Map<string, Shape>();
     list.forEach((s, i) => {
       const k = `${s.hex.col},${s.hex.row}`;
       for (const p of s.polys) {
@@ -1337,7 +1372,10 @@ export class MapView {
       }
       if (s.top && s.label && (this.hover === k || (this.showCoords && v.fs >= 6)))
         this.drawLabel(v, s, d, this.hover === k);
-      if (s.top) this.drawMarks(v, s, k, d);
+      if (s.top) {
+        this.drawMarks(v, s, k, d, prone);
+        if (prone.has(k)) proneTops.set(k, s);
+      }
     });
     this.drawn = list;
     this.drawOutline(list);
@@ -1346,6 +1384,7 @@ export class MapView {
     for (const f of this.fx.under) f(fx);
     this.drawActiveRing(v);
     this.drawFacings(v);
+    for (const [k, s] of proneTops) this.drawPiles(v, s, k, d);
     for (const f of this.fx.mid) f(fx);
     this.drawBanners(v);
     for (const f of this.fx.over) f(fx);
@@ -1414,7 +1453,7 @@ export class MapView {
   }
 
   private fxContext(v: ReturnType<MapView["view"]>): FxContext {
-    const m = bannerMetrics(v.fs);
+    const m = bannerMetrics(v.fs, this.glyphs);
     const src = this.src!;
     const ctx = this.ctx;
     const hexW = (h: HexCoord) => {
@@ -1621,35 +1660,71 @@ export class MapView {
   }
 
   /**
-   * Hex marks below the face centre: the reachable MP lies on the top face,
+   * Hex marks. The reachable MP lies on the top face below its centre,
    * flattened by the tilt like the labels so it stays on the face at any
-   * tilt; wreckage `%` and club `!` stand upright there, like the banners.
+   * tilt. Wreckage `%` and club `!` are glyph-style signs (white, black
+   * outline, the glyph avatars' size), each its own screen-upright plane
+   * standing on the face's near edge, opposite the CCRR label (`drawPiles`).
+   * A hex holding a prone unit has its signs drawn after the prone glyph
+   * (`drawFacings`), so the glyph never covers them.
    */
-  private drawMarks(v: ReturnType<MapView["view"]>, s: Shape, k: string, d: number): void {
+  private drawMarks(
+    v: ReturnType<MapView["view"]>,
+    s: Shape,
+    k: string,
+    d: number,
+    prone: ReadonlySet<string>,
+  ): void {
     const mp = this.overlays.reachable?.get(k);
+    if (mp) {
+      const ctx = this.ctx;
+      const [x, y] = v.proj([s.hex.x, s.hex.y + (v.fs * 0.35) / v.R], s.hex.drawn);
+      ctx.save();
+      ctx.font = `${Math.max(8, v.fs * 0.8)}px ${FONT}`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillStyle = css("--ia-map-mark", "#f0f0f0");
+      ctx.setTransform(d, 0, 0, d * v.sq, d * x, d * y);
+      ctx.fillText(mp, 0, 0);
+      ctx.restore();
+    }
+    if (!prone.has(k)) this.drawPiles(v, s, k, d);
+  }
+
+  /** Signs of the wreckage `%` and club `!` piles on a hex (`drawMarks`). */
+  private drawPiles(v: ReturnType<MapView["view"]>, s: Shape, k: string, d: number): void {
     const items: string[] = [];
     if (this.overlays.wreckage?.has(k)) items.push("%");
     if (this.overlays.clubs?.has(k)) items.push("!");
-    if (!mp && items.length === 0) return;
+    if (items.length === 0) return;
+    // the near edge: opposite the edge the CCRR label hangs from (`drawLabel`)
+    const top = v.normals.reduce((best, n, j) => (n[1] < v.normals[best]![1] ? j : best), 0);
+    const n = v.normals[(top + 3) % 6]!;
+    const t = [-n[1], n[0]] as const;
+    const apo = SQ3 / 2 - PILE_INSET;
+    const spots = items.map((ch, i) => {
+      const along = (i - (items.length - 1) / 2) * PILE_GAP;
+      const p = v.proj(
+        [s.hex.x + n[0] * apo + t[0] * along, s.hex.y + n[1] * apo + t[1] * along],
+        s.hex.drawn,
+      );
+      return { ch, p };
+    });
+    spots.sort((a, b) => a.p[1] - b.p[1]); // back to front
+    const size = Math.max(8, v.fs * LABEL_FS);
     const ctx = this.ctx;
-    const [x, y] = v.proj([s.hex.x, s.hex.y + (v.fs * 0.35) / v.R], s.hex.drawn);
-    const text = [mp, ...items].filter(Boolean).join(" ");
     ctx.save();
-    ctx.font = `${Math.max(8, v.fs * 0.8)}px ${FONT}`;
-    ctx.textAlign = "left";
-    ctx.textBaseline = "middle";
-    ctx.fillStyle = css("--ia-map-mark", "#f0f0f0");
-    // Lay the whole run out once so the flat and upright parts keep their places.
-    let cx = -ctx.measureText(text).width / 2;
-    if (mp) {
-      ctx.setTransform(d, 0, 0, d * v.sq, d * x, d * y);
-      ctx.fillText(mp, cx, 0);
-      cx += ctx.measureText(`${mp} `).width;
-    }
-    if (items.length) {
-      ctx.setTransform(d, 0, 0, d, d * x, d * y);
-      ctx.textBaseline = "alphabetic";
-      ctx.fillText(items.join(" "), cx, 0);
+    ctx.setTransform(d, 0, 0, d, 0, 0);
+    ctx.font = `${size}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "alphabetic";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(1.5, size * 0.14);
+    ctx.strokeStyle = "#000";
+    ctx.fillStyle = "#fff";
+    for (const { ch, p } of spots) {
+      ctx.strokeText(ch, p[0], p[1]);
+      ctx.fillText(ch, p[0], p[1]);
     }
     ctx.restore();
   }
@@ -1678,9 +1753,9 @@ export class MapView {
   private drawFacings(v: ReturnType<MapView["view"]>): void {
     if (!this.src) return;
     const ctx = this.ctx;
-    const h = 0.5; // 1/4 the hex's corner-to-corner width (one circumradius)
+    const h = TRI_H;
     const hw = h * 0.26;
-    const nudge = SQ3 / 16; // shifted 1/16 hex toward the facing edge
+    const nudge = TRI_NUDGE; // shifted 1/16 hex toward the facing edge
     const items = this.banners.map((b) => {
       const g = this.unitGround(b);
       return { b, g, y: v.rot(g.w)[1] };
@@ -1719,14 +1794,87 @@ export class MapView {
       if (b.team === 0 || b.ghost) ctx.setLineDash([v.fs * 0.25, v.fs * 0.2]);
       ctx.stroke();
       ctx.restore();
+      if (b.glyph && b.prone) {
+        const [gx, gy] = v.proj(v.rot([w[0] + f[0] * TRI_BASE, w[1] + f[1] * TRI_BASE]), g.level);
+        this.drawGlyph(v, b, gx + (pose?.dx ?? 0), gy - (pose?.lift ?? 0) * v.R, t);
+      }
     }
+  }
+
+  /**
+   * A unit's glyph avatar, white with a black outline at the coordinate
+   * label's size, on the facing triangle's base line (`TRI_BASE`), not the hex
+   * centre. Upright, it is a plane standing there and facing
+   * the unit's facing: its rows run along the plane's horizontal (so it narrows
+   * and shears with the view, and its back shows mirrored) while its height
+   * stays screen-upright like the signs. Prone, it lies centred there a few px
+   * up, head row toward the facing, turned but never mirrored.
+   */
+  private drawGlyph(
+    v: ReturnType<MapView["view"]>,
+    b: Banner,
+    x: number,
+    y: number,
+    angle: number,
+  ): void {
+    if (!this.glyphs) return;
+    const g = [...(b.glyph ?? "")];
+    const size = v.fs * LABEL_FS;
+    if (g.length === 0 || size < GLYPH_MIN) return;
+    const rows = [g.slice(0, 4), g.slice(4, 8), [" ", g[8] ?? " ", g[9] ?? " ", " "]];
+    const f = [Math.sin(angle), -Math.cos(angle)] as const; // world y points south
+    const cw = size * GLYPH_CW;
+    const lh = size * GLYPH_LH;
+    const bw = cw * GLYPH_COLS;
+    const bh = lh * GLYPH_ROWS;
+    let u: readonly [number, number];
+    let w: readonly [number, number];
+    let o: readonly [number, number];
+    if (b.prone) {
+      // the head-up glyph turned to the facing: x to the right of the head, rows toward the feet
+      const r = v.rot([-f[1], f[0]]);
+      const h = v.rot([f[0], f[1]]);
+      u = [r[0], r[1] * v.sq];
+      w = [-h[0], -h[1] * v.sq];
+      o = [x - (u[0] * bw + w[0] * bh) / 2, y - GLYPH_LIFT - (u[1] * bw + w[1] * bh) / 2];
+    } else {
+      // the viewer's right when facing the 'Mech's front: column 0 is its right side
+      const r = v.rot([f[1], -f[0]]);
+      // edge-on (the camera turns in 30° steps, so often exactly) it would vanish
+      const ux = Math.abs(r[0]) < GLYPH_MIN_W ? (r[0] < -1e-9 ? -GLYPH_MIN_W : GLYPH_MIN_W) : r[0];
+      u = [ux, r[1] * v.sq];
+      w = [0, 1];
+      o = [x - (u[0] * bw) / 2, y - bh - (u[1] * bw) / 2];
+    }
+    const ctx = this.ctx;
+    ctx.save();
+    if (b.ghost || this.poses.get(b.id)?.shadow) ctx.globalAlpha = 0.55;
+    ctx.transform(u[0], u[1], w[0], w[1], o[0], o[1]);
+    ctx.font = `${size}px ${FONT}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineJoin = "round";
+    ctx.lineWidth = Math.max(1.5, size * 0.14);
+    ctx.strokeStyle = "#000";
+    ctx.fillStyle = "#fff";
+    for (const fill of [false, true])
+      rows.forEach((row, ri) => {
+        row.forEach((ch, ci) => {
+          if (ch === " ") return;
+          const cx = cw * (ci + 0.5);
+          const cy = lh * (ri + 0.5);
+          if (fill) ctx.fillText(ch, cx, cy);
+          else ctx.strokeText(ch, cx, cy);
+        });
+      });
+    ctx.restore();
   }
 
   /** Units as upright signs on a pole, back to front (starter design). */
   private drawBanners(v: ReturnType<MapView["view"]>): void {
     if (!this.src) return;
     const ctx = this.ctx;
-    const { fs, chh, bh, pole } = bannerMetrics(v.fs);
+    const { fs, chh, bh, pole } = bannerMetrics(v.fs, this.glyphs);
     ctx.font = `${fs}px ${FONT}`;
     const cw = fs * 0.6;
     const items = this.banners.map((b) => {
@@ -1759,6 +1907,12 @@ export class MapView {
       ctx.moveTo(base[0], base[1]);
       ctx.lineTo(base[0], y0 + bh);
       ctx.stroke();
+      if (b.glyph && !b.prone) {
+        const t = pose?.angle ?? (FACINGS.indexOf(b.facing) * Math.PI) / 3;
+        // on the facing triangle's base line, not under the pole
+        const off = v.rot([Math.sin(t) * TRI_BASE, -Math.cos(t) * TRI_BASE]);
+        this.drawGlyph(v, b, base[0] + off[0] * v.R, base[1] + off[1] * v.R * v.sq, t);
+      }
       if (pose?.tilt) {
         ctx.translate(base[0], y0 + bh);
         ctx.rotate(pose.tilt);

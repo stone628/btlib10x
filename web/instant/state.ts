@@ -53,6 +53,29 @@ export function setAiReasoning(on: boolean): void {
 }
 
 const ANIM_KEY = "bt10x.instant.anim";
+const GLYPHS_KEY = "bt10x.instant.glyphs";
+
+/** Glyph avatars on the map kept between visits (Options); on by default. */
+function loadGlyphs(): boolean {
+  try {
+    return localStorage.getItem(GLYPHS_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
+
+export function setGlyphs(on: boolean): void {
+  app.glyphs = on;
+  if (app.mapView) {
+    app.mapView.glyphs = on;
+    app.mapView.render();
+  }
+  try {
+    localStorage.setItem(GLYPHS_KEY, on ? "on" : "off");
+  } catch {
+    // private mode or blocked storage: the setting lasts for this visit
+  }
+}
 
 /** The OS asks for less motion: travel, shakes and rises become cuts and fades. */
 export function reducedMotion(): boolean {
@@ -269,6 +292,8 @@ export interface App {
   /** Map animations: Full, Fast or Off (battle menu). */
   anim: AnimSpeed;
   aiReasoning: boolean;
+  /** Glyph avatars on the map (Options). */
+  glyphs: boolean;
   /** Persistent map views: battle board and setup / deploy preview. */
   mapView: MapView | null;
   error: string | null;
@@ -293,6 +318,7 @@ export const app: App = {
   aiPace: loadPace(),
   anim: loadAnim(),
   aiReasoning: loadReasoning(),
+  glyphs: loadGlyphs(),
   mapView: null,
   error: null,
   version: "",

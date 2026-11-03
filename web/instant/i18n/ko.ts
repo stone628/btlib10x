@@ -488,6 +488,9 @@ export const ko: Catalog = {
     "페르소나가 차례를 진행하는 방식:\n즉시, Enter마다 한 단계,\n또는 시간 간격.",
   "options.info.reasoning":
     "전투 기록에 각 페르소나의 선택과 태세,\n검토한 선택지 수를 표시합니다.",
+  "options.glyphs": "글리프 아바타",
+  "options.info.glyphs":
+    "지도에 각 'Mech의 글리프 아바타를\n그립니다. 넘어진 'Mech은 헥스 위에\n눕혀 그립니다.",
   "setupMenu.title": "새 전투",
   "setup.discardTitle": "전투 설정 버리기",
   "setup.discardText": "이 전투 설정을 버리고 타이틀 화면으로 돌아갈까요?",

@@ -24,6 +24,7 @@ import { type BattleResult, unitLoss } from "../battle/victory";
 import { battleBanners, battleMapSource, rematch } from "../flow";
 import { locName, t } from "../i18n";
 import { bracket } from "../input";
+import { glyphOf } from "../map/avatars";
 import type { Banner } from "../map/view";
 import { app, kitModal, rerender } from "../state";
 import { UI_THEME } from "../theme";
@@ -898,6 +899,8 @@ function debriefBanners(b: BattleController): Banner[] {
       team: u.team,
       sub: hull ? "HULL" : "WRECK",
       ghost: true,
+      glyph: glyphOf(u.model),
+      prone: u.prone,
     });
   }
   // Signs sharing a hex stack in list order, so the wrecks and hulls stand above the units in play.

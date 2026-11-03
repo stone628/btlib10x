@@ -30,6 +30,7 @@ import {
 } from "./battle/deploy";
 import { t } from "./i18n";
 import { MapAnimator } from "./map/anim";
+import { glyphOf } from "./map/avatars";
 import type { Banner, MapSource, MapViewInit } from "./map/view";
 import { CAMERA_MS, CLIP_MIN_FS, MapView } from "./map/view";
 import {
@@ -125,6 +126,7 @@ export function ensureMapView(): MapView {
   if (app.mapView === null) {
     const canvas = document.createElement("canvas");
     app.mapView = new MapView(canvas);
+    app.mapView.glyphs = app.glyphs;
   }
   return app.mapView;
 }
@@ -249,6 +251,7 @@ export function deployBanners(): Banner[] {
         team: u.side + 1,
         sub: u.model.slice(0, 6),
         active: i === d.cursor,
+        glyph: glyphOf(u.model),
       },
     ];
   });
@@ -481,6 +484,8 @@ export function bannersOf(state: BattleState, actorId: string | null): Banner[] 
       team: hull ? 0 : u.team,
       sub: bannerSub(lookOf(u)),
       active: u.id === actorId,
+      glyph: glyphOf(u.model),
+      prone: u.prone,
     });
   }
   return out;
@@ -500,6 +505,7 @@ export function battleBanners(): Banner[] {
       team: b.actor.team,
       sub: "",
       ghost: true,
+      glyph: glyphOf(b.actor.model),
     });
   }
   return out;
