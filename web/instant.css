@@ -669,3 +669,7 @@
   background: rgba(0, 0, 0, 0.6);
   pointer-events: none;
 }
+/* Choose 'Mech: the glyph avatar in the Selected box's inset (no fill of its own). */
+.ia-avatar {
+  color: var(--c-white);
+}

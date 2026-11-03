@@ -253,7 +253,12 @@
        actions          [{ text, title, onClick }] drawn at the top right
        tone             accent | warn | danger | info | clear
        theme            green | amber | paper | any CSS-defined theme
-       shadow, pad      boolean, cells of inner padding (default 1) */
+       shadow, pad      boolean, cells of inner padding (default 1)
+       inset            "<corner> <cols> <rows>" (corner nw | ne | sw | se): a
+                        compartment in that corner sharing the box's two edges,
+                        its lines and joints drawn in the box's border glyphs
+                        (e.g. "ne 8 5"); its inside is a .tui-inset element,
+                        styled by the app. Empty or invalid: none. */
   function box(el, opts) {
     if (!(el instanceof Element)) {
       opts = el;
@@ -277,6 +282,7 @@
     st.titleAlign = pick("titleAlign", "titleAlign", "left");
     st.footer = pick("footer", "footer", "");
     st.footerRight = pick("footerRight", "footerRight", "");
+    st.inset = pick("inset", "inset", "");
     if (opts.actions) st.actions = opts.actions;
     if (opts.border) d.border = opts.border;
     else if (!d.border) d.border = "single";
@@ -397,6 +403,52 @@
     return row;
   }
 
+  /* Geometry of a box's inset ("<corner> <cols> <rows>", see box()): its
+     cells x0..x0+w-1 by y0..y0+h-1, the column of its vertical line (vx) and
+     the row of its horizontal one (hy). Null when absent or not fitting. */
+  function insetGeom(spec, c, r) {
+    const m = /^(n|s)(w|e)\s+(\d+)\s+(\d+)$/.exec(String(spec || "").trim());
+    if (!m) return null;
+    const w = +m[3],
+      h = +m[4];
+    if (w < 3 || h < 3 || w > c - 1 || h > r - 1) return null;
+    const x0 = m[2] === "e" ? c - w : 0;
+    const y0 = m[1] === "s" ? r - h : 0;
+    return {
+      n: m[1] === "n",
+      e: m[2] === "e",
+      x0,
+      y0,
+      w,
+      h,
+      vx: m[2] === "e" ? x0 : x0 + w - 1,
+      hy: m[1] === "n" ? y0 + h - 1 : y0,
+    };
+  }
+
+  /* Draw an inset's inner lines, its edge joint and its inside element. */
+  function drawInset(f, g, ins) {
+    const set = (y, x, ch) => {
+      const row = f.children[y];
+      // edge rows hold labels in spans: only plain middle rows are rewritten
+      if (!row || row.children.length) return;
+      const t = row.textContent;
+      row.textContent = t.slice(0, x) + ch + t.slice(x + 1);
+    };
+    for (let y = ins.y0 + 1; y < ins.y0 + ins.h - 1; y++) set(y, ins.vx, g.v);
+    const corner = ins.n ? (ins.e ? g.bl : g.br) : ins.e ? g.tl : g.tr;
+    const line = ins.e
+      ? corner + g.h.repeat(ins.w - 2) + g.rt
+      : g.lt + g.h.repeat(ins.w - 2) + corner;
+    for (let i = 0; i < ins.w; i++) set(ins.hy, ins.x0 + i, line[i]);
+    const d = div("tui-inset");
+    d.style.left = `calc(${ins.x0 + 1} * var(--cw))`;
+    d.style.top = `calc(${ins.y0 + 1} * var(--ch))`;
+    d.style.width = `calc(${ins.w - 2} * var(--cw))`;
+    d.style.height = `calc(${ins.h - 2} * var(--ch))`;
+    f.appendChild(d);
+  }
+
   function draw(el) {
     const st = el._tui;
     const g = glyphs(el);
@@ -474,7 +526,9 @@
 
     const f = st.frame;
     f.textContent = "";
-    f.appendChild(edgeRow(c, g.tl, g.h, g.tr, top, st.junctions, g.tt));
+    const ins = insetGeom(st.inset, c, r);
+    const topJ = ins?.y0 === 0 ? [...st.junctions, { at: ins.vx, ch: g.tt }] : st.junctions;
+    f.appendChild(edgeRow(c, g.tl, g.h, g.tr, top, topJ, g.tt));
     const rightV = st.hideRightEdge ? " " : g.v;
     const mid = g.v + " ".repeat(Math.max(0, c - 2)) + rightV;
     for (let i = 1; i < r - 1; i++) f.appendChild(div(null, mid));
@@ -487,12 +541,22 @@
       row.textContent = t.slice(0, x) + j.ch + t.slice(x + 1);
     }
     if (r > 1) {
+      const botJ = st.bottomJunctions || st.junctions;
       f.appendChild(
         st.hideBottomEdge
           ? div(null, g.bl + " ".repeat(Math.max(0, c - 2)) + g.br)
-          : edgeRow(c, g.bl, g.h, g.br, bottom, st.bottomJunctions || st.junctions, g.bt),
+          : edgeRow(
+              c,
+              g.bl,
+              g.h,
+              g.br,
+              bottom,
+              ins && ins.y0 + ins.h === r ? [...botJ, { at: ins.vx, ch: g.bt }] : botJ,
+              g.bt,
+            ),
       );
     }
+    if (ins) drawInset(f, g, ins);
 
     // Separator rows inside this box (not inside nested boxes).
     for (const s of st.inner.querySelectorAll(".tui-sep")) {
@@ -2154,6 +2218,7 @@
     "theme",
     "shadow",
     "pad",
+    "inset",
   ];
   const BOXDEF = {
     cols: 20,
@@ -2165,6 +2230,7 @@
     border: "single",
     shadow: false,
     pad: 1,
+    inset: "",
   };
 
   const isNode = (x) => !!x && typeof x === "object" && !!x[NODE];

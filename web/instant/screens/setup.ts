@@ -15,6 +15,7 @@ import {
 import { launch, mapSource } from "../flow";
 import { locName, t } from "../i18n";
 import { bracket } from "../input";
+import { avatarOf } from "../map/avatars";
 import { createRng } from "../rng";
 import {
   addedSlot,
@@ -53,6 +54,7 @@ import {
   modalFocusables,
   nearest,
   row,
+  span,
   statusbar,
 } from "./common";
 import { closesMessage, menuKey, menuWindow, openMenu, prefItems } from "./menu";
@@ -879,16 +881,31 @@ function selectedBox(model: string | null): TuiNode {
   }
   const def = mechDef(model);
   const cls = def.weightClass.toLowerCase();
+  // The glyph avatar, when the model has one, fills the box's top-right inset:
+  // the four info rows stop short of it and carry its rows at cells 36–39.
+  const g = avatarOf(model);
+  const av = g === null ? null : [...g];
+  const avRows = av
+    ? [av.slice(0, 4).join(""), av.slice(4, 8).join(""), ` ${av[8] ?? " "}${av[9] ?? " "} `]
+    : [];
+  const info = (i: number, text: string, style?: string): TuiNode => {
+    const o = style ? { key: `i${i}`, cls: style } : { key: `i${i}` };
+    const r = avRows[i];
+    if (r === undefined) return row(fit(text, av ? 34 : 41), o);
+    return h().el(
+      "div",
+      { class: `ia-row${style ? ` ${style}` : ""}`, key: `i${i}` },
+      `${fit(text, 34)}  `,
+      span(r, { cls: "ia-avatar" }),
+    );
+  };
   lines.push(
-    row(fit(`${def.model} ${def.name}`, 41), { key: "i0", cls: "ia-bright" }),
-    row(fit(`${t(`wclass.${cls}`)} ${def.tonnage}t ${def.techBase}`, 41), { key: "i1" }),
-    row(fit(`${t("mech.era")} ${def.intro}   BV ${def.bv}`, 41), { key: "i2" }),
-    row(
-      fit(
-        `${t("mech.walk")} ${def.walking}  ${t("mech.run")} ${def.running}  ${t("mech.jump")} ${def.jumping}`,
-        41,
-      ),
-      { key: "i3" },
+    info(0, `${def.model} ${def.name}`, "ia-bright"),
+    info(1, `${t(`wclass.${cls}`)} ${def.tonnage}t ${def.techBase}`),
+    info(2, `${t("mech.era")} ${def.intro}   BV ${def.bv}`),
+    info(
+      3,
+      `${t("mech.walk")} ${def.walking}  ${t("mech.run")} ${def.running}  ${t("mech.jump")} ${def.jumping}`,
     ),
   );
   // Ammo: every mount of a weapon shares one pool; the first mount shows the
@@ -930,7 +947,17 @@ function selectedBox(model: string | null): TuiNode {
     ),
   );
   lines.push(...armorDiagram(model));
-  return H.box({ key: "sel", cols: 43, rows: 20, pad: 0, title: t("mech.selected") }, ...lines);
+  return H.box(
+    {
+      key: "sel",
+      cols: 43,
+      rows: 20,
+      pad: 0,
+      title: t("mech.selected"),
+      inset: av ? "ne 8 5" : "",
+    },
+    ...lines,
+  );
 }
 
 /**

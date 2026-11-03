@@ -16,3 +16,8 @@ export const DEFAULT_GLYPH = TABLE.default ?? " ╭╮ ╽[]╽╽╽";
 export function glyphOf(model: string): string {
   return TABLE[model] ?? DEFAULT_GLYPH;
 }
+
+/** The glyph avatar of a catalog model, or null when the table does not list it (no default). */
+export function avatarOf(model: string): string | null {
+  return model === "default" ? null : (TABLE[model] ?? null);
+}

@@ -18,6 +18,7 @@ import {
 } from "btlib10x";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../web/instant/ai/persona.data";
+import AVATARS from "../web/instant/avatars/mech-avatars.json";
 import { type Beat, beatTime, buildBeats, isReel, legTimes } from "../web/instant/battle/beats";
 import { clipNeeds, emptyRects } from "../web/instant/battle/camera";
 import { BattleController, type StepRecord } from "../web/instant/battle/controller";
@@ -35,7 +36,7 @@ import { en } from "../web/instant/i18n/en";
 import { ko } from "../web/instant/i18n/ko";
 import { commitAlias } from "../web/instant/input";
 import { clipStatus, JUMP_LIFT, MapAnimator } from "../web/instant/map/anim";
-import { DEFAULT_GLYPH, glyphOf } from "../web/instant/map/avatars";
+import { avatarOf, DEFAULT_GLYPH, glyphOf } from "../web/instant/map/avatars";
 import type { MapView } from "../web/instant/map/view";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
@@ -1443,5 +1444,27 @@ describe("glyph avatars (map/avatars)", () => {
   it("falls back to the default avatar for an unknown model", () => {
     expect(glyphOf("NO-SUCH-MODEL")).toBe(DEFAULT_GLYPH);
     expect(DEFAULT_GLYPH).toBe(" ╭╮ ╽[]╽╽╽");
+  });
+
+  it("has no avatar for Choose 'Mech when the table does not list the model", () => {
+    expect(avatarOf("NO-SUCH-MODEL")).toBeNull();
+    expect(avatarOf("default")).toBeNull();
+    expect(avatarOf(models[0]!)).toBe(glyphOf(models[0]!));
+  });
+
+  it("lists only models of the ci / fc / jh / sw / w39 packs", () => {
+    const packs = new Set(
+      ["ci", "fc", "jh", "sw", "w39"].flatMap((p) =>
+        readdirSync(`docs/mtf/${p}/json`)
+          .filter((f) => f.endsWith(".json"))
+          .map(
+            (f) =>
+              (JSON.parse(readFileSync(join(`docs/mtf/${p}/json`, f), "utf8")) as { model: string })
+                .model,
+          ),
+      ),
+    );
+    const stray = Object.keys(AVATARS).filter((m) => m !== "default" && !packs.has(m));
+    expect(stray).toEqual([]);
   });
 });

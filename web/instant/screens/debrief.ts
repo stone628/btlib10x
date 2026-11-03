@@ -862,7 +862,7 @@ function mapTab(): TuiNode[] {
   const legend = h().el(
     "span",
     { key: "legend" },
-    ...glyph("┄", "debrief.lg.out", "a"),
+    ...glyph("┄┄", "debrief.lg.out", "a"),
     sep("a"),
     ...glyph("%", "debrief.lg.wreckage", "d"),
     sep("d"),

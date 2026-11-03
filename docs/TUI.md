@@ -214,7 +214,8 @@ from script. All `data-*` options below also exist as JS options in camelCase.
 
 | Component | Markup | Notes |
 |---|---|---|
-| Box / panel | `<div data-tui="box" data-cols="30" data-rows="6" data-title="Pilot">` | `cols`: number or `auto` (fill parent). `rows`: number or `auto` (fit content, default). `data-border`, `data-tone`, `data-theme`, `data-shadow`, `data-pad` (cells, default 1), `data-title-align`, `data-footer`, `data-footer-right`. |
+| Box / panel | `<div data-tui="box" data-cols="30" data-rows="6" data-title="Pilot">` | `cols`: number or `auto` (fill parent). `rows`: number or `auto` (fit content, default). `data-border`, `data-tone`, `data-theme`, `data-shadow`, `data-pad` (cells, default 1), `data-title-align`, `data-footer`, `data-footer-right`, `data-inset`. |
+| Inset | `data-inset="ne 8 5"` on a box | A compartment `cols × rows` (frame lines included) in one corner (`nw` `ne` `sw` `se`) that shares the box's two edges there: its inner lines and the `┬ ┤`-style joints come from the box's own border set. Its inside is a `.tui-inset` element in the frame, transparent unless styled; the box's content stays one flow, so the app keeps its rows clear of those cells. Empty, malformed or larger than the box: no inset. |
 | Separator | `<div class="tui-sep"></div>` inside a box | Draws `├───┤` joined to the frame. Inside a split pane it joins the dividers on either side. |
 | Split | `<div data-tui="split" data-dir="h" data-sizes="24 1fr">` with `<div data-pane data-title="Pilot">` children | One box divided into panes; see [Layout](#layout). |
 | Stacks, grid | `data-tui="hstack"`, `"vstack"`, `"grid"`, `"spacer"` | Place children in cell-sized slots; see [Layout](#layout). |
@@ -365,7 +366,7 @@ every type: `key` (identity in a list), `ref` (name in `scene.refs`), `id`, `cla
 
 | Types | Props |
 |---|---|
-| `box`, `window`, `scroll` | `cols rows title titleAlign footer footerRight border tone theme shadow pad`; window adds `closable` |
+| `box`, `window`, `scroll` | `cols rows title titleAlign footer footerRight border tone theme shadow pad inset`; window adds `closable` |
 | `tabs`, `tab` | tabs: the box props; tab: `label`, `active` |
 | `split`, `pane` | split: `dir sizes fixed cols rows border tone theme shadow`; pane: `title min pad` |
 | `hstack`, `vstack`, `grid`, `spacer` | `gap wrap align`; grid adds `columns min` |

@@ -122,6 +122,20 @@ seven-row paper doll of internal structure and armor:
 
 (I internal, A armor, F / R torso front / rear, HS heat dissipation.)
 
+A model with a glyph avatar (the map's, `web/instant/avatars/mech-avatars.json`,
+without the `default` stand-in) shows it in the Selected box's top-right
+corner, in a compartment the kit draws on the box frame (`inset: "ne 8 5"`,
+docs/TUI.md); the four summary rows stop short of it. A model without one
+has no compartment, and the rows take the full width:
+
+```
+┌─ Selected ───────────────────────┬──────┐
+│CRS-6B Crossbow                   │ ░░░░ │
+│Heavy 60t Inner Sphere            │ ░░░░ │
+│Era 2473   BV 1210                │ ░░░░ │
+│walk 5  run 8  jump 0             └──────┤
+```
+
 ### Choose Control
 
 A slot's Control button opens it, an 80-column window in three rows:

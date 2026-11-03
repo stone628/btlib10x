@@ -4,10 +4,14 @@
 제한된 환경에서 최대한 많은 정보를 제공하려고 노력했습니다.
 
 더 큰 게임의 일부분으로 쓰기 위해서 만들긴 했는데, 그 날이 언제 올지는 잘 모르겠네요. 
+
+* GLYPH AVATAR를 추가했습니다! 멋져요! *
 </div>
 <div lang="en">This started from a question: what if bt10x terminal could be played through a console-game UI?
 The text-and-box UI is still a deliberate choice,
 and I tried to show as much information as the limited space allows.
 
 It was made to become part of a bigger game, though I can't say when that day will come.
+
+* GLYPH AVATAR is finally here! Awesome! *
 </div>

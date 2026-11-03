@@ -262,6 +262,10 @@
 .tui-frame > div {
   height: var(--ch);
 }
+/* Inside of a box's inset compartment (box option `inset`): the app styles it. */
+.tui-frame > .tui-inset {
+  position: absolute;
+}
 /* Labels on an edge fill their whole cell with the box background, so the
    half that lies outside .tui-bg is not see-through. */
 .tui-frame :is(.tui-title, .tui-action, .tui-foot, .tui-tab) {
