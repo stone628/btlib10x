@@ -51,6 +51,9 @@
           if (glyphart) glyphart.href = saved ? "glyphart.html" : `glyphart.html?lang=${locale}`;
           const glyphpaint = document.getElementById("card-glyphpaint");
           if (glyphpaint) glyphpaint.href = saved ? "glyphpaint.html" : `glyphpaint.html?lang=${locale}`;
+          // The TUI demo takes its start locale from the hash, never storage.
+          const tui = document.getElementById("card-tui");
+          if (tui) tui.href = locale === "en" ? "tui-demo.html" : `tui-demo.html#${locale}`;
           for (const b of document.querySelectorAll("#lang button")) {
             b.toggleAttribute("data-on", b.dataset.lang === locale);
           }
@@ -69,10 +72,29 @@
         </nav>
         <h1>BT10X</h1>
         <p class="tagline">
-          <span lang="en">BattleTech in a text terminal</span><span lang="ko">텍스트 터미널로 즐기는 BattleTech</span>
+          <span lang="en">Same BattleTech, ten times less hassle</span><span lang="ko">같은 BattleTech, 번거로움은 10분의 1</span>
         </p>
       </header>
-      <div id="cards" class="cards">
+      <section class="group" id="group-showcase">
+        <h2 class="group-title"><span lang="en">Showcase</span><span lang="ko">쇼케이스</span></h2>
+        <p class="group-sub">
+          <span lang="en">The btlib10x engine at work: full Total Warfare battles you can play now.</span><span lang="ko">btlib10x 엔진이 돌아가는 모습. 지금 바로 플레이할 수 있는 Total Warfare 전투입니다.</span>
+        </p>
+        <div id="cards" class="cards cards-showcase">
+        <a id="card-instant" class="card" href="instant.html">
+          <pre class="preview">╔═ New battle ════════╗
+║▸1 A1 HBK-4G  Player ║
+║ 2 A2 CN9     Alpha  ║
+║   <span class="g">[ LAUNCH  F10 ]</span>   ║
+╚═════════════════════╝</pre>
+          <h2>
+            <span lang="en">bt10x instant action</span><span lang="ko">bt10x 인스턴트 액션</span>
+          </h2>
+          <p>
+            <span lang="en">Pick your lance, a map and opponents from menus, then drop into a battle on a vector hex map.</span><span lang="ko">메뉴에서 랜스, 지도, 상대를 골라 바로 벡터 헥스 지도 위의 전투에 들어갑니다.</span>
+          </p>
+          <span class="go"><span lang="en">open instant action →</span><span lang="ko">인스턴트 액션 열기 →</span></span>
+        </a>
         <a id="card-terminal" class="card" href="terminal.html">
           <pre class="preview">
 <span class="g">&gt;</span> map quickstart
@@ -88,20 +110,14 @@
           </p>
           <span class="go"><span lang="en">open terminal →</span><span lang="ko">터미널 열기 →</span></span>
         </a>
-        <a id="card-instant" class="card" href="instant.html">
-          <pre class="preview">╔═ New battle ════════╗
-║▸1 A1 HBK-4G  Player ║
-║ 2 A2 CN9     Alpha  ║
-║   <span class="g">[ LAUNCH  F10 ]</span>   ║
-╚═════════════════════╝</pre>
-          <h2>
-            <span lang="en">bt10x instant action</span><span lang="ko">bt10x 인스턴트 액션</span>
-          </h2>
-          <p>
-            <span lang="en">Pick your lance, a map and opponents from menus, then drop into a battle on a vector hex map.</span><span lang="ko">메뉴에서 랜스, 지도, 상대를 골라 바로 벡터 헥스 지도 위의 전투에 들어갑니다.</span>
-          </p>
-          <span class="go"><span lang="en">open instant action →</span><span lang="ko">인스턴트 액션 열기 →</span></span>
-        </a>
+        </div>
+      </section>
+      <section class="group" id="group-workshop">
+        <h2 class="group-title"><span lang="en">Workshop</span><span lang="ko">작업장</span></h2>
+        <p class="group-sub">
+          <span lang="en">The tools we built to make the showcase apps. Use them for your own 'Mechs and text art.</span><span lang="ko">쇼케이스 앱을 만들려고 만든 도구들. 여러분의 'Mech와 텍스트 아트에도 써 보세요.</span>
+        </p>
+        <div id="cards-more" class="cards cards-workshop">
         <a id="card-avatar" class="card" href="avatar.html?head=bv&amp;shoulder=l3&amp;torso=dbo&amp;arms=pb&amp;legs=bf">
           <!-- Composite from the creator: head=bv shoulder=l3 torso=dbo arms=pb legs=bf. -->
           <pre class="preview avatar-art">╔════╗
@@ -133,17 +149,6 @@
           </p>
           <span class="go"><span lang="en">open gallery →</span><span lang="ko">갤러리 열기 →</span></span>
         </a>
-        <!-- Desktop only: fills the empty grid cell next to the card above. -->
-        <!--
-        <div class="card card-soon">
-          <span lang="en">more coming soon</span><span lang="ko">곧 더 추가됩니다</span>
-        </div>
-        -->
-      </div>
-      <p id="coffee">
-        <a href="https://buymeacoffee.com/stone628" target="_blank" rel="noopener" class="link-button"><span style="text-decoration: none; font-family: sans-serif; font-weight: bold;">☕</span> Buy me a coffee!</a>
-      </p>
-      <div id="cards-more" class="cards">
         <a id="card-glyphart" class="card" href="glyphart.html">
           <pre class="preview glyph-art"><span><span class="g">   ████▓▓▒   </span>        @@@%#*+
 <span class="g"> ██████▓▓▒▒░ </span>      @@@@@%#*+=:
@@ -175,13 +180,31 @@
           </p>
           <span class="go"><span lang="en">open glyph paint →</span><span lang="ko">글리프 페인트 열기 →</span></span>
         </a>
-        <!-- Desktop only: fills the empty grid cell next to the card above. -->
-        <!--
+        <a id="card-tui" class="card" href="tui-demo.html">
+          <!-- A menu bar over a dialog: checkbox, radio, progress bar, buttons. -->
+          <pre class="preview tui-art"><span><span class="y"> File  Edit  View </span>
+<span class="g">┌─ Dialog ──────────┐</span>
+<span class="g">│</span> [x] option  ( ) b <span class="g">│</span>
+<span class="g">│</span> ▓▓▓▓▓▓▓░░░  70%   <span class="g">│</span>
+<span class="g">│</span>  <span class="y">[ OK ]</span>  [Cancel] <span class="g">│</span>
+<span class="g">└───────────────────┘</span></span></pre>
+          <h2>
+            <span lang="en">TUI kit</span><span lang="ko">TUI 키트</span>
+          </h2>
+          <p>
+            <span lang="en">The terminal-style component kit Instant Action is built on: menus, dialogs, lists and borders on a character grid.</span><span lang="ko">인스턴트 액션의 바탕이 된 터미널 스타일 컴포넌트 키트입니다. 문자 격자 위의 메뉴, 대화상자, 목록, 테두리.</span>
+          </p>
+          <span class="go"><span lang="en">open TUI kit →</span><span lang="ko">TUI 키트 열기 →</span></span>
+        </a>
+        <!-- Fills the sixth cell in the two- and three-column layouts; hidden in one column. -->
         <div class="card card-soon">
           <span lang="en">more coming soon</span><span lang="ko">곧 더 추가됩니다</span>
         </div>
-        -->
-      </div>
+        </div>
+      </section>
+      <p id="coffee">
+        <a href="https://buymeacoffee.com/stone628" target="_blank" rel="noopener" class="link-button"><span style="text-decoration: none; font-family: sans-serif; font-weight: bold;">☕</span> Buy me a coffee!</a>
+      </p>
     </main>
     <footer id="legal">
       Unofficial fan project. Not affiliated with or endorsed by Catalyst Game Labs, The Topps

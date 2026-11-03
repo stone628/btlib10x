@@ -14,7 +14,7 @@
 
 #landing-head {
   width: 100%;
-  max-width: 760px;
+  max-width: 1000px;
   text-align: center;
 }
 
@@ -35,9 +35,39 @@
   font-style: italic;
 }
 
+/* Two labelled groups: the showcase apps, then the workshop tools. */
+.group {
+  width: 100%;
+  max-width: 1000px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.group-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13px;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--c-yellow);
+}
+
+.group-title::after {
+  content: "";
+  flex: 1;
+  border-top: 1px solid var(--c-line);
+}
+
+.group-sub {
+  margin: 0 0 4px;
+  color: var(--c-dim);
+}
+
 .cards {
   width: 100%;
-  max-width: 760px;
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
@@ -145,6 +175,43 @@
   height: calc(6 * var(--board-lh) + 18px);
 }
 
+/* Showcase cards stand out a little; workshop cards are more compact. */
+.cards-showcase .card {
+  border-color: #2d4a2d;
+}
+
+.cards-showcase .card h2 {
+  font-size: 17px;
+}
+
+/* Every workshop preview is as tall as the gallery's six rows at the card's
+   font size (plus padding and border), written in each preview's own em so
+   the avatar and gallery art fit without an inner scrollbar. */
+.cards-workshop .card .preview {
+  font-size: 0.9em;
+  height: calc(6 * var(--board-lh) / 0.9 + 18px);
+}
+
+.cards-workshop .card .preview.avatar-art {
+  font-size: 1.15em;
+  height: calc(6 * var(--board-lh) / 1.15 + 18px);
+}
+
+.cards-workshop .card .preview.gallery-art {
+  font-size: 1em;
+  height: calc(6 * var(--board-lh) + 18px);
+}
+
+.cards-workshop .card p {
+  font-size: 0.92em;
+}
+
+.card .preview.tui-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 /* Placeholder for an empty grid cell; only shown in the two-column layout. */
 .card.card-soon {
   display: none;
@@ -161,13 +228,19 @@
   background: none;
 }
 
-/* Two columns; a placeholder fills the cell next to the gallery card, and the
-   grid under the coffee link keeps the same columns. */
+/* Two columns, and three for the workshop on wide screens. The placeholder
+   fills the sixth workshop cell in both; with one column it stays hidden. */
 @media (min-width: 640px) {
   .cards {
     grid-template-columns: 1fr 1fr;
   }
   .card.card-soon {
     display: flex;
+  }
+}
+
+@media (min-width: 900px) {
+  .cards-workshop {
+    grid-template-columns: 1fr 1fr 1fr;
   }
 }

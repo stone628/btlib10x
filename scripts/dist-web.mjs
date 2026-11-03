@@ -32,6 +32,8 @@ const FILES = [
   "glyphpaint.html",
   "tui.css",
   "tui.js",
+  "tui-demo.html",
+  "tui-demo.i18n.js",
   // The admin page lives at /avatar/admin, the path Cloudflare Access guards.
   ["gallery-admin.html", "avatar/admin.html"],
   "VISION.md",
