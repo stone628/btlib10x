@@ -97,7 +97,13 @@ export type Beat =
       readonly facing: Facing;
       readonly damage: number;
     }
-  | { readonly kind: "pilot"; readonly unitId: string; readonly hits: number }
+  | {
+      readonly kind: "pilot";
+      readonly unitId: string;
+      readonly hits: number;
+      /** Pilot hits after this source (the banner's health boxes). */
+      readonly totalHits: number;
+    }
   | { readonly kind: "ko"; readonly unitId: string }
   | { readonly kind: "explode"; readonly unitId: string; readonly damage: number }
   | { readonly kind: "shutdown"; readonly unitId: string }
@@ -268,7 +274,7 @@ export function buildBeats(events: readonly GameEvent[], move: CommittedMove | n
         });
         break;
       case "pilotDamaged":
-        out.push({ kind: "pilot", unitId: e.unitId, hits: e.hits });
+        out.push({ kind: "pilot", unitId: e.unitId, hits: e.hits, totalHits: e.totalHits });
         break;
       case "consciousnessCheck":
         if (!e.success && e.cause !== "recovery") out.push({ kind: "ko", unitId: e.unitId });

@@ -339,19 +339,21 @@ function animateStep(battle: BattleController, step: StepRecord): void {
   const byBeat = new Map(parts.map((p) => [p.beat, p.needs]));
   ui.clip = { id: ++clipSeq, needs, follow, framed: false, collapsed: false };
   animator.play(view, {
-    banners: bannersOf(step.before, step.actorId, battle.totals),
+    banners: bannersOf(step.before, step.actorId),
     beats,
     k,
     reduced: reducedMotion(),
     sub: (id, change) => {
       const look = looks.get(id);
       if (!look) return null;
-      if ("damage" in change) look.damage = change.damage;
+      // the banner shows the pilot, not the armor: damage leaves it as it is
+      if ("damage" in change) return null;
+      if ("pilotHits" in change) look.pilotHits = change.pilotHits;
       else if ("prone" in change) look.prone = true;
       else if ("off" in change) look.off = true;
       else if (change.removed === "hull") look.hull = true;
       else look.destroyed = true;
-      return bannerSub(look, battle.totals[id]);
+      return bannerSub(look);
     },
     follow: follow
       ? {
@@ -427,17 +429,22 @@ export function newBattle(): void {
 
 /** What a banner's second line says about a unit. */
 export interface BannerLook {
-  damage: { armor: object; armorRear: object; internalStructure: object };
+  /** Pilot hits taken, and the hits that kill (`pilotHitMax`). */
+  pilotHits: number;
+  pilotMax: number;
   prone: boolean;
   off: boolean;
   hull: boolean;
   destroyed: boolean;
 }
 
-/** A banner's second line: armor pips, or a status word. */
-export function bannerSub(look: BannerLook, total: number | undefined): string {
-  const left = total ? unitLeft({ damage: look.damage }, total) : 1;
-  const pips = Math.max(0, Math.min(5, Math.ceil(left * 5)));
+/**
+ * A banner's second line: the pilot's health, one box per hit it can still
+ * take of `pilotHitMax` (as the record sheet's P: row), or a status word.
+ */
+export function bannerSub(look: BannerLook): string {
+  const max = Math.max(0, look.pilotMax);
+  const hp = Math.max(0, Math.min(max, max - look.pilotHits));
   return look.destroyed
     ? M.out
     : look.hull
@@ -445,13 +452,14 @@ export function bannerSub(look: BannerLook, total: number | undefined): string {
       : look.off
         ? "OFF"
         : look.prone
-          ? `PRN ${B.mpOn.repeat(Math.min(2, pips))}`
-          : `${B.mpOn.repeat(pips)}${B.mpOff.repeat(5 - pips)}`;
+          ? `PRN ${B.mpOn.repeat(hp)}`
+          : `${B.mpOn.repeat(hp)}${B.mpOff.repeat(max - hp)}`;
 }
 
 export function lookOf(u: BattleState["units"][string]): BannerLook {
   return {
-    damage: u.damage,
+    pilotHits: u.pilotHits,
+    pilotMax: u.pilotHitMax,
     prone: u.prone,
     off: u.shutdown !== "not",
     hull: isHull(u),
@@ -460,11 +468,7 @@ export function lookOf(u: BattleState["units"][string]): BannerLook {
 }
 
 /** Banners for every unit on the board of a battle state; hulls are neutral. */
-export function bannersOf(
-  state: BattleState,
-  actorId: string | null,
-  totals: Readonly<Record<string, number>>,
-): Banner[] {
+export function bannersOf(state: BattleState, actorId: string | null): Banner[] {
   const out: Banner[] = [];
   for (const u of Object.values(state.units)) {
     if (!isUnitOnBoard(u)) continue;
@@ -474,7 +478,7 @@ export function bannersOf(
       hex: u.position,
       facing: u.facing,
       team: hull ? 0 : u.team,
-      sub: bannerSub(lookOf(u), totals[u.id]),
+      sub: bannerSub(lookOf(u)),
       active: u.id === actorId,
     });
   }
@@ -485,7 +489,7 @@ export function bannersOf(
 export function battleBanners(): Banner[] {
   const b = app.battle;
   if (!b) return [];
-  const out = bannersOf(b.state, b.actorId, b.totals);
+  const out = bannersOf(b.state, b.actorId);
   const m = b.move;
   if (m?.landing && b.actor) {
     out.push({
@@ -498,17 +502,6 @@ export function battleBanners(): Banner[] {
     });
   }
   return out;
-}
-
-function unitLeft(
-  u: { damage: { armor: object; armorRear: object; internalStructure: object } },
-  start: number,
-): number {
-  let n = 0;
-  for (const part of [u.damage.armor, u.damage.armorRear, u.damage.internalStructure]) {
-    for (const v of Object.values(part as Record<string, number>)) n += Math.max(0, v);
-  }
-  return start > 0 ? n / start : 0;
 }
 
 let aiTimer: ReturnType<typeof setTimeout> | null = null;

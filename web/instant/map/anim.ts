@@ -43,6 +43,7 @@ type MutablePose = { -readonly [K in keyof BannerPose]: BannerPose[K] };
 /** A banner's state change a beat asks for; the caller renders the second line. */
 export type LookChange =
   | { readonly damage: UnitDamageState }
+  | { readonly pilotHits: number }
   | { readonly prone: true }
   | { readonly off: true }
   | { readonly removed: "hull" | "destroyed" };
@@ -370,6 +371,7 @@ class Builder {
       case "pilot":
         this.flash(at, b.unitId, "--tui-red");
         this.tick(at, b.unitId, t("anim.pilot", { n: b.hits }), "--tui-red");
+        this.look(at, b.unitId, { pilotHits: b.totalHits });
         break;
       case "ko":
         this.tick(at, b.unitId, t("anim.ko"), "--tui-red");

@@ -751,7 +751,7 @@ export class MapView {
       let t = y - v.R * v.sq;
       const b = y + v.R * v.sq;
       if (n.sign !== undefined) {
-        const half = (Math.max(n.sign.length + 2, 7) * cw) / 2;
+        const half = (Math.max(n.sign.length + 2, 10) * cw) / 2;
         l = Math.min(l, x - half);
         r = Math.max(r, x + half + (n.tick ? 6 + TICK_COLS * cw : 0));
         // pole, sign box, and the chip row over it

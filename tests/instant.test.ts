@@ -30,6 +30,7 @@ import {
   setupRng,
 } from "../web/instant/battle/deploy";
 import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
+import { bannerSub } from "../web/instant/flow";
 import { en } from "../web/instant/i18n/en";
 import { ko } from "../web/instant/i18n/ko";
 import { commitAlias } from "../web/instant/input";
@@ -897,6 +898,25 @@ describe("Instant Action map animation beats", () => {
       after: { armor: {}, armorRear: {}, internalStructure: {} } as never,
     });
     expect(volley).toBeLessThanOrEqual(1500);
+  });
+});
+
+describe("Instant Action unit sign", () => {
+  const look = {
+    pilotHits: 0,
+    pilotMax: 6,
+    prone: false,
+    off: false,
+    hull: false,
+    destroyed: false,
+  };
+  it("shows the pilot's health, one box per hit it can still take", () => {
+    expect(bannerSub(look)).toBe("▮▮▮▮▮▮");
+    expect(bannerSub({ ...look, pilotHits: 2 })).toBe("▮▮▮▮▯▯");
+    expect(bannerSub({ ...look, pilotHits: 1, pilotMax: 8 })).toBe("▮▮▮▮▮▮▮▯");
+    expect(bannerSub({ ...look, pilotHits: 9 })).toBe("▯▯▯▯▯▯");
+    expect(bannerSub({ ...look, pilotHits: 4, prone: true })).toBe("PRN ▮▮");
+    expect(bannerSub({ ...look, off: true })).toBe("OFF");
   });
 });
 

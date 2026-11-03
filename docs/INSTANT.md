@@ -331,6 +331,12 @@ persona play stays on hold until the battle menu itself closes.
 
 ### Map animations
 
+Each unit stands on the map as a sign: its id, and below it the pilot's
+health, one box per hit the pilot can still take of its MaxHit (`▮▮▮▮▯▯`
+after two hits at MaxHit 6, as the record sheet's P: row). The second line
+says `PRN` and the lit boxes while prone, `OFF` while shut down, `HULL` for
+an abandoned hull and `×` once destroyed.
+
 The map replays each committed step after the engine has applied it
 (`web/instant/battle/beats.ts` reads the step's game events and the committed
 move; `web/instant/map/anim.ts` plays them). Presentation only: state, dice
@@ -349,7 +355,7 @@ and the log are final at once; the map's banners catch up beat by beat.
   plays one volley per attacker and target in event order: weapons fire
   110 ms apart (closer for big volleys; a volley ≤ 1.5 s); energy weapons
   draw a beam, ballistic a shell, missiles a spread of four. A hit sparks,
-  flashes the hex, shakes the sign and drops its armor pips, and adds a
+  flashes the hex, shakes the sign, and adds a
   ticker line beside the sign (`−5 CT`, `✶CRIT` in orange); a miss veers
   past the target as a dim dashed line and ticks MISS (or JAMMED). Physical
   attacks lunge at the target with the attack named over the attacker; self
@@ -357,7 +363,8 @@ and the log are final at once; the map's banners catch up beat by beat.
 - **Penalties**: a piloting roll shows a chip over the sign (`PSR 7+ · 9 ✓`
   green, ✗ red; a pass wobbles the sign); a fall drops the pole, tips the
   sign, turns the triangle to the new facing and ticks FALL; pilot hits tick
-  PILOT +n (KO on a failed consciousness roll); an ammo explosion throws two
+  PILOT +n and put out that many of the sign's health boxes (KO on a failed
+  consciousness roll); an ammo explosion throws two
   orange rings; heat shutdown, hulls and destroyed units show on the sign.
 - **Pace**: timed waits for the clip, then 0.6 s; step plays it after Enter;
   instant skips persona moves and plays the attack reel at Fast. Player moves
