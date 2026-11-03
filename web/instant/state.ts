@@ -6,7 +6,7 @@ import type { Facing, HexCoord, UnitPolicy } from "btlib10x";
 import { ANIM_SPEEDS, type AnimSpeed } from "./battle/beats";
 import type { BattleController } from "./battle/controller";
 import type { Edge, RollOff } from "./battle/deploy";
-import type { MapView } from "./map/view";
+import type { MapView, MustSee } from "./map/view";
 import type { Loadout, MechFilter } from "./setup/loadout";
 
 export type ScreenId = "loading" | "title" | "setup" | "deploy" | "battle" | "debrief";
@@ -201,6 +201,20 @@ export interface BattleUi {
   centerPending: boolean;
   /** Frame the actor and its target on the map after the next render. */
   framePending: boolean;
+  /**
+   * The playing clip's camera (docs/INSTANT.md, Camera): its id, must-see
+   * spots, whether the camera follows it beat by beat, and whether it is
+   * framed yet; null when no clip plays.
+   */
+  clip: {
+    id: number;
+    needs: MustSee[];
+    follow: boolean;
+    framed: boolean;
+    collapsed: boolean;
+  } | null;
+  /** Clip the drawers were last set for (the HUD follows the clip, not the next prompt). */
+  clipSheetsFor: number | null;
   /** Size of the orders box over the map (cells), null when there is none. */
   menuBox: { cols: number; rows: number } | null;
   /** Key focus (Tab / X): the left sheet or its tab, the orders panel, the right sheet or tab. */
@@ -228,6 +242,8 @@ export function newBattleUi(): BattleUi {
     focusFor: null,
     centerPending: false,
     framePending: false,
+    clip: null,
+    clipSheetsFor: null,
     menuBox: null,
     focus: "orders",
     hint: null,

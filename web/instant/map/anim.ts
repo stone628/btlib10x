@@ -20,6 +20,9 @@ import {
 import { locName, t } from "../i18n";
 import type { Banner, BannerPose, FxContext, FxDraw, MapView } from "./view";
 
+/** Highest point of a jump's arc, in hex circumradii. */
+export const JUMP_LIFT = 1.6;
+
 const FACINGS: readonly Facing[] = ["n", "ne", "se", "s", "sw", "nw"];
 const angleOf = (f: Facing) => (FACINGS.indexOf(f) * Math.PI) / 3;
 /** Shortest turn from `a` to `b`, radians. */
@@ -54,6 +57,17 @@ export interface ClipInput {
   readonly reduced: boolean;
   /** The banner's second line after a change (null: keep it). */
   readonly sub: (unitId: string, change: LookChange) => string | null;
+  /**
+   * Camera follow (a reel too big to show whole): before each beat it picks,
+   * `run` frames that beat and the clip waits `gap` ms (unscaled) for it.
+   */
+  readonly follow?:
+    | {
+        readonly picks: (b: Beat) => boolean;
+        readonly run: (b: Beat) => void;
+        readonly gap: number;
+      }
+    | undefined;
 }
 
 interface Item {
@@ -111,6 +125,14 @@ export class MapAnimator {
     return this.pausedAt !== null;
   }
 
+  /**
+   * Hold the clip's start for `ms` (the camera glides into place first). Only
+   * right after `play`, before any of it has run past its first frames.
+   */
+  delayStart(ms: number): void {
+    if (this.clip) this.clip.t0 = performance.now() + ms;
+  }
+
   /** Stop the clock (the battle menu is open); nothing moves until `resume`. */
   pause(): void {
     if (this.pausedAt !== null || !this.clip) return;
@@ -152,7 +174,14 @@ export class MapAnimator {
     this.tickRows.clear();
     const seq = new Builder(this, input);
     let at = 0;
-    for (const b of input.beats) at = seq.beat(b, at);
+    const follow = input.follow;
+    for (const b of input.beats) {
+      if (follow?.picks(b)) {
+        seq.items.push({ at: at * input.k, dur: 0, once: () => follow.run(b) });
+        at += follow.gap / input.k;
+      }
+      at = seq.beat(b, at);
+    }
     const items = seq.items;
     if (items.length === 0) {
       this.shown = [];
@@ -419,7 +448,7 @@ class Builder {
       o.from = b.from;
       o.to = b.to;
       o.t = ease(p);
-      o.lift = Math.sin(Math.PI * p) * 1.6;
+      o.lift = Math.sin(Math.PI * p) * JUMP_LIFT;
       o.angle = a0 + da * Math.min(1, Math.max(0, (p - 0.3) / 0.4));
       o.shadow = true;
     });

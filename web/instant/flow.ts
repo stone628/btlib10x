@@ -16,6 +16,7 @@ import {
 } from "btlib10x";
 import type { PersonaKey } from "./ai/persona.data";
 import { buildBeats, isReel, SPEED_K } from "./battle/beats";
+import { clipNeeds, safeRects } from "./battle/camera";
 import type { StepRecord } from "./battle/controller";
 import { BattleController } from "./battle/controller";
 import {
@@ -30,7 +31,7 @@ import {
 import { t } from "./i18n";
 import { MapAnimator } from "./map/anim";
 import type { Banner, MapSource, MapViewInit } from "./map/view";
-import { MapView } from "./map/view";
+import { CAMERA_MS, CLIP_MIN_FS, MapView } from "./map/view";
 import {
   emptyLoadout,
   type Loadout,
@@ -300,6 +301,8 @@ export function beginBattle(): void {
 
 /** Plays each committed step on the battle map (`map/anim.ts`). */
 export const animator = new MapAnimator();
+/** Clips played so far (`battleUi.clip.id`). */
+let clipSeq = 0;
 /** The actor the hand-off ring last marked. */
 let pinged: string | null = null;
 
@@ -320,6 +323,21 @@ function animateStep(battle: BattleController, step: StepRecord): void {
   const k = clipSpeed(step.persona, isReel(beats));
   if (k === null) return;
   const looks = new Map(Object.values(step.before.units).map((u) => [u.id, lookOf(u)]));
+  // the camera (docs/INSTANT.md, Camera): frame the whole clip once its HUD is drawn,
+  // or, for a reel too big to show whole, each attack in turn
+  const parts = clipNeeds(beats, step.before);
+  const needs = parts.flatMap((p) => p.needs);
+  const reel = isReel(beats);
+  const ui = app.battleUi;
+  // the reel closes the unpinned drawers (battle.ts, clipSheets)
+  const closing = (el: Element) =>
+    el.classList.contains("ia-drawer") &&
+    !ui.sheets[Number((el as HTMLElement).dataset.side) as 0 | 1]?.pinned;
+  const follow =
+    reel &&
+    !view.canShow(needs, safeRects(view.canvas, closing), { minFs: CLIP_MIN_FS, rotate: true });
+  const byBeat = new Map(parts.map((p) => [p.beat, p.needs]));
+  ui.clip = { id: ++clipSeq, needs, follow, framed: false, collapsed: false };
   animator.play(view, {
     banners: bannersOf(step.before, step.actorId, battle.totals),
     beats,
@@ -335,6 +353,21 @@ function animateStep(battle: BattleController, step: StepRecord): void {
       else look.destroyed = true;
       return bannerSub(look, battle.totals[id]);
     },
+    follow: follow
+      ? {
+          picks: (b) => b.kind === "volley" || b.kind === "physical",
+          run: (b) => {
+            const n = byBeat.get(b) ?? [];
+            if (app.mapView !== view || app.battleUi.logs) return;
+            view.ensureVisible(n, safeRects(view.canvas), {
+              minFs: CLIP_MIN_FS,
+              rotate: true,
+              ease: !reducedMotion(),
+            });
+          },
+          gap: reducedMotion() ? 0 : CAMERA_MS,
+        }
+      : undefined,
   });
   // the orders panel shows the clip's status until it ends (step pace has no pump waiting)
   animator.whenDone(() => rerender());

@@ -1,12 +1,22 @@
 /** Screen 3: the battle HUD (full map, frame, drawers, orders) and its windows. */
 import { type Facing, isHull, isUnitOnBoard, type RevealedLanding } from "btlib10x";
 import { ANIM_SPEEDS } from "../battle/beats";
+import { largestRect, safeRects } from "../battle/camera";
 import type { MoveChoice } from "../battle/controller";
 import { tallies } from "../battle/victory";
 import { animateOverlays, animator, battleBanners, holdAi, pumpAi, stopAi } from "../flow";
 import { t } from "../i18n";
 import { bracket, isLogsKey } from "../input";
-import { AI_PACES, app, kitModal, rerender, setAiPace, setAnimSpeed } from "../state";
+import { CAMERA_MS, CLIP_MIN_FS, type MapView } from "../map/view";
+import {
+  AI_PACES,
+  app,
+  kitModal,
+  reducedMotion,
+  rerender,
+  setAiPace,
+  setAnimSpeed,
+} from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
 import {
@@ -25,6 +35,7 @@ import {
 import {
   BODY,
   battleFrame,
+  clipSheets,
   cycleFocus,
   doneButton,
   focusMover,
@@ -37,7 +48,6 @@ import {
   togglePin,
   toggleSheet,
 } from "./battle.hud";
-import { SHEET_W } from "./battle.sheet";
 import { at, blank, cells, fit, h, kit, mapSlot, modal, row, span, statusbar } from "./common";
 import { closesMessage } from "./menu";
 import { openOptions, optionsKey, optionsWindow } from "./options";
@@ -203,38 +213,6 @@ function moveHint(): { width: number; row: (width: number) => TuiNode } | null {
   };
 }
 
-/**
- * The biggest clear part of the map, in canvas px: inside the open drawers'
- * tabs (or the closed edge tabs), and below or beside the orders box.
- */
-function clearArea(canvas: HTMLCanvasElement): { x0: number; y0: number; x1: number; y1: number } {
-  const ui = app.battleUi;
-  const cw = canvas.clientWidth / BODY.cols;
-  const ch = canvas.clientHeight / BODY.rows;
-  const left = ui.sheets[0].open ? SHEET_W + 3 : 3;
-  const right = ui.sheets[1].open ? 99 - SHEET_W - 2 : 97;
-  const bottom = BODY.row + BODY.rows;
-  const m = ui.menuBox;
-  const m0 = m ? BODY.col + Math.floor((BODY.cols - m.cols) / 2) : 0;
-  const m1 = m ? m0 + m.cols : 0;
-  const mb = m ? BODY.row + m.rows : BODY.row;
-  const areas = [
-    [left, mb, right, bottom],
-    [left, BODY.row, Math.min(right, m0), bottom],
-    [Math.max(left, m1), BODY.row, right, bottom],
-  ].map(([x0, y0, x1, y1]) => ({
-    x0: (x0! - BODY.col) * cw,
-    y0: (y0! - BODY.row) * ch,
-    x1: (x1! - BODY.col) * cw,
-    y1: (y1! - BODY.row) * ch,
-  }));
-  const area = (r: (typeof areas)[number]) =>
-    Math.max(0, r.x1 - r.x0) *
-    Math.max(0, r.y1 - r.y0) *
-    (r.x1 - r.x0 > 8 * cw && r.y1 - r.y0 > 4 * ch ? 1 : 0.01);
-  return areas.reduce((a, r) => (area(r) > area(a) ? r : a));
-}
-
 // ------------------------------------------------------------ screen
 
 function title(): string {
@@ -305,6 +283,9 @@ function orders(): Orders {
   // the map is still catching up: say what it plays, not the prompt already waiting
   const clip = animator.status;
   if (animator.busy && clip) {
+    // a move or jump shows itself on the map: no box, unless paused
+    const plain = clip.kind === "move" || clip.kind === "jump";
+    if (plain && !animator.paused) return out([], 0, false);
     const text =
       clip.kind === "reel"
         ? t("anim.status.reel")
@@ -371,8 +352,16 @@ function regionKeys(persona: boolean): StatusKey[] {
 export function battleScreen(): TuiNode {
   const H = h();
   const b = app.battle!;
-  focusMover();
-  sheetPolicy();
+  const ui = app.battleUi;
+  if (!animator.busy) ui.clip = null;
+  // while a clip plays the HUD follows it; the next prompt's drawers wait for its end
+  if (ui.clip) {
+    const st = animator.status;
+    clipSheets(st && st.kind !== "reel" ? st.unitId : null, st?.kind === "reel");
+  } else {
+    focusMover();
+    sheetPolicy();
+  }
   const o = orders();
   const clip = animator.busy;
   // a persona waits for Enter (A) or a click on NEXT
@@ -498,6 +487,7 @@ export function battleOverlays(): void {
   v.reframe = reframe;
   // A clip on the map shows the step catching up: no prompt overlays yet.
   if (animateOverlays(v)) {
+    clipCamera(v);
     v.overlays = o;
     return;
   }
@@ -539,15 +529,61 @@ export function battleOverlays(): void {
     const foes = Object.values(b.state.units).filter(
       (u) => u.team !== actor.team && isUnitOnBoard(u) && !isHull(u),
     );
-    v.fitHexes([actor.position, ...foes.map((u) => u.position)], clearArea(v.canvas));
+    // a Player's move: where it can go too
+    const reach = b.move && b.actorPersona === null ? b.move.landings.map((l) => l.hex) : [];
+    v.fitHexes(
+      [actor.position, ...foes.map((u) => u.position), ...reach],
+      largestRect(v.canvas, safeRects(v.canvas)),
+    );
   }
   const target = b.attack?.targetId ? b.state.units[b.attack.targetId] : null;
   if (ui.framePending && actor && target && b.phase === "attack") {
     ui.framePending = false;
-    v.frame(actor.position, target.position, clearArea(v.canvas));
+    v.frame(actor.position, target.position, largestRect(v.canvas, safeRects(v.canvas)));
+  }
+  // a persona's attack: shooter and target in view, moving as little as it can
+  const shot = actor && target && b.phase === "attack" && b.actorPersona !== null;
+  const shotKey = shot ? `${b.state.turn}:${actor.id}>${target.id}` : null;
+  if (shot && shotKey !== ui.frameFor && !ui.logs) {
+    ui.frameFor = shotKey;
+    v.ensureVisible(
+      [
+        { hex: actor.position, sign: actor.id },
+        { hex: target.position, sign: target.id },
+      ],
+      safeRects(v.canvas),
+      { minFs: CLIP_MIN_FS },
+    );
   }
   v.onPick = (hex, facing) => onMapPick(hex, facing);
   v.reframe = reframe;
+}
+
+/**
+ * Frame the playing clip once its HUD is drawn (docs/INSTANT.md, Camera): no
+ * move when it shows whole already, else pan, then zoom out; when that is not
+ * enough the unpinned drawers close (after the next render), then a turn.
+ * The clip waits for the camera. A reel too big to show whole frames each
+ * attack in turn instead (`flow.ts`, follow).
+ */
+function clipCamera(v: MapView): void {
+  const ui = app.battleUi;
+  const c = ui.clip;
+  if (!c || c.framed || c.follow || ui.logs || app.modal) return;
+  const rects = safeRects(v.canvas);
+  if (
+    !c.collapsed &&
+    ui.sheets.some((d) => d.open && !d.pinned) &&
+    !v.canShow(c.needs, rects, { minFs: CLIP_MIN_FS })
+  ) {
+    c.collapsed = true;
+    rerender();
+    return;
+  }
+  c.framed = true;
+  const ease = !reducedMotion();
+  const r = v.ensureVisible(c.needs, rects, { minFs: CLIP_MIN_FS, rotate: true, ease });
+  if (r.moved && ease) animator.delayStart(CAMERA_MS);
 }
 
 const keyOf = (h: { col: number; row: number }) => `${h.col},${h.row}`;

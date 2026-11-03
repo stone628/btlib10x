@@ -18,7 +18,8 @@ import {
 } from "btlib10x";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PERSONA_KEYS, PERSONAS, type PersonaKey } from "../web/instant/ai/persona.data";
-import { beatTime, buildBeats, isReel, legTimes } from "../web/instant/battle/beats";
+import { type Beat, beatTime, buildBeats, isReel, legTimes } from "../web/instant/battle/beats";
+import { clipNeeds, emptyRects } from "../web/instant/battle/camera";
 import { BattleController, type StepRecord } from "../web/instant/battle/controller";
 import {
   autoPlace,
@@ -32,7 +33,7 @@ import { unitLoss, type VictoryMode } from "../web/instant/battle/victory";
 import { en } from "../web/instant/i18n/en";
 import { ko } from "../web/instant/i18n/ko";
 import { commitAlias } from "../web/instant/input";
-import { clipStatus, MapAnimator } from "../web/instant/map/anim";
+import { clipStatus, JUMP_LIFT, MapAnimator } from "../web/instant/map/anim";
 import type { MapView } from "../web/instant/map/view";
 import { resolveFacing } from "../web/instant/map/view";
 import { createRng } from "../web/instant/rng";
@@ -776,7 +777,7 @@ describe("Instant Action map animation beats", () => {
   it("replays a move to where the engine left the unit", () => {
     for (const r of steps(42)) {
       const moved = r.events.find((e) => e.kind === "moved");
-      if (!moved || moved.kind !== "moved" || !r.move) continue;
+      if (moved?.kind !== "moved" || !r.move) continue;
       const beat = buildBeats(r.events, r.move).find((x) => x.kind === "move" || x.kind === "jump");
       if (!beat) continue;
       if (beat.kind === "jump") {
@@ -896,6 +897,124 @@ describe("Instant Action map animation beats", () => {
       after: { armor: {}, armorRear: {}, internalStructure: {} } as never,
     });
     expect(volley).toBeLessThanOrEqual(1500);
+  });
+});
+
+describe("Instant Action camera policy (docs/INSTANT.md, Camera)", () => {
+  const hex = (col: number, row: number): HexCoord => ({ col, row });
+  const before = {
+    units: { A1: { position: hex(1, 1) }, B1: { position: hex(5, 5) } },
+  } as unknown as Parameters<typeof clipNeeds>[1];
+
+  it("must show every hex of a move with its sign, and attacks from where the clip left units", () => {
+    const beats: Beat[] = [
+      {
+        kind: "move",
+        unitId: "A1",
+        mode: "walk",
+        legs: [
+          { kind: "enter", from: hex(1, 1), to: hex(1, 2) },
+          { kind: "turn", from: "n", to: "ne" },
+          { kind: "enter", from: hex(1, 2), to: hex(2, 2) },
+        ],
+      },
+      {
+        kind: "volley",
+        attackerId: "A1",
+        targetId: "B1",
+        shots: [],
+        after: {} as never,
+      },
+    ];
+    const [move, volley] = clipNeeds(beats, before);
+    expect(move!.needs.map((n) => n.hex)).toEqual([hex(1, 1), hex(1, 2), hex(1, 2), hex(2, 2)]);
+    expect(move!.needs.every((n) => n.sign === "A1")).toBe(true);
+    expect(move!.needs.at(-1)!.tick).toBe(true);
+    // A1 shoots from its landing; the target's ticker column counts
+    expect(volley!.needs).toEqual([
+      { hex: hex(2, 2), sign: "A1", tick: false },
+      { hex: hex(5, 5), sign: "B1", tick: true },
+    ]);
+  });
+
+  it("leaves headroom for a jump's arc", () => {
+    const [jump] = clipNeeds(
+      [
+        {
+          kind: "jump",
+          unitId: "A1",
+          from: hex(1, 1),
+          to: hex(3, 3),
+          fromFacing: "n",
+          facing: "s",
+          hexes: 3,
+        },
+      ],
+      before,
+    );
+    expect(jump!.needs.map((n) => [n.hex, n.lift])).toEqual([
+      [hex(1, 1), JUMP_LIFT],
+      [hex(3, 3), JUMP_LIFT],
+    ]);
+  });
+
+  it("finds the clear rectangles between the overlays", () => {
+    const bound = { x0: 0, y0: 0, x1: 1000, y1: 600 };
+    const drawer = { x0: 0, y0: 50, x1: 250, y1: 550 };
+    const orders = { x0: 400, y0: 0, x1: 600, y1: 60 };
+    const done = { x0: 420, y0: 520, x1: 580, y1: 600 };
+    const rects = emptyRects(bound, [drawer, orders, done]);
+    expect(rects[0]).toEqual({ x0: 250, y0: 60, x1: 1000, y1: 520 });
+    for (const r of rects)
+      for (const o of [drawer, orders, done])
+        expect(o.x0 < r.x1 && o.x1 > r.x0 && o.y0 < r.y1 && o.y1 > r.y0).toBe(false);
+    expect(emptyRects(bound, [])).toEqual([bound]);
+  });
+
+  it("follows a reel: the camera runs before each attack and the clip waits for it", () => {
+    const shot = {
+      weapon: "Medium Laser",
+      look: "beam" as const,
+      hit: false,
+      damage: 0,
+      locations: [],
+      crit: false,
+      jammed: false,
+      after: {} as never,
+    };
+    const beats: Beat[] = [
+      { kind: "volley", attackerId: "A1", targetId: "B1", shots: [shot], after: {} as never },
+      { kind: "volley", attackerId: "B1", targetId: "A1", shots: [shot], after: {} as never },
+    ];
+    const view = { banners: [], poses: new Map(), fx: {}, onFrame: null, wake: vi.fn() };
+    const end = (a: MapAnimator) => (a as unknown as { clip: { end: number } }).clip.end;
+    const base = { banners: [], beats, k: 1, reduced: true, sub: () => null };
+    const plain = new MapAnimator();
+    plain.play(view as unknown as MapView, base);
+    const run = vi.fn();
+    const follow = new MapAnimator();
+    follow.play(view as unknown as MapView, {
+      ...base,
+      follow: { picks: (b) => b.kind === "volley", run, gap: 250 },
+    });
+    expect(end(follow)).toBe(end(plain) + 500);
+    let now = performance.now();
+    const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
+    try {
+      follow.delayStart(100);
+      now += 50;
+      (view.onFrame as unknown as (n: number) => boolean)(now);
+      expect(run).not.toHaveBeenCalled(); // held for the camera
+      now += 100;
+      (view.onFrame as unknown as (n: number) => boolean)(now);
+      expect(run).toHaveBeenCalledTimes(1);
+      now += 60_000;
+      (view.onFrame as unknown as (n: number) => boolean)(now);
+      expect(run).toHaveBeenCalledTimes(2);
+    } finally {
+      clock.mockRestore();
+      plain.skip();
+    }
   });
 });
 

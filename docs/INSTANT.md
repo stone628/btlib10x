@@ -283,7 +283,8 @@ or Esc go back to the menu); they take effect as described there.
   in the movement phase the left one shows the mover and the right one
   closes; in the attack phase the right one shows the weapon target (a new
   target updates it) and the left one closes. Manual opens, closes and
-  picks hold until then. The header's `S1: A1 ▼` picks the unit; its pin
+  picks hold until then. While a map clip plays the drawers follow the clip,
+  not the prompt waiting after it (see Camera). The header's `S1: A1 ▼` picks the unit; its pin
   (`◇` / `◆` pinned, on the map side of the header, or Shift+`[` / `]`) keeps that drawer as it is
   through the policy (a map or queue click meant for it uses the other one).
   Hovering the pilot, engine, gyro, sensors, life support or
@@ -371,14 +372,48 @@ and the log are final at once; the map's banners catch up beat by beat.
   it; any other key is ignored until it ends. With a dialog open, keys go to
   the dialog.
 - **Orders panel**: while a clip plays it says what the map shows (`A1
-  moving…`, `A1 jumping…`, `A1 acting…`, `Resolving attacks…`, with
-  `(paused)` while the battle menu is open) instead of the prompt already
-  waiting, with a SKIP button and only Enter Skip / Esc Menu in the status
-  bar; the next prompt comes back when the clip ends or is skipped.
+  acting…`, `Resolving attacks…`, with `(paused)` while the battle menu is
+  open) instead of the prompt already waiting; a move or jump clip shows no
+  box (the map shows it), except `A1 moving… (paused)` / `A1 jumping…
+  (paused)` while paused. A SKIP button and only Enter Skip / Esc Menu in
+  the status bar stand in for the prompt; the next prompt comes back when the clip ends or is skipped.
 - **Setting**: Animations in the battle menu, Full / Fast (half the time) /
   Off, kept in localStorage (`bt10x.instant.anim`); Fast by default when the
   OS asks for reduced motion, which also turns travel, shakes and rises into
   cuts and short fades, and stills the marching ring.
+
+### Camera
+
+Every map clip and prompt has a set of spots it must show whole: each hex of
+a move with the sign above it (a jump also its arc's headroom), the attacker
+and target of every volley or physical attack with the target's ticker
+column, and a unit's sign and chip for piloting rolls, falls, pilot hits,
+ammo explosions, shutdowns and removals (`web/instant/battle/camera.ts`).
+They must fit the clear part of the canvas: the canvas clipped to the
+browser window, less the boxes of every overlay over it (open drawers, edge
+tabs, the orders or clip-status box, DONE / SKIP, the LOGS tab), measured
+after the render.
+
+- **The action wins.** While a clip plays the HUD shows the clip: a move,
+  jump or one unit's clip puts that unit in the left drawer and closes the
+  right one; the attack reel closes both. The next prompt's drawers and
+  framing apply when the clip ends or is skipped. Pinned drawers stay as they
+  are.
+- **Least camera move** (`MapView.ensureVisible`), before the clip starts:
+  already shown, no move; else the shortest pan; else zoom out about the
+  spots, down to a map font size of 9 (or the whole-map fit, if that is
+  smaller); else the unpinned drawers close for the clip; else the nearest
+  30° turn that fits. The camera glides over 250 ms and the clip waits for it
+  (a cut under reduced motion).
+- **Big reels**: when the attack reel cannot show whole even so, the camera
+  follows it, framing each attack (attacker and target) in turn with the same
+  steps, 250 ms before each.
+- **Prompts**: a mover is fitted with its enemies (a Player's move also with
+  every hex it can reach), a Player's shot frames shooter and target as
+  before, and a persona's shot moves the camera only as far as it takes to
+  show both. All use the measured clear area.
+- A view moved by hand holds until the next actor; clips still move it, but
+  only as little as it takes to show them.
 
 ### Battle menu
 

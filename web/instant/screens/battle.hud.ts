@@ -489,6 +489,38 @@ export function focusMover(): void {
 }
 
 /**
+ * While a clip plays the HUD follows the clip, not the prompt already
+ * waiting (docs/INSTANT.md, Camera): a move, jump or one unit's clip shows
+ * that unit in the left drawer and closes the right one, as the movement
+ * policy does; the attack reel closes both; with `collapse` (the clip does
+ * not fit beside them) every drawer closes. Pinned drawers stay. Once per
+ * clip; the sheet policy applies afresh when it ends.
+ */
+export function clipSheets(unitId: string | null, reel: boolean): void {
+  const ui = app.battleUi;
+  const c = ui.clip;
+  if (!c) return;
+  const key = c.collapsed ? -c.id : c.id;
+  if (ui.clipSheetsFor === key) return;
+  ui.clipSheetsFor = key;
+  // the prompt after the clip opens its drawers again
+  ui.sheetFor = null;
+  ui.sheetTarget = null;
+  const show = (side: 0 | 1, id: string | null) => {
+    const d = ui.sheets[side];
+    if (d.pinned) return;
+    if (id !== null) d.unitId = id;
+    const open = id !== null;
+    if (ui.logSheets) ui.logSheets[side] = open;
+    else d.open = open;
+    if (!open && ui.focus === side) ui.focus = "orders";
+  };
+  const mover = c.collapsed || reel ? null : unitId;
+  show(0, mover);
+  show(1, null);
+}
+
+/**
  * The record sheet policy, the same for Player and persona units: in the
  * movement phase the left drawer shows the mover and the right one closes;
  * in the attack phase the right drawer shows the weapon target and the left

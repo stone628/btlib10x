@@ -30,6 +30,36 @@ export interface MapViewInit {
   readonly fit?: boolean;
 }
 
+/** A canvas rectangle, CSS px. */
+export interface Rect {
+  readonly x0: number;
+  readonly y0: number;
+  readonly x1: number;
+  readonly y1: number;
+}
+
+/**
+ * A spot the map must show whole (docs/INSTANT.md, Camera): a hex, the sign
+ * of the unit `sign` standing on it (pole, box and the chip row above), and
+ * with `tick` the ticker column to the sign's right.
+ */
+export interface MustSee {
+  readonly hex: HexCoord;
+  readonly sign?: string;
+  readonly tick?: boolean;
+  /** The sign rises this high (hex circumradii), a jump's arc. */
+  readonly lift?: number;
+}
+
+/** Camera eases over this long (CSS transitions aside, the clip waits for it). */
+export const CAMERA_MS = 250;
+/** Smallest map font size a clip zooms out to, unless the whole-map fit is smaller. */
+export const CLIP_MIN_FS = 9;
+/** Breathing room around the must-see boxes, CSS px. */
+const SEE_PAD = 4;
+/** Ticker column width beside a sign, in sign text cells. */
+const TICK_COLS = 10;
+
 /** A unit drawn as an upright glyph banner. */
 export interface Banner {
   readonly id: string;
@@ -196,6 +226,13 @@ function css(name: string, fallback: string): string {
   return v || fallback;
 }
 
+interface CameraState {
+  angle: number;
+  fs: number | null;
+  panX: number;
+  panY: number;
+}
+
 export class MapView {
   readonly canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -263,6 +300,12 @@ export class MapView {
   private tipHex: HexCoord | null = null;
   private tipAnchor: HTMLElement | null = null;
   private tipPlace = "";
+  /** Camera ease in progress: from and to states, start time (`ensureVisible`). */
+  private cam: {
+    from: CameraState;
+    to: CameraState;
+    t0: number;
+  } | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -299,6 +342,7 @@ export class MapView {
       if (e.button === 1) {
         e.preventDefault();
         this.unfit();
+        this.cam = null;
         pan = { x: e.clientX, y: e.clientY, px: this.panX, py: this.panY };
         canvas.setPointerCapture(e.pointerId);
         return;
@@ -461,6 +505,7 @@ export class MapView {
 
   /** Pan so the map moves `dx`, `dy` CSS px under a fixed reticle (stick right: map left). */
   panBy(dx: number, dy: number): void {
+    this.cam = null;
     if (!this.src) return;
     this.unfit();
     this.framed = false;
@@ -532,6 +577,7 @@ export class MapView {
   }
 
   rotate(dir: number): void {
+    this.cam = null;
     const a = this.angle / 60;
     const steps = dir > 0 ? Math.floor(a + 1e-6) + 1 : Math.ceil(a - 1e-6) - 1;
     this.anchored(null, () => {
@@ -542,6 +588,7 @@ export class MapView {
 
   /** Zoom about a canvas point (CSS px), the view centre by default. */
   zoom(step: number, at: readonly [number, number] | null = null): void {
+    this.cam = null;
     const fs = this.fs ?? this.fitFs();
     this.anchored(at, () => {
       this.fs = Math.max(4, Math.min(48, fs + step));
@@ -600,6 +647,7 @@ export class MapView {
 
   /** Pan so a hex's centre sits in the middle of the canvas. */
   centerOn(hex: HexCoord): void {
+    this.cam = null;
     if (!this.src) return;
     this.unfit();
     const v = this.view();
@@ -622,6 +670,7 @@ export class MapView {
     hexes: readonly HexCoord[],
     rect: { x0: number; y0: number; x1: number; y1: number },
   ): void {
+    this.cam = null;
     if (!this.src || hexes.length === 0) return;
     const sq = Math.max(Math.sin((this.tilt * Math.PI) / 180), 1e-3);
     const pts = hexes.map((hex) => {
@@ -681,12 +730,239 @@ export class MapView {
     this.render();
   }
 
+  /** Screen box (CSS px) of must-see spots under the current view. */
+  private seeBox(needs: readonly MustSee[]): Rect {
+    const v = this.view();
+    const m = bannerMetrics(v.fs);
+    const cw = m.fs * 0.6;
+    const src = this.src!;
+    let x0 = Infinity;
+    let y0 = Infinity;
+    let x1 = -Infinity;
+    let y1 = -Infinity;
+    for (const n of needs) {
+      const c = worldCenter(n.hex.col, n.hex.row);
+      const [x, y] = v.proj(
+        v.rot([c[0] - this.world.cx, c[1] - this.world.cy]),
+        src.levelAt(n.hex),
+      );
+      let l = x - v.R;
+      let r = x + v.R;
+      let t = y - v.R * v.sq;
+      const b = y + v.R * v.sq;
+      if (n.sign !== undefined) {
+        const half = (Math.max(n.sign.length + 2, 7) * cw) / 2;
+        l = Math.min(l, x - half);
+        r = Math.max(r, x + half + (n.tick ? 6 + TICK_COLS * cw : 0));
+        // pole, sign box, and the chip row over it
+        t = Math.min(t, y - (n.lift ?? 0) * v.R - m.pole - m.bh - m.chh * 1.4);
+      }
+      x0 = Math.min(x0, l);
+      x1 = Math.max(x1, r);
+      y0 = Math.min(y0, t);
+      y1 = Math.max(y1, b);
+    }
+    return { x0: x0 - SEE_PAD, y0: y0 - SEE_PAD, x1: x1 + SEE_PAD, y1: y1 + SEE_PAD };
+  }
+
+  private camState(): CameraState {
+    return { angle: this.angle, fs: this.fs, panX: this.panX, panY: this.panY };
+  }
+
+  private setCam(c: CameraState): void {
+    this.angle = c.angle;
+    this.fs = c.fs;
+    this.panX = c.panX;
+    this.panY = c.panY;
+  }
+
+  /**
+   * The camera policy for a clip or prompt (docs/INSTANT.md, Camera): show
+   * every must-see spot whole inside one of the clear `rects`, moving as
+   * little as it can. Already shown: no move. Else the least pan; else zoom
+   * out about the spots down to `minFs` (or the whole-map fit, if smaller);
+   * else, with `rotate`, the nearest 30° turn that fits. Returns false when
+   * nothing fits: the view is then left at the smallest size, centred on the
+   * spots in the largest rect. `ease` glides there over CAMERA_MS; it
+   * returns whether the camera moves.
+   */
+  ensureVisible(
+    needs: readonly MustSee[],
+    rects: readonly Rect[],
+    opts: { minFs?: number; rotate?: boolean; ease?: boolean; dry?: boolean } = {},
+  ): { fits: boolean; moved: boolean } {
+    if (!this.src || needs.length === 0 || rects.length === 0) return { fits: true, moved: false };
+    const inside = (b: Rect, r: Rect) =>
+      b.x0 >= r.x0 && b.x1 <= r.x1 && b.y0 >= r.y0 && b.y1 <= r.y1;
+    const fitsIn = (b: Rect, r: Rect) => b.x1 - b.x0 <= r.x1 - r.x0 && b.y1 - b.y0 <= r.y1 - r.y0;
+    const now = this.seeBox(needs);
+    if (rects.some((r) => inside(now, r))) return { fits: true, moved: false };
+    this.unfit();
+    const start = this.camState();
+    const fitFs = this.fitFs();
+    const floor = Math.min(opts.minFs ?? CLIP_MIN_FS, fitFs, this.fs ?? fitFs);
+    /** Pan the least so the box lies inside `r` (centred on an axis it overflows). */
+    const panInto = (r: Rect) => {
+      const b = this.seeBox(needs);
+      const axis = (lo: number, hi: number, r0: number, r1: number) => {
+        if (hi - lo > r1 - r0) return (r0 + r1) / 2 - (lo + hi) / 2;
+        if (lo < r0) return r0 - lo;
+        if (hi > r1) return r1 - hi;
+        return 0;
+      };
+      this.panX += axis(b.x0, b.x1, r.x0, r.x1);
+      this.panY += axis(b.y0, b.y1, r.y0, r.y1);
+    };
+    const area = (r: Rect) => (r.x1 - r.x0) * (r.y1 - r.y0);
+    // 1. pan only: the rect needing the shortest pan
+    let best: { r: Rect; d: number } | null = null;
+    for (const r of rects) {
+      if (!fitsIn(now, r)) continue;
+      const dx = now.x0 < r.x0 ? r.x0 - now.x0 : now.x1 > r.x1 ? r.x1 - now.x1 : 0;
+      const dy = now.y0 < r.y0 ? r.y0 - now.y0 : now.y1 > r.y1 ? r.y1 - now.y1 : 0;
+      const d = Math.hypot(dx, dy);
+      if (!best || d < best.d) best = { r, d };
+    }
+    /** Largest size ≤ the current one at which the spots fit `r`, about their centre; null if none ≥ floor. */
+    const zoomFor = (r: Rect): number | null => {
+      const fs0 = this.fs!;
+      const at = this.seeBox(needs);
+      const c: [number, number] = [(at.x0 + at.x1) / 2, (at.y0 + at.y1) / 2];
+      const s0 = this.camState();
+      const tryFs = (f: number) => {
+        this.setCam(s0);
+        this.anchored(c, () => {
+          this.fs = f;
+        });
+        return fitsIn(this.seeBox(needs), r);
+      };
+      let out: number | null = null;
+      if (tryFs(fs0)) out = fs0;
+      else if (tryFs(floor)) {
+        let lo = floor;
+        let hi = fs0;
+        for (let i = 0; i < 12; i++) {
+          const mid = (lo + hi) / 2;
+          if (tryFs(mid)) lo = mid;
+          else hi = mid;
+        }
+        out = lo;
+      }
+      this.setCam(s0);
+      return out;
+    };
+    const zoomTo = (f: number) => {
+      const at = this.seeBox(needs);
+      this.anchored([(at.x0 + at.x1) / 2, (at.y0 + at.y1) / 2], () => {
+        this.fs = f;
+      });
+    };
+    let fits = true;
+    if (best) panInto(best.r);
+    else {
+      // 2. zoom out: the rect that keeps the spots largest
+      const pick = (): { r: Rect; f: number } | null => {
+        let z: { r: Rect; f: number } | null = null;
+        for (const r of rects) {
+          const f = zoomFor(r);
+          if (f !== null && (!z || f > z.f)) z = { r, f };
+        }
+        return z;
+      };
+      let z = pick();
+      // 3. turn: the nearest 30° step that fits
+      if (!z && opts.rotate) {
+        const a0 = this.angle;
+        const steps = Array.from(
+          { length: 11 },
+          (_, i) => (i % 2 ? 1 : -1) * 30 * Math.ceil((i + 1) / 2),
+        );
+        for (const d of steps) {
+          const s0 = this.camState();
+          const at = this.seeBox(needs);
+          this.anchored([(at.x0 + at.x1) / 2, (at.y0 + at.y1) / 2], () => {
+            this.angle = (((a0 + d) % 360) + 360) % 360;
+          });
+          z = pick();
+          if (z) break;
+          this.setCam(s0);
+        }
+      }
+      if (z) {
+        zoomTo(z.f);
+        panInto(z.r);
+      } else {
+        fits = false;
+        zoomTo(floor);
+        panInto(rects.reduce((a, r) => (area(r) > area(a) ? r : a)));
+      }
+    }
+    const to = this.camState();
+    const moved =
+      to.angle !== start.angle ||
+      to.fs !== start.fs ||
+      Math.abs(to.panX - start.panX) > 0.5 ||
+      Math.abs(to.panY - start.panY) > 0.5;
+    if (opts.dry) return { fits, moved };
+    if (moved && opts.ease) {
+      this.cam = { from: start, to, t0: performance.now() };
+      this.setCam(start);
+      this.wake();
+    } else this.render();
+    return { fits, moved };
+  }
+
+  /** Would `ensureVisible` fit the spots? The view is left as it was. */
+  canShow(
+    needs: readonly MustSee[],
+    rects: readonly Rect[],
+    opts: { minFs?: number; rotate?: boolean } = {},
+  ): boolean {
+    const s = this.camState();
+    const r = this.ensureVisible(needs, rects, { ...opts, dry: true });
+    this.setCam(s);
+    return r.fits;
+  }
+
+  /** A camera ease in progress (`ensureVisible` with `ease`). */
+  get easing(): boolean {
+    return this.cam !== null;
+  }
+
+  /** Advance the camera ease; true while it runs. */
+  private stepCam(now: number): boolean {
+    const c = this.cam;
+    if (!c) return false;
+    const p = Math.min(1, (now - c.t0) / CAMERA_MS);
+    const e = p < 0.5 ? 2 * p * p : 1 - (-2 * p + 2) ** 2 / 2;
+    const lerp = (a: number, b: number) => a + (b - a) * e;
+    let da = c.to.angle - c.from.angle;
+    if (da > 180) da -= 360;
+    if (da < -180) da += 360;
+    const fa = c.from.fs ?? 1;
+    const fb = c.to.fs ?? fa;
+    this.setCam({
+      angle: (((c.from.angle + da * e) % 360) + 360) % 360,
+      // zoom eases geometrically, so it reads as an even pace
+      fs: fa * (fb / fa) ** e,
+      panX: lerp(c.from.panX, c.to.panX),
+      panY: lerp(c.from.panY, c.to.panY),
+    });
+    if (p >= 1) {
+      this.setCam(c.to);
+      this.cam = null;
+      return false;
+    }
+    return true;
+  }
+
   /**
    * Turn, zoom and pan so hexes `a` and `b` lie on a diagonal of a canvas
    * rectangle (CSS px), with room for their banners: the diagonal (of the four
    * corner pairings) that needs the least turn wins.
    */
   frame(a: HexCoord, b: HexCoord, rect: { x0: number; y0: number; x1: number; y1: number }): void {
+    this.cam = null;
     if (!this.src) return;
     const wa = worldCenter(a.col, a.row);
     const wb = worldCenter(b.col, b.row);
@@ -753,6 +1029,7 @@ export class MapView {
   }
 
   cycleTilt(): void {
+    this.cam = null;
     const i = TILTS.indexOf(this.tilt) ?? 0;
     this.tilt = TILTS[(i + 1) % TILTS.length]!;
     this.render();
@@ -763,6 +1040,7 @@ export class MapView {
    * (`fit`: the whole map, centred, at the angle and tilt); the rest stay.
    */
   setView(init: MapViewInit): void {
+    this.cam = null;
     if (init.turn !== undefined) this.angle = ((init.turn % 360) + 360) % 360;
     if (init.tilt !== undefined) this.tilt = Math.max(TILT_MIN, Math.min(TILT_MAX, init.tilt));
     if (init.fit) {
@@ -775,6 +1053,7 @@ export class MapView {
 
   /** Turn back to north-up about the view centre. */
   north(): void {
+    this.cam = null;
     this.anchored(null, () => {
       this.angle = 0;
     });
@@ -783,6 +1062,7 @@ export class MapView {
 
   /** North indicator click (L3): snap to the nearest 60° step; on a step already, turn +60°. */
   snapTurn(): void {
+    this.cam = null;
     const near = Math.round(this.angle / 60);
     const on = Math.abs(this.angle - near * 60) < 0.5;
     this.anchored(null, () => {
@@ -793,6 +1073,7 @@ export class MapView {
 
   /** Turn by a number of degrees about the view centre. */
   turn(deg: number): void {
+    this.cam = null;
     this.anchored(null, () => {
       this.angle = (((this.angle + deg) % 360) + 360) % 360;
     });
@@ -801,6 +1082,7 @@ export class MapView {
 
   /** Change the tilt within TILT_MIN..TILT_MAX about the view centre. */
   tiltBy(deg: number): void {
+    this.cam = null;
     const tilt = Math.max(TILT_MIN, Math.min(TILT_MAX, this.tilt + deg));
     if (tilt === this.tilt) return;
     this.anchored(null, () => {
@@ -814,6 +1096,7 @@ export class MapView {
    * with no fixed font size is exactly the fitted, centred placement.
    */
   fit(): void {
+    this.cam = null;
     this.panX = 0;
     this.panY = 0;
     this.fs = null;
@@ -1086,10 +1369,18 @@ export class MapView {
       this.animating = false;
       return;
     }
+    const easing = this.cam !== null;
+    const cam = this.stepCam(now);
     if (this.animating) {
       this.animating = this.onFrame?.(now) ?? false;
       this.render();
-      if (this.animating) this.wake();
+      if (this.animating || cam) this.wake();
+      return;
+    }
+    // a camera ease alone (its last frame included)
+    if (easing) {
+      this.render();
+      if (cam) this.wake();
       return;
     }
     // the marching ring alone: about 30 frames a second
