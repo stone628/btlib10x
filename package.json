@@ -43,6 +43,7 @@
     "typescript"
   ],
   "license": "MIT",
+  "author": "stone628",
   "engines": {
     "node": ">=20"
   },
