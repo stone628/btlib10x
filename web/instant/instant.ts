@@ -38,7 +38,7 @@ import {
 } from "./screens/setup";
 import { titleAfterRender, titleKey, titleScreen } from "./screens/title";
 import { emptyLoadout } from "./setup/loadout";
-import { app, kitModal, setRerender } from "./state";
+import { app, kitModal, leaveWarns, setRerender } from "./state";
 import type { TuiNode, TuiScene } from "./tui";
 import { APP_VERSION, ENGINE_BUILT_WITH, engineMismatch } from "./version";
 
@@ -447,6 +447,14 @@ async function boot(): Promise<void> {
   document.addEventListener("keydown", onKey);
   initInput();
   document.addEventListener("click", () => setTimeout(rerender, 0));
+  // Setup, deployment and battles live only in memory: ask before a reload,
+  // close or Back throws them away. (Browsers show the prompt only once the
+  // page has had a click or key press.)
+  window.addEventListener("beforeunload", (e) => {
+    if (!leaveWarns(app)) return;
+    e.preventDefault();
+    e.returnValue = "";
+  });
   try {
     loadCatalog(await fetchText("btlib10x.jsonl"));
     await fetchText("btlib10x.sw.jsonl")

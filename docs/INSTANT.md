@@ -42,6 +42,10 @@ covers what Instant Action adds or does differently.
 
 The loadout lives only in memory: a reload, or *New battle* from the title,
 starts from an empty one.
+Leaving the page (reload, close the tab, browser Back) from a setup with
+units in it, deployment, a battle or its debrief asks first with the
+browser's leave-page prompt; the title and an empty setup leave freely.
+Browsers show that prompt only after the page has had a click or key press.
 
 ## Conventions
 

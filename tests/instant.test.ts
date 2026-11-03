@@ -77,6 +77,7 @@ import {
 } from "../web/instant/setup/loadout";
 import {
   app,
+  leaveWarns,
   newBattleUi,
   setAiPace,
   setAiReasoning,
@@ -1466,5 +1467,18 @@ describe("glyph avatars (map/avatars)", () => {
     );
     const stray = Object.keys(AVATARS).filter((m) => m !== "default" && !packs.has(m));
     expect(stray).toEqual([]);
+  });
+});
+
+describe("Instant Action leave-page prompt", () => {
+  const withUnit = emptyLoadout();
+  withUnit.sides[0].push({} as (typeof withUnit.sides)[0][number]);
+  it("asks only when leaving would throw away setup, deployment or a battle", () => {
+    expect(leaveWarns({ screen: "loading", loadout: withUnit })).toBe(false);
+    expect(leaveWarns({ screen: "title", loadout: withUnit })).toBe(false);
+    expect(leaveWarns({ screen: "setup", loadout: emptyLoadout() })).toBe(false);
+    expect(leaveWarns({ screen: "setup", loadout: withUnit })).toBe(true);
+    for (const screen of ["deploy", "battle", "debrief"] as const)
+      expect(leaveWarns({ screen, loadout: emptyLoadout() })).toBe(true);
   });
 });

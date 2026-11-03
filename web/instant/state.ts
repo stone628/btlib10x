@@ -326,6 +326,24 @@ export const app: App = {
   padInput: false,
 };
 
+/**
+ * Whether leaving the page (reload, close, Back) would throw away work that
+ * lives only in memory: a setup with units in it, deployment, a battle, or
+ * its debrief. The page then asks first (a `beforeunload` prompt).
+ */
+export function leaveWarns(a: Pick<App, "screen" | "loadout">): boolean {
+  switch (a.screen) {
+    case "setup":
+      return a.loadout.sides.some((side) => side.length > 0);
+    case "deploy":
+    case "battle":
+    case "debrief":
+      return true;
+    default:
+      return false;
+  }
+}
+
 /** True while a kit popup or dialog owns the keyboard (cleared after it resolves). */
 export const kitModal = { open: false };
 
