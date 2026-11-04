@@ -18,7 +18,7 @@ proof-of-concept demos of how the engine plays, not a finished game:
 - **TUI kit** (`web/tui.js`, `web/tui.css`) — the plain-JS terminal-style
   component kit Instant Action is built on.
 
-The live site is at <https://bt10x.stoneworks.dev>.
+The live site is at <https://bt10x.stoneworks.dev>, <https://stone628.github.io/btlib10x>.
 
 ## Quick start
 
