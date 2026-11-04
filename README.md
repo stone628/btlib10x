@@ -18,7 +18,13 @@ proof-of-concept demos of how the engine plays, not a finished game:
 - **TUI kit** (`web/tui.js`, `web/tui.css`) — the plain-JS terminal-style
   component kit Instant Action is built on.
 
-The live site is at <https://bt10x.stoneworks.dev>, <https://stone628.github.io/btlib10x>.
+The live site is on two hosts:
+
+- <https://bt10x.stoneworks.dev> (Cloudflare Pages) is the full site.
+- <https://stone628.github.io/btlib10x/> (GitHub Pages) is a static mirror
+  with no avatar gallery, because the gallery's backend needs Cloudflare
+  Pages Functions. The avatar creator works there, but it cannot publish to or
+  browse the gallery.
 
 ## Quick start
 
