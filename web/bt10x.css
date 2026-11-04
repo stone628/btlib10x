@@ -161,3 +161,9 @@ html {
   font-size: 11px;
   cursor: pointer;
 }
+
+/* The GitHub Pages build (npm run dist:pages) ships no gallery; it marks the
+   pages that link to it with data-gallery="off" (scripts/dist-web.mjs). */
+[data-gallery="off"] .needs-gallery {
+  display: none;
+}

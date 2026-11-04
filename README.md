@@ -38,6 +38,7 @@ Other common commands:
 | `npm run lint` / `npm run typecheck` | Biome check / `tsc --noEmit` |
 | `npm run build:web` | Bundle the engine and apps into `web/` |
 | `npm run dist:web` | Build the deployable static site into `dist/web/` |
+| `npm run dist:pages` | Same site without the avatar gallery, for GitHub Pages, into `dist/pages/` |
 | `npm run dist:standalone` | Single-file terminal app at `dist/standalone/bt10x.html` |
 | `npm run pack` | Pack `data/mechs` and `data/maps` into `data/btlib10x.jsonl` |
 

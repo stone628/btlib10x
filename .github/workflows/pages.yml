@@ -1,0 +1,53 @@
+# Publishes the static web apps to GitHub Pages at https://stone628.github.io/btlib10x/.
+# Repository Settings → Pages → Source must be "GitHub Actions".
+# The avatar gallery (pages and its functions/ API) is Cloudflare-only and is
+# left out by `npm run dist:pages`.
+name: Pages
+
+# Manual only: run it from the Actions tab ("Pages" → "Run workflow") or with
+# `gh workflow run pages.yml`. Pushes never deploy.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Build stamps read per-path git history; a shallow clone fails the build.
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      # The catalog packs are gitignored, so build them from their tracked sources.
+      - run: npm run pack
+      - run: npm run pack:sw
+      - run: npm run dist:pages
+        env:
+          SITE_BASE: /btlib10x/
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist/pages
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

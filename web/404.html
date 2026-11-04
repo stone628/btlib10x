@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex" />
     <title>bt10x · not found</title>
-    <!-- Cloudflare Pages serves this for any path with no file, at any depth,
-         so every link here is absolute. Without a top-level 404.html, Pages
-         would answer unknown paths with index.html instead. -->
-    <link rel="stylesheet" href="/bt10x.css" />
+    <!-- Pages serves this for any path with no file, at any depth, so every
+         link here resolves against <base>. scripts/dist-web.mjs sets it to the
+         site root (SITE_BASE, "/" by default; "/btlib10x/" on GitHub Pages).
+         Without a top-level 404.html, Cloudflare Pages would answer unknown
+         paths with index.html instead. -->
+    <base href="/" />
+    <link rel="stylesheet" href="bt10x.css" />
     <style>
       /* Locale and language-toggle rules come from bt10x.css. */
       #notfound {
@@ -58,7 +61,7 @@
           }
           // Storage blocked: carry the choice home in the URL.
           const home = document.getElementById("home");
-          if (home) home.href = saved ? "/" : `/?lang=${locale}`;
+          if (home) home.href = saved ? "./" : `./?lang=${locale}`;
           for (const b of document.querySelectorAll("#lang button")) {
             b.setAttribute("aria-pressed", String(b.dataset.lang === locale));
           }
@@ -77,7 +80,7 @@
       <h1>404</h1>
       <p><span lang="en">no such page</span><span lang="ko">페이지가 없습니다</span></p>
       <p>
-        <a id="home" href="/"><span lang="en">back to bt10x</span><span lang="ko">bt10x로 돌아가기</span></a>
+        <a id="home" href="./"><span lang="en">back to bt10x</span><span lang="ko">bt10x로 돌아가기</span></a>
       </p>
     </main>
     <script>

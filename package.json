@@ -25,6 +25,7 @@
     "build": "tsc -b tsconfig.build.json",
     "build:web": "node scripts/build-web.mjs && node scripts/build-dts.mjs",
     "dist:web": "node scripts/build-web.mjs && node scripts/build-dts.mjs && node scripts/dist-web.mjs",
+    "dist:pages": "node scripts/build-web.mjs && node scripts/build-dts.mjs && node scripts/dist-web.mjs --no-gallery",
     "dist:standalone": "node scripts/standalone-web.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node scripts/test-default.mjs",
