@@ -37,6 +37,7 @@ import {
   sensorTip,
 } from "./battle.hints";
 import { fit, h, hintAttrs, row, span } from "./common";
+import { POLICY_ROWS, policyBrief, policyCodeOf, policyLabel, policyValue } from "./policy";
 
 const { GRID: G, ROUND: R, MARK: M, ARROW: A, BAR: B } = UI_THEME;
 
@@ -51,9 +52,6 @@ type Loc =
   | "rightArm"
   | "leftLeg"
   | "rightLeg";
-
-const AMMO_CODE = { exposed: "e", core: "c", spread: "s", leastFirst: "l" } as const;
-const AMS_CODE = { expected: "e", firstHit: "f", priority: "p", off: "o" } as const;
 
 /**
  * Unit chip word (8 cells): NOMINAL green, SHUTDOWN red from heat and white
@@ -105,22 +103,21 @@ function componentCls(hits: number, total: number): string {
   return total - left === 1 ? "ia-lv-yellow" : "ia-lv-orange";
 }
 
-/** Six-letter policy code, e.g. `AeJFMe` (see the tooltip for the breakdown). */
-export function policyCode(u: UnitState): { code: string; tip: string } {
+/**
+ * Six-letter policy code, e.g. `AeJFMe`, and its tooltip: per policy its code,
+ * label and value, then a dim few-word description of the value.
+ */
+export function policyCode(u: UnitState): { code: string; tip: string; runs: [string, string][] } {
   const p = unitPolicyOf(u);
-  const a = `A${AMMO_CODE[p.ammoPolicy]}`;
-  const j = p.autoEject ? "J" : "j";
-  const f = p.heatFlamer ? "F" : "f";
-  const m = `M${AMS_CODE[p.amsPolicy]}`;
-  const onOff = (on: boolean) => t(on ? "policy.on" : "policy.off");
-  const tip = [
-    t("policy.title", { id: u.id }),
-    `${a} ${t("policy.ammo")}: ${t(`ammo.${p.ammoPolicy}`)}`,
-    `${fit(j, 2)} ${t("policy.autoEject")}: ${onOff(p.autoEject)}`,
-    `${fit(f, 2)} ${t("policy.heatFlamer")}: ${onOff(p.heatFlamer)}`,
-    `${m} ${t("policy.ams")}: ${t(`ams.${p.amsPolicy}`)}`,
-  ].join("\n");
-  return { code: `${a}${j}${f}${m}`, tip };
+  const runs: [string, string][] = [[t("policy.title", { id: u.id }), ""]];
+  for (const r of POLICY_ROWS) {
+    const v = r.get(p);
+    runs.push(
+      [`\n${fit(r.code(v), 2)} ${policyLabel(r)}: ${policyValue(r, v)}`, ""],
+      [`\n   ${policyBrief(r, v)}`, "ia-dim"],
+    );
+  }
+  return { code: policyCodeOf(p), tip: runs.map(([x]) => x).join(""), runs };
 }
 
 /** Hits taken as □, what is left as ■. */
@@ -352,6 +349,7 @@ export function recordSheet(
       onPolicy
         ? span(`[${pol.code}]`, {
             tip: pol.tip,
+            tipRuns: pol.runs,
             cls: "ia-bright",
             onClick: () => onPolicy(),
             hint: "policy",
@@ -359,6 +357,7 @@ export function recordSheet(
           })
         : span(`${M.chipL}${pol.code}${M.chipR}`, {
             tip: pol.tip,
+            tipRuns: pol.runs,
             cls: "ia-bright",
             hint: "policy",
             ...sheetTip(side),

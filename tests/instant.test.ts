@@ -8,6 +8,7 @@ import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import {
   buildUnitInit,
+  DEFAULT_UNIT_POLICY,
   ensureMapRegistered,
   type Facing,
   type HexCoord,
@@ -57,6 +58,7 @@ import { debriefKey } from "../web/instant/screens/debrief";
 import { closesMessage, menuKey, openMenu, prefItems } from "../web/instant/screens/menu";
 import { openOptions, optionsKey } from "../web/instant/screens/options";
 import { pileTip } from "../web/instant/screens/piles";
+import { POLICY_ROWS, policyCodeOf } from "../web/instant/screens/policy";
 import {
   CONTROLS,
   personaFacts,
@@ -1480,5 +1482,34 @@ describe("Instant Action leave-page prompt", () => {
     expect(leaveWarns({ screen: "setup", loadout: withUnit })).toBe(true);
     for (const screen of ["deploy", "battle", "debrief"] as const)
       expect(leaveWarns({ screen, loadout: emptyLoadout() })).toBe(true);
+  });
+});
+
+describe("Instant Action policy text (docs/INSTANT.md, Policies)", () => {
+  it("codes the default policy AeJFMe and flips case for J and F", () => {
+    expect(policyCodeOf(DEFAULT_UNIT_POLICY)).toBe("AeJFMe");
+    expect(
+      policyCodeOf({
+        ...DEFAULT_UNIT_POLICY,
+        ammoPolicy: "leastFirst",
+        autoEject: false,
+        heatFlamer: false,
+        amsPolicy: "off",
+      }),
+    ).toBe("AljfMo");
+  });
+
+  it("names, describes and briefs every policy value in both locales", () => {
+    for (const r of POLICY_ROWS) {
+      for (const cat of [en, ko] as Record<string, string>[]) {
+        expect(cat[`policy.${r.id}`]).toBeTruthy();
+        for (const v of r.values) {
+          const w = r.word(v);
+          expect(cat[`policy.${r.id}.${w}`]).toBeTruthy();
+          expect(cat[`policy.desc.${r.id}.${w}`]).toBeTruthy();
+          expect(cat[`policy.brief.${r.id}.${w}`]).toBeTruthy();
+        }
+      }
+    }
   });
 });

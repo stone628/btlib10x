@@ -80,7 +80,7 @@ Two sides (Side 1 = team 1, ids `A1…`; Side 2 = team 2, ids `B1…`), each 1�
 | Gunnery / Piloting | 0–7 (defaults 4 / 5) | `set <id> gunnery\|piloting` |
 | MaxHit | 4–8 pilot hits (default 6, TW pp. 41–42; 7–8 a house rule with a scaled consciousness table) | `set <id> pilotHitMax` |
 | Control | Player, or one of the seven personas, picked in the Choose Control dialog (a new slot gets a random persona, never Player) | `pp <id> <persona\|off>` |
-| Policy | ammo policy (exposed, core, spread, least first), auto-eject on/off, flamers deal heat on/off, AMS (expected, first hit, priority, off); Defaults resets | `set <id> ammoPolicy\|autoEject\|heatFlamer\|amsPolicy` |
+| Policy | ammo order (exposed, core, spread, least first), auto-eject on/off, flamer effect (heat only, damage only), AMS (expected, first hit, priority, off); each value shows its record-sheet code (`exposed(Ae)`) and a one-sentence description under its dropdown; Defaults resets | `set <id> ammoPolicy\|autoEject\|heatFlamer\|amsPolicy` |
 
 Slots are added one at a time up to four per side and removed individually.
 [+] fills the new slot at once: the next free id, default skills, MaxHit and
@@ -288,6 +288,9 @@ The acting Player unit's policies (ammo, auto-eject, flamer heat, AMS) can be
 changed during its prompt, as the terminal's `policy`, from the policy
 button on its record sheet or *Policies* in the battle menu (OK, Cancel
 or Esc go back to the menu); they take effect as described there.
+The record sheet's policy code (`AeJFMe`: ammo order, auto-eject `J`/`j`, flamer
+effect `F`/`f`, AMS) has a tooltip with each policy's value and, on the next line,
+a few-word description of it.
 
 ### Information
 

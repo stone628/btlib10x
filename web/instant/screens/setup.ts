@@ -58,6 +58,7 @@ import {
   statusbar,
 } from "./common";
 import { closesMessage, menuKey, menuWindow, openMenu, prefItems } from "./menu";
+import { POLICY_ROWS, policyDesc, policyLabel, policyValue } from "./policy";
 import {
   controlName,
   personaArrow,
@@ -68,8 +69,6 @@ import {
 
 const { GRID: G, MARK: M, ARROW: A } = UI_THEME;
 
-const AMMO = ["exposed", "core", "spread", "leastFirst"] as const;
-const AMS = ["expected", "firstHit", "priority", "off"] as const;
 const ERAS = [3025, 3050, 3075, 3150];
 const SKILLS = [0, 1, 2, 3, 4, 5, 6, 7];
 const HIT_MAXES = Array.from(
@@ -538,48 +537,41 @@ function okCancel(
 
 // ------------------------------------------------------------ policy dialog
 
-/** Policy dialog of a setup slot or, in battle, of the acting unit. */
+/** Policy dialog columns: the label, the dropdown (value and its code). */
+const POLICY_COLS = 66;
+const POLICY_LABEL = 24;
+const POLICY_SELECT = 20;
+
+/**
+ * Policy dialog of a setup slot or, in battle, of the acting unit. Each policy
+ * is a label and dropdown (each value with its sheet code, e.g. `exposed(Ae)`)
+ * and, under it, a dim sentence describing the selected value.
+ */
 export function policyWindow(m: Extract<Modal, { kind: "policy" }>): TuiNode {
   const d = m.draft;
-  const onOff = [true, false] as const;
-  const toOnOff = (v: boolean) => t(v ? "on" : "off");
-  const items: [string, TuiNode][] = [
-    [
-      "policy.ammo",
-      select(
-        "ammo",
-        16,
-        AMMO,
-        d.ammoPolicy,
-        (x) => t(`ammo.${x}`),
-        (x) => (d.ammoPolicy = x),
+  const items = POLICY_ROWS.flatMap((r) => {
+    const v = r.get(d);
+    return [
+      line(
+        r.id,
+        fit(policyLabel(r), POLICY_LABEL),
+        select(
+          r.id,
+          POLICY_SELECT,
+          r.values,
+          v,
+          (x) => `${policyValue(r, x)}(${r.code(x)})`,
+          (x) => r.set(d, x),
+        ),
       ),
-    ],
-    [
-      "policy.autoEject",
-      select("eject", 16, onOff, d.autoEject, toOnOff, (x) => (d.autoEject = x)),
-    ],
-    [
-      "policy.heatFlamer",
-      select("flamer", 16, onOff, d.heatFlamer, toOnOff, (x) => (d.heatFlamer = x)),
-    ],
-    [
-      "policy.ams",
-      select(
-        "ams",
-        16,
-        AMS,
-        d.amsPolicy,
-        (x) => t(`ams.${x}`),
-        (x) => (d.amsPolicy = x),
-      ),
-    ],
-  ];
-  const cols = 46;
+      row(`  ${policyDesc(r, v)}`, { key: `${r.id}-desc`, cls: "ia-dim" }),
+    ];
+  });
+  const cols = POLICY_COLS;
   const defaults = t("btn.defaults");
   return modal(
     { cols, title: t("policy.title", { id: m.id }), pad: 1 },
-    ...items.map(([k, c]) => line(k, fit(t(k), 24), c)),
+    ...items,
     row(" ", { key: "b0" }),
     okCancel(
       cols - 4,
