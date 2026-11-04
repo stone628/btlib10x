@@ -392,14 +392,20 @@
 }
 /* Narrow screens: wrap the log so the prompt never scrolls away; wide blocks scroll in place. */
 @media (max-width: 480px) {
-  /* Phone: the MOTD becomes a sheet from under the header to above the home bar. */
+  /* Phone: the MOTD spans the width under the header and grows with its text,
+     up to just above the home bar (bottom stays auto so it never stretches). */
   #motd {
-    inset: var(--motd-top) calc(8px + env(safe-area-inset-right))
-      calc(8px + env(safe-area-inset-bottom)) calc(8px + env(safe-area-inset-left));
+    inset: var(--motd-top) calc(8px + env(safe-area-inset-right)) auto
+      calc(8px + env(safe-area-inset-left));
     width: auto;
     height: auto;
-    max-height: none;
+    max-height: calc(100vh - var(--motd-top) - env(safe-area-inset-bottom) - 8px);
     font-size: 13px;
+  }
+  @supports (height: 100dvh) {
+    #motd {
+      max-height: calc(100dvh - var(--motd-top) - env(safe-area-inset-bottom) - 8px);
+    }
   }
   #out {
     overflow-x: hidden;
