@@ -75,7 +75,47 @@
     padding-left: max(8px, env(safe-area-inset-left, 0px));
     padding-right: max(8px, env(safe-area-inset-right, 0px));
   }
+  /* Inset compartment demo: the app styles the .tui-inset element. */
+  #insetDemo .tui-inset {
+    background: var(--tui-field);
+    color: var(--tui-accent);
+    display: grid;
+    place-items: center;
+    white-space: pre;
+    text-align: center;
+  }
+  #insetDemo .tui-inset::before { content: "◢◣\A◥◤"; }
+  #insetDemo[data-inset^="nw"] .inset-text,
+  #insetDemo[data-inset^="sw"] .inset-text { padding-left: calc(11 * var(--cw)); }
   [hidden] { display: none; }
+</style>
+<style>
+  /* A theme added from CSS alone (docs/TUI.md, "Adding a theme"): usable on
+     the page (View menu, F3) and on a single box. Only color tokens. */
+  [data-theme="ice"] {
+    color-scheme: dark;
+    --tui-page: #0a0e14;
+    --tui-fg: #b4c6d8;
+    --tui-bright: #e2ecf6;
+    --tui-dim: #4e5f72;
+    --tui-accent: #7fc4ff;
+    --tui-accent-ink: #0a0e14;
+    --tui-line: #5f7d9c;
+    --tui-surface: #111822;
+    --tui-surface-2: #18222f;
+    --tui-field: #142a40;
+    --tui-sel-bg: #7fc4ff;
+    --tui-sel-fg: #0a0e14;
+    --tui-shadow: rgba(0, 0, 0, 0.55);
+    --tui-overlay: rgba(4, 6, 10, 0.6);
+    --tui-red: #e07a6a;
+    --tui-yellow: #d8c26a;
+    --tui-blue: #7aa7d8;
+    --tui-cyan: #6ac9c0;
+    --tui-red-bg: #3a1712;
+    --tui-yellow-bg: #383012;
+    --tui-blue-bg: #152838;
+  }
 </style>
 </head>
 <body class="tui">
@@ -101,6 +141,7 @@
       <div data-value="theme:green" data-i18n="m.t.green">Theme: <u>g</u>reen</div>
       <div data-value="theme:amber" data-i18n="m.t.amber">Theme: a<u>m</u>ber</div>
       <div data-value="theme:paper" data-i18n="m.t.paper">Theme: <u>p</u>aper</div>
+      <div data-value="theme:ice" data-i18n="m.t.ice">Theme: <u>i</u>ce (CSS only)</div>
       <hr>
       <div data-value="lang:en" data-i18n="m.l.en">Language: <u>E</u>nglish</div>
       <div data-value="lang:ko" data-i18n="m.l.ko">Language: 한국어 (<u>K</u>)</div>
@@ -114,7 +155,7 @@
 
 <main>
   <section class="intro">
-    <h1 data-i18n="intro.title">TUI Kit · draft 0.2</h1>
+    <h1 data-i18n="intro.title">TUI Kit 1.0</h1>
     <p data-i18n="intro.body">Terminal-style components in plain HTML, CSS and JS. Every panel is sized in character cells, framed with box-drawing glyphs, and filled by a background layer inset half a cell so nothing outside the line is colored. Korean and other wide text snaps to 2-cell slots. Use the View menu or F2, F3, F4 to swap the border set, theme and language.</p>
   </section>
 
@@ -135,6 +176,7 @@
             <label class="tui-radio"><input type="radio" name="theme" id="th-green" value="green" checked><span class="tui-mark"></span><span data-i18n="disp.green">Green phosphor</span></label>
             <label class="tui-radio"><input type="radio" name="theme" id="th-amber" value="amber"><span class="tui-mark"></span><span data-i18n="disp.amber">Amber</span></label>
             <label class="tui-radio"><input type="radio" name="theme" id="th-paper" value="paper"><span class="tui-mark"></span><span data-i18n="disp.paper">Paper</span></label>
+            <label class="tui-radio"><input type="radio" name="theme" id="th-ice" value="ice"><span class="tui-mark"></span><span data-i18n="disp.ice">Ice (CSS only)</span></label>
           </span>
           <span class="lines">
             <span class="hint" data-i18n="disp.border">Border set</span>
@@ -152,6 +194,9 @@
               <option value="16px">16 px</option>
               <option value="18px">18 px</option>
             </select>
+            <span class="tui-line"></span>
+            <button type="button" class="tui-btn" data-variant="tight" id="fsFit" data-tip="TUI.fitFontSize({ cols: 100, rows: 1 })" data-i18n="disp.fit">Fit 100 cols</button>
+            <label class="tui-check"><input type="checkbox" id="autoFit"><span class="tui-mark"></span><span data-i18n="disp.auto">Auto-fit</span></label>
             <span class="tui-line"></span>
             <span class="hint" id="cellinfo">cell –</span>
           </span>
@@ -219,6 +264,60 @@
       </div>
     </div>
 
+    <!-- Inset compartment -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Inset compartment" data-i18n-attr="data-title=ic.title" data-demo-border>
+        <div data-tui="box" id="insetDemo" data-cols="34" data-rows="8" data-inset="ne 12 5" data-title="Atlas AS7-D" data-i18n-attr="data-title=u.atlas">
+          <div class="inset-text">
+            <span class="tui-line"><span class="tui-col" style="--col:9" data-i18n="ic.walk">Walk</span>3</span>
+            <span class="tui-line"><span class="tui-col" style="--col:9" data-i18n="ic.run">Run</span>5</span>
+            <span class="tui-line"><span class="tui-col" style="--col:9" data-i18n="ic.heat">Heat</span>14</span>
+            <span class="tui-line"><span class="tui-col" style="--col:9" data-i18n="ic.facing">Facing</span>NE</span>
+          </div>
+        </div>
+        <div class="row">
+          <label class="tui-radio"><input type="radio" name="corner" value="nw"><span class="tui-mark"></span><span>nw</span></label>
+          <label class="tui-radio"><input type="radio" name="corner" value="ne" checked><span class="tui-mark"></span><span>ne</span></label>
+          <label class="tui-radio"><input type="radio" name="corner" value="sw"><span class="tui-mark"></span><span>sw</span></label>
+          <label class="tui-radio"><input type="radio" name="corner" value="se"><span class="tui-mark"></span><span>se</span></label>
+        </div>
+        <p class="hint" data-i18n="ic.hint">data-inset="ne 12 5": a 12 × 5 compartment that shares the box's corner edges, drawn in the box's own border set. The page styles its inside (.tui-inset) and keeps text out of it.</p>
+      </div>
+    </div>
+
+    <!-- Per-box theme -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Per-box theme" data-i18n-attr="data-title=pt.title" data-demo-border>
+        <div class="row">
+          <div data-tui="box" data-cols="20" data-title="green" data-theme="green" data-i18n-attr="data-title=pt.green">
+            <span class="tui-line"><button type="button" class="tui-btn is-primary" data-variant="tight" data-i18n="btn.fire">Fire</button> <span class="tui-dim" data-i18n="pt.dim">dim</span></span>
+            <select data-tui="select" data-cols="16"><option data-i18n="w.ml">Medium Laser (RA)</option><option data-i18n="w.ppc">PPC (RT)</option></select>
+            <div data-tui="box" data-cols="auto" data-rows="3" data-tone="warn"><span data-i18n="tone.heat">Heat 14</span></div>
+          </div>
+          <div data-tui="box" data-cols="20" data-title="amber" data-theme="amber" data-i18n-attr="data-title=pt.amber">
+            <span class="tui-line"><button type="button" class="tui-btn is-primary" data-variant="tight" data-i18n="btn.fire">Fire</button> <span class="tui-dim" data-i18n="pt.dim">dim</span></span>
+            <select data-tui="select" data-cols="16"><option data-i18n="w.ml">Medium Laser (RA)</option><option data-i18n="w.ppc">PPC (RT)</option></select>
+            <div data-tui="box" data-cols="auto" data-rows="3" data-tone="warn"><span data-i18n="tone.heat">Heat 14</span></div>
+          </div>
+          <div data-tui="box" data-cols="20" data-title="paper" data-theme="paper" data-i18n-attr="data-title=pt.paper">
+            <span class="tui-line"><button type="button" class="tui-btn is-primary" data-variant="tight" data-i18n="btn.fire">Fire</button> <span class="tui-dim" data-i18n="pt.dim">dim</span></span>
+            <select data-tui="select" data-cols="16"><option data-i18n="w.ml">Medium Laser (RA)</option><option data-i18n="w.ppc">PPC (RT)</option></select>
+            <div data-tui="box" data-cols="auto" data-rows="3" data-tone="warn"><span data-i18n="tone.heat">Heat 14</span></div>
+          </div>
+          <div data-tui="box" data-cols="20" data-title="ice (CSS only)" data-theme="ice" data-i18n-attr="data-title=pt.ice">
+            <span class="tui-line"><button type="button" class="tui-btn is-primary" data-variant="tight" data-i18n="btn.fire">Fire</button> <span class="tui-dim" data-i18n="pt.dim">dim</span></span>
+            <select data-tui="select" data-cols="16"><option data-i18n="w.ml">Medium Laser (RA)</option><option data-i18n="w.ppc">PPC (RT)</option></select>
+            <div data-tui="box" data-cols="auto" data-rows="3" data-tone="warn"><span data-i18n="tone.heat">Heat 14</span></div>
+          </div>
+        </div>
+        <div class="row">
+          <button type="button" class="tui-btn" id="openThemed" data-i18n="pt.dialog">Paper dialog</button>
+          <button type="button" class="tui-btn" id="openIce" data-i18n="pt.dialog.ice">Ice dialog</button>
+        </div>
+        <p class="hint" id="themeOut" data-i18n="pt.hint">data-theme on one box themes it and everything inside, whatever the page theme. A select popup copies the theme of its box; a warn tone uses that theme's yellow. ice is one CSS block in this page.</p>
+      </div>
+    </div>
+
     <!-- Buttons -->
     <div class="cell">
       <div data-tui="box" data-cols="auto" data-title="Buttons" data-i18n-attr="data-title=btn.title" data-demo-border>
@@ -232,13 +331,18 @@
           <button type="button" class="tui-btn" data-variant="angle" id="b-cancel" data-i18n="btn.cancel">Cancel</button>
           <button type="button" class="tui-btn" data-variant="bare" id="b-bare" data-i18n="btn.bare">bare</button>
         </div>
+        <div class="row">
+          <button type="button" class="tui-btn" data-variant="tight" id="b-tight" data-i18n="btn.tight">tight</button>
+          <button type="button" class="tui-btn" data-variant="tight" id="b-tight2">AC/20</button>
+          <span class="tui-line"><span class="tui-col hint" style="--col:6" data-i18n="btn.hex">Hex</span><button type="button" class="tui-btn" data-variant="field" id="b-field">0604 N</button></span>
+        </div>
         <div class="tui-line"></div>
         <div class="row">
           <button type="button" data-tui="button" data-border="rounded" id="bb-1" data-i18n="btn.end">End phase</button>
           <button type="button" data-tui="button" data-border="double" id="bb-2" data-i18n="btn.confirm">Confirm</button>
           <button type="button" data-tui="button" data-border="heavy" id="bb-3" data-i18n="btn.eject">Eject</button>
         </div>
-        <p class="hint" data-i18n="btn.hint">Press shows reverse video. Focus shows ▸ ◂ marks.</p>
+        <p class="hint" data-i18n="btn.hint">Press shows reverse video. Focus shows ▸ ◂ marks. tight drops the inner spaces; field shows a value that opens an editor.</p>
       </div>
     </div>
 
@@ -315,7 +419,7 @@
     <div class="cell">
       <div data-tui="box" data-cols="auto" data-title="Menu and list" data-i18n-attr="data-title=menu.title" data-demo-border>
         <div class="row">
-          <div data-tui="menu" data-cols="22" data-title="Attack" data-i18n-attr="data-title=menu.attack" data-border="single" id="attackMenu">
+          <div data-tui="menu" data-cols="22" data-title="Attack" data-i18n-attr="data-title=menu.attack" data-border="single" id="attackMenu" data-no-hover>
             <div data-key="F" data-i18n="menu.fire"><u>F</u>ire weapons</div>
             <div data-key="P" data-i18n="menu.punch"><u>P</u>unch</div>
             <div data-key="K" data-i18n="menu.kick"><u>K</u>ick</div>
@@ -331,6 +435,7 @@
           </div>
         </div>
         <p class="hint" id="menuOut" data-i18n="menu.hint">Pick an item with the mouse, ↑ ↓ Enter, or a hotkey letter.</p>
+        <p class="hint" data-i18n="menu.nohover">The Attack menu has data-no-hover: the pointer does not move its cursor, only a click does.</p>
       </div>
     </div>
 
@@ -353,6 +458,19 @@
           </table>
         </div>
         <p class="hint" id="tableOut" data-i18n="tbl.hint">Click a row or use ↑ ↓.</p>
+        <div class="tui-line"></div>
+        <div class="xscroll">
+          <table data-tui="table" data-border="single" data-rules="rows" id="heatTable">
+            <thead><tr><th data-align="right" data-width="4" data-i18n="ht.heat">Heat</th><th data-width="24" data-i18n="ht.effect">Effect</th></tr></thead>
+            <tbody>
+              <tr><td>5</td><td data-i18n="ht.5">−1 MP</td></tr>
+              <tr><td>8</td><td data-i18n="ht.8">+1 to-hit</td></tr>
+              <tr><td>14</td><td data-i18n="ht.14">Shutdown, avoid on 4+</td></tr>
+              <tr><td>19</td><td data-i18n="ht.19">Ammo explodes, avoid on 4+</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint" data-i18n="tbl.rules">The roster merges cells with rowspan and colspan and puts data-rule rows between classes; the heat table uses data-rules="rows" for a rule between every row.</p>
       </div>
     </div>
 
@@ -405,13 +523,23 @@
 
     <!-- Tooltip -->
     <div class="cell">
-      <div data-tui="box" data-cols="auto" data-title="Tooltip" data-i18n-attr="data-title=tip.title" data-demo-border>
+      <div data-tui="box" data-cols="auto" data-title="Tooltip" data-i18n-attr="data-title=tip.title" data-demo-border id="tipBox">
         <div class="row">
           <button type="button" class="tui-btn" id="t1" data-tip="Point-blank: +0 to-hit" data-i18n="tip.range" data-i18n-attr="data-tip=tip.range.t">Range</button>
           <button type="button" class="tui-btn" id="t2" data-tip="Target moved 7 hexes&#10;+3 target movement modifier" data-tip-border="double" data-i18n="tip.mods" data-i18n-attr="data-tip=tip.mods.t">Modifiers</button>
           <span class="tui-accent" data-tip="Any element with data-tip works" data-i18n="tip.hover" data-i18n-attr="data-tip=tip.hover.t">hover me</span>
         </div>
+        <div class="row" id="tipStage">
+          <button type="button" class="tui-btn" data-variant="tight" data-tip="data-tip-at e&#10;data-tip-anchor w" data-tip-at="e" data-tip-anchor="w" data-i18n="tip.right">Right</button>
+          <button type="button" class="tui-btn" data-variant="tight" data-tip="data-tip-at n&#10;data-tip-anchor s" data-tip-at="n" data-tip-anchor="s" data-i18n="tip.above">Above</button>
+          <button type="button" class="tui-btn" data-variant="tight" data-tip="data-tip-at se&#10;data-tip-anchor sw" data-tip-at="se" data-tip-anchor="sw" data-i18n="tip.bottom">Bottoms aligned</button>
+          <button type="button" class="tui-btn" data-variant="tight" data-tip="data-tip-xy 0,-1&#10;from the Tooltip box" data-tip-xy="0,-1" data-tip-from="#tipBox" data-tip-anchor="sw" data-i18n="tip.pinned">Pinned</button>
+        </div>
+        <div class="row">
+          <span class="tui-line" data-tip="Heat 14 / 30&#10;+2 to-hit, −2 MP&#10;Shutdown at 30" data-tip-runs='[["Heat ","tui-dim"],["14","tui-accent"],[" / 30\n","tui-dim"],["+2 to-hit, −2 MP\n",""],["Shutdown at 30","tui-bright"]]' data-tip-at="e" data-tip-anchor="w" data-i18n-attr="data-tip=tip.runs.t; data-tip-runs=tip.runs.r"><span class="tui-accent" data-i18n="tip.runs">Coloured runs</span></span>
+        </div>
         <p class="hint" data-i18n="tip.hint">Hover or focus. Tooltips size themselves to the text in cells.</p>
+        <p class="hint" data-i18n="tip.place">data-tip-at is the point of the element, data-tip-anchor the point of the tip placed on it; data-tip-xy pins the tip to a cell of another element. data-tip-runs colours parts of the text.</p>
       </div>
     </div>
 
@@ -487,6 +615,33 @@
         </div>
       </div>
       <p class="hint" data-i18n="split.hint">A split from markup, with a prefab placed by data-tui-use. Drag a divider, or Tab to it and use the arrow keys.</p>
+      <div class="tui-line"></div>
+      <div data-tui="split" data-cols="auto" data-rows="5" data-sizes="30% 1fr 9" data-fixed data-demo-border>
+        <div data-pane data-title="Phase" data-i18n-attr="data-title=fx.phase"><span class="tui-line" data-i18n="fx.move">Movement</span></div>
+        <div data-pane data-title="Unit" data-i18n-attr="data-title=fx.unit"><span class="tui-line" data-i18n="u.atlas">Atlas AS7-D</span></div>
+        <div data-pane data-title="Turn" data-i18n-attr="data-title=fx.turn"><span class="tui-line">T4</span></div>
+      </div>
+      <p class="hint" data-i18n="fx.hint">data-fixed: dividers are drawn but cannot be dragged or focused. Sizes mix percent, fr and cells.</p>
+    </div>
+
+    <!-- Layout from markup -->
+    <div class="cell">
+      <div data-tui="box" data-cols="auto" data-title="Layout" data-i18n-attr="data-title=ly.title" data-demo-border>
+        <div data-tui="hstack" data-gap="2">
+          <button type="button" class="tui-btn" data-i18n="btn.fire">Fire</button>
+          <button type="button" class="tui-btn" data-i18n="btn.twist">Torso twist</button>
+          <span data-tui="spacer"></span>
+          <button type="button" class="tui-btn is-primary" data-i18n="btn.end">End phase</button>
+        </div>
+        <div class="tui-line"></div>
+        <div data-tui="grid" data-columns="10 1fr 1fr">
+          <div data-tui="box" data-cols="auto" data-title="LA" data-i18n-attr="data-title=ly.la"><span>34</span></div>
+          <div data-tui="box" data-cols="auto" data-title="CT" data-i18n-attr="data-title=ly.ct"><span>47/14</span></div>
+          <div data-tui="box" data-cols="auto" data-title="RA" data-i18n-attr="data-title=ly.ra"><span>34</span></div>
+          <div data-tui="box" data-cols="auto" data-span="all" data-title="Legs" data-i18n-attr="data-title=ly.legs"><span>LL 41 · RL 41</span></div>
+        </div>
+        <p class="hint" data-i18n="ly.hint">An hstack with a spacer pushes the last button right; a grid with data-columns="10 1fr 1fr" (cells, then fr) and a data-span="all" row. Every slot is a whole number of cells.</p>
+      </div>
     </div>
 
     <!-- Scene built from script -->
@@ -535,10 +690,10 @@
   const $ = (id) => document.getElementById(id);
   const t = TUI.t;
   const BORDERS = ['single', 'double', 'heavy', 'rounded', 'ascii'];
-  const THEMES = ['green', 'amber', 'paper'];
+  const THEMES = ['green', 'amber', 'paper', 'ice'];
   const LOCALES = ['en', 'ko', 'pseudo'];
   // Demo state survives a locale switch, which rebuilds #app from markup.
-  const state = { border: 'single', theme: 'green', fs: '14px', heat: 14, inset: '0.5', grid: true };
+  const state = { border: 'single', theme: 'green', fs: '14px', heat: 14, inset: '0.5', grid: true, corner: 'ne', autoFit: false };
 
   const say = (s) => { $('statusMsg').textContent = s; };
 
@@ -580,6 +735,37 @@
     $('insetLabel').textContent = `x ${v} · y ${v}`;
     document.querySelector(`input[name="inset"][value="${v}"]`).checked = true;
   }
+  function setCorner(c) {
+    state.corner = c;
+    TUI.update($('insetDemo'), { inset: `${c} 12 5` });
+    $('insetDemo').dataset.inset = `${c} 12 5`;   // the CSS keys off it
+    document.querySelector(`input[name="corner"][value="${c}"]`).checked = true;
+  }
+  // Font size goes through TUI.setFontSize (sets --tui-fs and refreshes).
+  function setFs(px, quiet) {
+    state.fs = `${px}px`;
+    TUI.setFontSize(px);
+    const fs = $('fs');
+    if ([...fs.options].some((o) => o.value === state.fs) && fs.value !== state.fs) {
+      fs.value = state.fs;
+      fs.dispatchEvent(new Event('change'));
+    }
+    showCell();
+    if (!quiet) say(t('status.fs', { v: px }));
+  }
+  function setAutoFit(on) {
+    state.autoFit = on;
+    $('autoFit').checked = on;
+    TUI.autoFit(on && {
+      cols: 100, rows: 1, min: 10, max: 22,
+      onFit: ({ size, fits }) => {
+        state.fs = `${size}px`;
+        showCell();
+        say(t(fits ? 'status.fit' : 'status.nofit', { v: size }));
+      },
+    });
+    if (!on) say(t('status.fitoff'));
+  }
   function setGrid(on) {
     state.grid = on;
     $('showGrid').checked = on;
@@ -592,9 +778,9 @@
     setHeat(state.heat);
     setInset(state.inset);
     setGrid(state.grid);
-    const fs = $('fs');
-    if (fs.value !== state.fs) { fs.value = state.fs; fs.dispatchEvent(new Event('change')); }
-    showCell();
+    setCorner(state.corner);
+    $('autoFit').checked = state.autoFit;
+    setFs(parseFloat(state.fs), true);
   }
   function helpDialog() {
     return TUI.dialog({ title: t('dlg.keys.title'), text: t('dlg.keys.text'), buttons: [t('dlg.ok')], cols: 50 });
@@ -611,11 +797,12 @@
     else if (el.name === 'lang') setLocale(el.value);
     else if (el.name === 'inset') setInset(el.value);
     else if (el.id === 'showGrid') setGrid(el.checked);
+    else if (el.name === 'corner') setCorner(el.value);
+    else if (el.id === 'autoFit') setAutoFit(el.checked);
     else if (el.id === 'fs') {
-      state.fs = el.value;
-      document.documentElement.style.setProperty('--tui-fs', el.value);
-      TUI.refresh();
-      showCell();
+      if (el.value === state.fs) return;
+      if (state.autoFit) setAutoFit(false);
+      setFs(parseFloat(el.value));
     }
   });
   document.addEventListener('click', async (e) => {
@@ -624,6 +811,17 @@
     if (b.id === 'heatUp') setHeat(state.heat + 1);
     else if (b.id === 'heatDown') setHeat(state.heat - 1);
     else if (b.id === 'reopen') { $('win').hidden = false; b.hidden = true; }
+    else if (b.id === 'fsFit') {
+      if (state.autoFit) setAutoFit(false);
+      setFs(TUI.fitFontSize({ cols: 100, rows: 1, min: 10, max: 22 }));
+    } else if (b.id === 'openThemed' || b.id === 'openIce') {
+      const theme = b.id === 'openThemed' ? 'paper' : 'ice';
+      const r = await TUI.dialog({
+        title: t('dlg.theme.title'), text: t('dlg.theme.text', { v: theme }),
+        buttons: [t('dlg.ok')], border: 'rounded', cols: 50, theme,
+      });
+      $('themeOut').textContent = t('out.dialog', { v: r === null ? t('out.dismissed') : r });
+    }
     else if (b.id === 'openDialog') {
       result(await TUI.dialog({
         title: t('dlg.end.title'), text: t('dlg.end.text'),
@@ -684,7 +882,7 @@
   // The whole status screen is one prefab of the demo state; scene.update()
   // re-renders it and the kit patches what changed.
   TUI.prefab('mech-status', {}, (p) =>
-    split({ cols: 'auto', sizes: '24 1fr', ref: 'split', attrs: { 'data-demo-border': '' },
+    split({ cols: 'auto', sizes: '24 1fr', ref: 'split', theme: p.theme, attrs: { 'data-demo-border': '' },
             onResize: (e, scene) => scene.update({ msg: tk('scn.out.resize', { a: e.detail.sizes[0], b: e.detail.sizes[1] }) }) },
       pane(tk('tab.pilot', null, 'Pilot'),
         TUI.h.use('pilot-card', { gunnery: 4, piloting: 5, hits: p.hits }),
@@ -705,13 +903,19 @@
                   scene.update({ ammo: s.ammo - 1, armor: Math.max(0, s.armor - 0.15), hits: Math.min(6, s.hits + 1),
                                  msg: tk('scn.out.fire', { v: s.ammo - 1 }) });
                 } }, tk('scn.fire')),
-                btn({ onClick: (e, scene) => scene.update({ armor: 1, hits: 0, msg: tk('scn.out.repair') }) }, tk('scn.repair')))),
+                btn({ onClick: (e, scene) => scene.update({ armor: 1, hits: 0, msg: tk('scn.out.repair') }) }, tk('scn.repair')),
+                // A changed theme prop only swaps data-theme: no relayout, focus stays.
+                btn({ variant: 'tight', onClick: (e, scene) => {
+                  const next = SCENE_THEMES[(SCENE_THEMES.indexOf(scene.props.theme) + 1) % SCENE_THEMES.length];
+                  scene.update({ theme: next, msg: tk('scn.out.theme', { v: next }) });
+                } }, tk('scn.theme')))),
             line(text({ class: 'hint' }, p.msg)))))));
 
+  const SCENE_THEMES = ['green', 'amber', 'paper', 'ice'];
   let scene = null;
   function mountScene() {
     scene = TUI.mount($('sceneDemo'),
-      TUI.h.use('mech-status', { ammo: 5, armor: 0.8, hits: 2, msg: tk('scn.ready') }));
+      TUI.h.use('mech-status', { ammo: 5, armor: 0.8, hits: 2, theme: 'green', msg: tk('scn.ready') }));
   }
 
   // Keep a pristine copy of #app for locale switches, pick the start locale

@@ -1,4 +1,4 @@
-/* tui.css: TUI-look components for plain HTML.
+/* tui.css (TUI Kit 1.0): TUI-look components for plain HTML.
  *
  * Geometry: everything is sized in character cells. tui.js measures the
  * font once and publishes the cell size as --cw / --ch (px) on :root.

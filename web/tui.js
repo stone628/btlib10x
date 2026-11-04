@@ -1,4 +1,4 @@
-/* tui.js: cell-sized TUI components for plain HTML. No build step.
+/* tui.js (TUI Kit 1.0): cell-sized TUI components for plain HTML. No build step.
  *
  * Load tui.css and this file, then either mark elements with data-tui
  * (auto-upgraded on DOMContentLoaded) or build them from script via the
@@ -3269,6 +3269,7 @@
   }
 
   global.TUI = {
+    version: "1.0",
     init,
     refresh,
     upgrade,

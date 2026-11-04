@@ -1,4 +1,4 @@
-# TUI Kit (draft 0.2)
+# TUI Kit 1.0
 
 Terminal-style UI components in plain HTML, CSS and JS. No build step, no framework.
 The goal is TUI looks, not cell-exact emulation: a pressed button is a reverse-video
@@ -247,6 +247,7 @@ TUI.upgrade(root)          // upgrade [data-tui] added later
 TUI.refresh()              // re-measure font, redraw all boxes
 TUI.fontSize() / setFontSize(px) / fitFontSize(opts) / autoFit(opts | false)  // see Cells
 TUI.hideTip()              // hide the open tooltip
+TUI.version                // "1.0"
 TUI.metrics                // { cw, ch } in px
 TUI.box(el?, opts)         // make/upgrade a box; returns the element
 TUI.update(el, opts)       // change cols/rows/title/border/... and redraw
@@ -473,11 +474,11 @@ and fires `tui-locale` on `<html>`. Page state inside a mounted root is reset by
 switch: bind handlers by delegation and restore state on `tui-locale` (the demo does
 this). Hotkeys follow the Korean convention `파일(<u>F</u>)`, so the letter still works.
 
-## Known limits of the draft
+## Known limits
 
 - Astral characters (emoji) count 3 cells: `compensatedLength` adds 1 to their 2 UTF-16 units, although its comment says 2. The kit follows the function as written.
 - `<input>` and native `<option>` text is not snapped (the browser draws it); fields still keep their cell width.
 - A box with fixed `rows` does not clip content that is taller; use `rows="auto"` or a scrollbox.
 - `cols="auto"` fills a block parent; inside a shrink-to-fit parent it has nothing to fill.
-- Window dragging, focus rings drawn as boxes and a menubar submenu level are not in this draft.
+- Window dragging, focus rings drawn as boxes and a menubar submenu level are not in 1.0.
 - Split dividers line up only when pane content is whole rows tall (true for text, boxes and every kit component); a pane whose content is a fractional height can shift a horizontal divider by part of a row.
