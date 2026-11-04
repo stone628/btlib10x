@@ -18,7 +18,7 @@ documented separately.
   leaves a gap the simulation needs filled. Where a rule is too deep or fiddly
   to pay for itself in play, or asks a player for a choice the simulator must
   make on its own, the engine follows an explicit **policy** instead (the
-  per-unit ammo policy is the model). Every such departure is listed in §2;
+  per-unit policies of §2.2 are the model). Every such departure is listed in §2;
   anything not listed there follows TW.
 - **Web CLI.** A single-page terminal-emulator app answers one question: how
   would this engine be used once playability counts? It exposes everything
@@ -48,6 +48,8 @@ yet is a gap, not a deviation; gaps are tracked in §4.
   comes first: a head loss sets the pilot to one hit short of death
   "regardless of prior condition", absorbing that step's other pilot hits,
   and an ejected pilot takes only the ejection roll and blast feedback.
+  Whether the system is armed is the `autoEject` policy (§2.2); disarmed,
+  those losses kill the MechWarrior (TW p.128).
   *Why:* TW gives a doomed pilot no way out, and ejection is what turns a
   fight into salvage. *Not adopted:* planetary-condition modifiers and the
   submerged-cockpit ban.
@@ -77,15 +79,22 @@ yet is a gap, not a deviation; gaps are tracked in §4.
 
 ### 2.2 Policies (choices TW leaves to a player)
 
+*Why, for every policy:* it removes an in-game prompt for a situation TW
+leaves to a player. Each is a per-unit standing order (`UnitPolicy`), set at
+setup and changeable by the acting unit at its movement or attack
+activation.
+
 - **Ammo bin selection (TW pp.103–104).** TW lets the player draw from any
-  matching bin and switch freely. The engine depletes bins by a per-unit
-  standing order. *Why:* bin choice only matters for crit exposure, so one
-  standing order replaces a decision on every shot.
-- **LOS along a hexside (TW pp.99–102, 119).** TW lets the target's player
-  choose one hex chain for the pair. The engine picks the chain worst for the
-  attacker's to-hit, ties going to cover, then to the better attack direction;
-  woods, cover and attack direction all use it. *Why:* no mid-resolution
-  prompt to the defender.
+  matching bin. The engine depletes bins in the order of the unit's
+  `ammoPolicy`.
+- **Auto-eject (TO:AR p.165).** TO lets a player disable it before battle.
+  The engine uses `autoEject` (default on), switchable mid-battle.
+- **Flamer heat mode (TW p.303).** TW lets the attacker choose heat or damage
+  per flamer attack. The engine uses `heatFlamer` (default on: heat only).
+- **AMS engagement (TW p.129).** TW lets the defender choose which hitting
+  missile attack an AMS engages. The engine uses `amsPolicy`: `expected`
+  (default, the best expected damage saved), `firstHit`, `priority` (biggest
+  volley) or `off`.
 
 ### 2.3 Simplifications
 
@@ -117,6 +126,10 @@ yet is a gap, not a deviation; gaps are tracked in §4.
     second chance within an activation.
   - **Ejection** and **abandonment** replace the unit's movement, as in
     TO:AR p.165.
+- **LOS along a hexside (TW pp.99–102, 119).** TW lets the target's player
+  choose the hex chain. The engine always picks the chain worst for the
+  attacker's to-hit, ties going to cover, then to the better attack
+  direction. *Why:* no mid-resolution prompt to the defender.
 
 ### 2.4 House rulings where TW is silent
 
