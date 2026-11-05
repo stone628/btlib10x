@@ -6,6 +6,11 @@ line of sight, to-hit, weapon and physical attacks, damage and criticals,
 heat, piloting rolls and Battle Value scoring. It is deterministic given an
 injected RNG and keeps the whole battle in one serializable `BattleState`.
 
+<p align="center">
+  <img src="docs/manual/i01_title.png" alt="Instant Action title screen" width="49%">
+  <img src="docs/manual/i14_attack.png" alt="Instant Action attack phase" width="49%">
+</p>
+
 The repository also holds single-page web apps built on the library. They are
 proof-of-concept demos of how the engine plays, not a finished game:
 
@@ -25,6 +30,10 @@ The live site is on two hosts:
   with no avatar gallery, because the gallery's backend needs Cloudflare
   Pages Functions. The avatar creator works there, but it cannot publish to or
   browse the gallery.
+
+> **New here? Start with the [BT10X User Manual](docs/manual/bt10x-manual-en.md).**
+> It is a BattleTech primer for game developers, with step-by-step walkthroughs
+> of the bt10x terminal and Instant Action.
 
 ## Quick start
 
@@ -78,6 +87,7 @@ docs/          documentation
 
 ## Documentation
 
+- [User Manual](docs/manual/bt10x-manual-en.md) — BattleTech primer and walkthroughs of the terminal and Instant Action (start here)
 - [VISION.md](docs/VISION.md) — goals, rules principles and policy departures from TW
 - [API.md](docs/API.md) — library public API; [USAGE.md](docs/USAGE.md) — usage walkthrough
 - [CLI.md](docs/CLI.md) — terminal app and the rule coverage status
