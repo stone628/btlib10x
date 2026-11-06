@@ -378,9 +378,13 @@ function critNames(u: UnitState, loc: Location): string[] {
   return [...counts].map(([n, k]) => (k > 1 ? `${n} ${M.times}${k}` : n));
 }
 
-function statusChip(u: UnitState): TuiChild | null {
+/** HULL or DESTROYED for a removed unit; the pilot chip beside it tells why a hull is one.
+ *  `max` clips the text to the cells left in a row, brackets excluded. */
+function statusChip(u: UnitState, max = Infinity): TuiChild | null {
   if (!isUnitRemoved(u)) return null;
-  return chip(removalText(u).toUpperCase(), isHull(u) ? "ia-lv-orange" : "ia-lv-red");
+  const hull = isHull(u);
+  const s = hull ? t("chip.hull") : t("debrief.status.destroyed").toUpperCase();
+  return chip(cells(s) > max ? fit(s, max) : s, hull ? "ia-lv-orange" : "ia-lv-red");
 }
 
 function killTurn(b: BattleController, id: string): number | null {
@@ -394,7 +398,8 @@ function unitList(all: readonly UnitState[]): TuiNode {
   all.forEach((u, i) => {
     if (i > 0 && u.team !== all[i - 1]!.team) rows.push(row(" ", { key: `gap${i}` }));
     const sel = i === app.debriefUnit;
-    const st = statusChip(u);
+    // 27 inner cells less the 15-cell `▸ID  MODEL    ` prefix, less the chip's two brackets.
+    const st = statusChip(u, 10);
     rows.push(
       H.el(
         "div",
