@@ -528,6 +528,64 @@ describe("turn-integrity", () => {
     });
   });
 
+  describe("within a team, units act slowest first", () => {
+    /** Losers (team 1) and winners (team 2) listed in roster order. */
+    function order(losers: string[], winners: string[], tweak?: (s: BattleState) => void) {
+      const units: UnitInit[] = [];
+      losers.forEach((m, i) => {
+        units.push(buildUnitInit(`l${i}`, m, 1, { col: i + 1, row: 1 }, "s"));
+      });
+      winners.forEach((m, i) => {
+        units.push(buildUnitInit(`w${i}`, m, 2, { col: i + 1, row: 6 }, "n"));
+      });
+      const state = createTestBattle([], units, true);
+      rollInitiativePhase(state, scriptedRng(1, 1, 3, 3), []);
+      tweak?.(state);
+      state.actorQueue = null;
+      return actorQueue(state)
+        .pending.map((v) => v.id)
+        .join(" ");
+    }
+
+    it("sorts by walking MP, ties by roster order", () => {
+      // l: LCT 8, AS7 3, HBK 4 / w: WVR 5, GRF 5, ENF 4 (WVR/GRF tie at 55 t: roster)
+      expect(order(["LCT-1V", "AS7-D", "HBK-4G"], ["WVR-6R", "GRF-1N", "ENF-4R"])).toBe(
+        "l1 w2 l2 w0 l0 w1",
+      );
+      // HBK and ENF both walk 4 at 50 t: roster order decides.
+      expect(order(["HBK-4G"], ["HBK-4G", "ENF-4R"])).toBe("l0 w0 w1");
+      expect(order(["HBK-4G"], ["ENF-4R", "HBK-4G"])).toBe("l0 w0 w1");
+    });
+
+    it("uses current MP, heavier first on a tie", () => {
+      // Heat 25 costs the Locust 5 MP (8 -> 3), tying the Atlas; the Atlas is heavier.
+      // 3 v 1, so the losers place all three before the lone winner.
+      const got = order(["LCT-1V", "AS7-D", "HBK-4G"], ["ENF-4R"], (s) => {
+        requireUnit(s, "l0").heat = 25;
+      });
+      expect(got).toBe("l1 l0 l2 w0");
+    });
+
+    it("breaks an MP tie with piloting, worst pilot first", () => {
+      // HBK and ENF both walk 4 at 50 t; the better pilot (lower number) moves later.
+      const got = order(["HBK-4G"], ["HBK-4G", "ENF-4R"], (s) => {
+        requireUnit(s, "w0").piloting = 3;
+        requireUnit(s, "w1").piloting = 6;
+      });
+      expect(got).toBe("l0 w1 w0");
+    });
+
+    it("orders the attack phase by gunnery alone, worst gunner first", () => {
+      // The Locust walks 8 and the Atlas 3, but speed is ignored when declaring.
+      const got = order(["AS7-D", "LCT-1V"], ["WVR-6R", "AS7-D"], (s) => {
+        s.phase = "attack";
+        requireUnit(s, "l0").gunnery = 2;
+        requireUnit(s, "l1").gunnery = 5;
+      });
+      expect(got).toBe("l1 w0 l0 w1");
+    });
+  });
+
   describe("attack-phase ratio counts only units that can declare (TW p.39, GAME-02)", () => {
     /** 2 losers v 4 winners, w2 and w3 disabled; `phase` picks the queue. */
     function disabledOrder(phase: "movement" | "attack", disable: (u: UnitState) => void): string {

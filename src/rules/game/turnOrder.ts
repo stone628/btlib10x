@@ -1,6 +1,9 @@
 import type { Rng } from "../../core/types";
+import { mechDefFor } from "../../data/index";
 import { isAmmoPolicy } from "../ammo";
 import { isAmsPolicy } from "../ams";
+import { effectiveMovement } from "../critical";
+import { effectiveMoveBudget, isTsmActive } from "../heat";
 import { rollInitiative } from "../initiative";
 import { isPilotUnconscious } from "../pilot";
 import { isNominal, isShutdown, isUnitRemoved, requirePhase, requireUnit } from "./queries";
@@ -177,12 +180,54 @@ export function pendingActors(state: BattleState): string[] {
   });
 }
 
+/** Walking MP `unit` has right now (damage, crits, heat, TSM). */
+function currentWalkMp(unit: UnitState): number {
+  const def = mechDefFor(unit);
+  return effectiveMoveBudget(
+    "walk",
+    effectiveMovement(def, unit.damage, unit.critSlotsDestroyed, isTsmActive(def, unit.heat)),
+    unit.heat,
+  );
+}
+
+/** A unit with its movement sort keys, computed once before sorting. */
+export interface MovementKey {
+  readonly unit: UnitState;
+  readonly walkMp: number;
+  readonly tonnage: number;
+}
+
+/** Movement: slowest first (current walking MP), then worst piloting first,
+ *  then heavier first. Fast, skilled pilots gain most from moving after they
+ *  have seen the enemy. Sort is stable, so roster order breaks any tie. */
+export function compareMovementOrder(a: MovementKey, b: MovementKey): number {
+  return a.walkMp - b.walkMp || b.unit.piloting - a.unit.piloting || b.tonnage - a.tonnage;
+}
+
+/** `units` in movement order; walking MP is costly, so it is computed once
+ *  per unit rather than once per comparison. */
+function sortForMovement(units: UnitState[]): UnitState[] {
+  return units
+    .map((unit) => ({ unit, walkMp: currentWalkMp(unit), tonnage: mechDefFor(unit).tonnage }))
+    .sort(compareMovementOrder)
+    .map((k) => k.unit);
+}
+
+/** Attack: worst gunnery first. Speed is irrelevant to a declaration; the
+ *  best gunner gains most from seeing the enemy's targets. Sort is stable,
+ *  so roster order breaks any tie. */
+export function compareAttackOrder(a: UnitState, b: UnitState): number {
+  return b.gunnery - a.gunnery;
+}
+
 /** Full activation order for the current phase: movement phases front-load
  *  shut-down units (they can only attempt startup or pass); both phases then
- *  alternate initiative-loser-first. Before every step the ratio is
- *  recounted from the units each team still has to place: each team places
- *  ⌊left/minLeft⌋ units (TW p.39 unequal-force activation, e.g. 8 v 5 →
- *  1/1, 1/1, 1/2, 1/2, 1/2). In the attack phase only units that can
+ *  alternate initiative-loser-first, each team's units sorted by
+ *  {@link compareMovementOrder} or {@link compareAttackOrder} so players never
+ *  pick which unit goes next. Before every step the ratio is recounted from
+ *  the units each team still has to place: each team places ⌊left/minLeft⌋
+ *  units (TW p.39 unequal-force activation, e.g. 8 v 5 → 1/1, 1/1, 1/2,
+ *  1/2, 1/2). In the attack phase only units that can
  *  declare are counted (GAME-02). */
 export function buildActorQueue(state: BattleState): string[] {
   const alive = Object.values(state.units).filter((u) => !isUnitRemoved(u));
@@ -191,9 +236,10 @@ export function buildActorQueue(state: BattleState): string[] {
   const winner = state.initiativeWinnerTeam;
   const loser = teams.find((t) => t !== winner) ?? winner;
   const order = loser === winner ? teams : [loser, ...teams.filter((t) => t !== loser)];
+  const attack = state.phase === "attack";
 
   const downIds = new Set<string>();
-  if (state.phase === "movement") {
+  if (!attack) {
     for (const u of alive) if (isShutdown(u)) downIds.add(u.id);
   }
 
@@ -202,9 +248,9 @@ export function buildActorQueue(state: BattleState): string[] {
 
   // In the attack phase shut-down units and unconscious pilots cannot declare,
   // so they stay out of the ratio (TW p.39 counts units "still to declare for").
-  const canDeclare = (u: UnitState): boolean =>
-    state.phase !== "attack" || (isNominal(u) && !isPilotUnconscious(u));
-  const nominal = alive.filter((u) => !downIds.has(u.id) && canDeclare(u));
+  const canDeclare = (u: UnitState): boolean => !attack || (isNominal(u) && !isPilotUnconscious(u));
+  const eligible = alive.filter((u) => !downIds.has(u.id) && canDeclare(u));
+  const nominal = attack ? eligible.sort(compareAttackOrder) : sortForMovement(eligible);
   const nextIndex = new Map<number, number>();
   for (const t of teams) nextIndex.set(t, 0);
   const left = (team: number): number =>
