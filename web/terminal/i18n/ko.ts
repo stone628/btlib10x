@@ -183,6 +183,7 @@ export const ko: Catalog = {
     "무작위 설정 완료: 플레이어 {players}명, 시드 {seed}. 'start'로 전투를 지켜보세요.",
   "cmd.pp.arg.go": "현재 프롬프트를 페르소나 플레이어가 진행 (예: 'rollback' 이후)",
   "cmd.pp.arg.why": "유닛의 마지막 판단 다시 표시 (기본: 행동 중인 유닛)",
+  "cmd.pp.arg.phase": "현재 단계만 페르소나가 행동 중인 유닛을 조종 (직접 조종하는 유닛)",
   "cmd.pp.arg.trace": "판단 근거 표시량: off, brief (상위 3개), full",
   "pp.list.header": "페르소나 지정:",
   "pp.list.entry": "  {id}: {persona}",
@@ -196,6 +197,10 @@ export const ko: Catalog = {
   "pp.err.setupOnly": "페르소나는 설정 단계에서만 지정할 수 있습니다",
   "pp.err.notPersonaPrompt": "현재 프롬프트는 페르소나가 조종하지 않습니다",
   "pp.err.noTrace": "{id}의 판단 기록이 아직 없습니다",
+  "pp.ok.phase": "{id}: 이번 단계는 {persona}이(가) 조종합니다",
+  "pp.err.phaseNoPrompt": "'pp phase'는 이동 또는 공격 프롬프트의 유닛에만 쓸 수 있습니다",
+  "pp.err.phaseAssigned":
+    "{id}은(는) {persona} 페르소나가 조종합니다. 'pp phase'는 직접 조종하는 유닛용입니다",
   "pp.stopped": "페르소나 플레이어: '{command}' 실패로 중단했습니다. 조종권을 돌려드립니다.",
   "pp.limit":
     "페르소나 플레이어: 판단 횟수 한도에 도달해 중단했습니다. 계속하려면 'pp go'를 입력하세요.",

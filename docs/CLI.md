@@ -55,7 +55,7 @@ Examples:
 | `info map <name>` | map info: width×height, terrain types and counts, elevation counts, ASCII map with terrain glyphs |
 | `reset` | wipe everything back to empty setup |
 | `ver` | show the terminal and engine versions (each a `YYMMDD-<git hash>` stamp of the last commit touching its own files; see "Versioning" in `AGENTS.md`) |
-| `pp` | persona player (see below): no argument lists assignments, personas and the trace level; `pp <id> <persona\|off>` assigns in setup only; `pp setup 2\|4` builds a random persona-vs-persona setup (empty setup only); `pp go` lets it act at the current prompt; `pp why [id]` reprints a unit's last decision; `pp trace off\|brief\|full` sets how much reasoning is shown |
+| `pp` | persona player (see below): no argument lists assignments, personas and the trace level; `pp <id> <persona\|off>` assigns in setup only; `pp setup 2\|4` builds a random persona-vs-persona setup (empty setup only); `pp go` lets it act at the current prompt; `pp phase <persona>` lets a persona play a hand-played unit's current phase only; `pp why [id]` reprints a unit's last decision; `pp trace off\|brief\|full` sets how much reasoning is shown |
 | `autoplay` | hidden demo driver (not listed by `help`): resets nothing itself but expects a blank slate — run `reset` first. Prints a notice, then on a short timer (`AUTOPLAY_INTERVAL_MS` in `web/terminal/autoplay.ts`) types the next command a demonstrator would: loads `quickstart`, places HBK-4G vs CDA-3MA adjacent, starts, then walks in place and fires every working weapon each turn until victory. Any manually typed command cancels it; it prints `autoplay finished.` when the battle ends |
 
 ### setup
@@ -189,6 +189,12 @@ Conservative (TN ≤ 8, 25% reserve) / Miser (TN ≤ 7, 50% reserve, energy firs
   `mode shutdown`, then `mode abandon` the next turn.
 - **Own RNG**: a separate stream seeded from the battle seed, used only for
   tie-breaks; deciding never moves the battle dice.
+- **One phase**: `pp phase <persona>` at a battle prompt hands the acting
+  unit to that persona for the current phase only (its movement or its
+  attack): it decides and types the commands at once, then the persona
+  prompts that follow are played as after `done`, and the unit's next prompt
+  is the human's again. Persona-assigned units are refused. Instant Action
+  offers the same through the Control dropdown of its command panels.
 - **Rollback**: the persona context (memory, its RNG, last traces) is part of
   each prompt snapshot. A rolled-back persona prompt waits; `pp go` replays the
   identical decision, or the human can play the prompt by hand.

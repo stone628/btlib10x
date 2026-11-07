@@ -187,7 +187,10 @@ export interface MenuItem {
 }
 
 /** One row of the Attack Command panel (`battle.attack.ts`). */
-export type AttackPanelRow = "twist" | "target" | "weapons" | "physical" | "club";
+export type AttackPanelRow = "control" | "twist" | "target" | "weapons" | "physical" | "club";
+
+/** One dropdown of the Movement Command bar: Control, Hold, Move to hex. */
+export type MoveBarItem = "control" | "hold" | "hex";
 
 /** The weapon or physical check-box dialog; `cursor` is its row, -1 when none can be checked. */
 export interface AttackDialog {
@@ -246,6 +249,8 @@ export interface BattleUi {
   hint: string | null;
   /** Attack panel row under the cursor, for the turn and actor `for`; null = the default. */
   attackRow: { for: string; row: AttackPanelRow } | null;
+  /** Movement bar dropdown under the cursor, for the turn and mover `for`; null = Hold. */
+  moveItem: { for: string; item: MoveBarItem } | null;
 }
 
 export type BattleFocus = 0 | "orders" | 1;
@@ -271,6 +276,7 @@ export function newBattleUi(): BattleUi {
     focus: "orders",
     hint: null,
     attackRow: null,
+    moveItem: null,
   };
 }
 
@@ -285,8 +291,6 @@ export interface App {
   modal: Modal | null;
   deploy: DeployState | null;
   battle: BattleController | null;
-  /** Battle Orders cursor (movement choices or attack rows). */
-  orderCursor: number;
   battleUi: BattleUi;
   aiPace: AiPace;
   /** Map animations: Full, Fast or Off (battle menu). */
@@ -313,7 +317,6 @@ export const app: App = {
   modal: null,
   deploy: null,
   battle: null,
-  orderCursor: 0,
   battleUi: newBattleUi(),
   aiPace: loadPace(),
   anim: loadAnim(),

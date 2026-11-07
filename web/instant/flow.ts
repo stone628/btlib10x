@@ -287,7 +287,6 @@ export function beginBattle(): void {
   const control = Object.fromEntries(units.map((u) => [u.id, l.sides[u.side][u.index]!.persona]));
   app.battle = new BattleController(currentMap(), inits, control, l.seed, mode);
   app.screen = "battle";
-  app.orderCursor = 0;
   app.battleUi = newBattleUi();
   app.modal = null;
   aiHeld = false;
@@ -573,7 +572,6 @@ export function pumpAi(force = false): void {
   aiTimer = setTimeout(() => {
     aiTimer = null;
     b.stepAi();
-    app.orderCursor = 0;
     if (b.actorPersona === null) app.playerSince = performance.now();
     rerender();
     if (app.aiPace !== "step") pumpAi();

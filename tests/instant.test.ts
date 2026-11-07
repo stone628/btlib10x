@@ -495,7 +495,6 @@ describe("Instant Action battle keys", () => {
     app.battle = b;
     app.battleUi = newBattleUi();
     app.modal = null;
-    app.orderCursor = 0;
     app.playerSince = -1e9;
   };
   const attackBattle = () => {
@@ -564,15 +563,61 @@ describe("Instant Action battle keys", () => {
     });
   });
 
-  it("walks the movement bar with ← → and chooses a mode with Enter", () => {
+  it("starts the movement bar on Hold and walks Control, Hold, Move to hex with ← →", () => {
     const b = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null });
     setUp(b);
+    const cursor = () => app.battleUi.moveItem?.item;
+    expect(app.battleUi.moveItem).toBeNull(); // the default: Hold
     expect(key("ArrowRight")).toBe(true);
-    expect(app.orderCursor).toBe(1); // the first mode after the Hold dropdown
-    expect(key("Enter")).toBe(true);
-    expect(b.move!.choice).toBe("walk");
+    expect(cursor()).toBe("hex");
+    expect(key("ArrowRight")).toBe(true); // round again
+    expect(cursor()).toBe("control");
     expect(key("ArrowLeft")).toBe(true);
-    expect(app.orderCursor).toBe(0);
+    expect(cursor()).toBe("hex");
+    expect(key("ArrowLeft")).toBe(true);
+    expect(cursor()).toBe("hold");
+    expect(key("F10")).toBe(false); // nothing chosen: nothing commits
+    expect(b.move!.choice).toBeNull();
+  });
+
+  it("Control: a persona picked for the move hides the bar, F10 lets it play this phase only", () => {
+    const b = battle({ kind: "destroyAll" }, { A1: null, A2: null, B1: null, B2: null });
+    setUp(b);
+    const mover = b.actorId!;
+    b.chooseMove("walk");
+    b.setPhasePersona("longtom");
+    expect(b.phasePersona).toBe("longtom");
+    expect(key("ArrowRight")).toBe(true); // Control is the only dropdown left
+    expect(app.battleUi.moveItem?.item).toBe("control");
+    b.setPhasePersona(null); // back to the Player: the draft is still there
+    expect(b.move!.choice).toBe("walk");
+    b.setPhasePersona("longtom");
+    expect(key("F10")).toBe(true);
+    expect(b.actorId).not.toBe(mover);
+    expect(b.phasePersona).toBeNull(); // lapsed with the prompt
+    expect(b.actorPersona).toBeNull(); // still a Player unit
+  });
+
+  it("Control: a persona picked for the attack hides the panel rows and fires on F10", () => {
+    const b = attackBattle();
+    setUp(b);
+    const shooter = b.actorId;
+    b.setPhasePersona("alpha");
+    expect(key("ArrowDown")).toBe(true); // only the Control row is left
+    expect(app.battleUi.attackRow?.row).toBe("control");
+    expect(key("F10")).toBe(true);
+    expect(b.actorId === shooter && b.phase === "attack").toBe(false);
+    expect(b.phasePersona).toBeNull();
+  });
+
+  it("Control: refused for a persona unit", () => {
+    const b = battle(
+      { kind: "destroyAll" },
+      { A1: "alpha", A2: "alpha", B1: "alpha", B2: "alpha" },
+    );
+    expect(b.actorPersona).not.toBeNull();
+    expect(() => b.setPhasePersona("longtom")).toThrow(/persona/);
+    expect(() => b.commitPhasePersona()).toThrow();
   });
 
   /** A1 with B1 and B2 both adjacent in its front arc, at A1's attack. */
@@ -593,19 +638,25 @@ describe("Instant Action battle keys", () => {
     return b;
   };
   const dialog = () => app.modal as { kind: "fire" | "physical"; cursor: number };
+  /** Twist (where the panel starts) → Weapon Target → the weapons button. */
+  const toWeapons = () => {
+    expect(key("ArrowDown")).toBe(true);
+    expect(key("ArrowDown")).toBe(true);
+    expect(app.battleUi.attackRow?.row).toBe("weapons");
+  };
 
   describe("Attack Command panel", () => {
-    it("starts on the weapons button; ↑ reaches Weapon Target and Twist, ← → act per row", () => {
+    it("starts on Twist under Control; ↑ ↓ walk the rows, ← → act per row", () => {
       const b = attackBattle();
       setUp(b);
       expect(b.phase).toBe("attack");
       const target = b.attack!.targetId;
       expect(app.battleUi.attackRow).toBeNull();
-      expect(key("ArrowRight")).toBe(true); // weapons button: twist
+      expect(key("ArrowRight")).toBe(true); // Twist: one to the right
       expect(b.attack!.twist).toBe("rightSide");
       expect(key("ArrowLeft")).toBe(true);
       expect(b.attack!.twist).toBe("front");
-      expect(key("ArrowUp")).toBe(true);
+      expect(key("ArrowDown")).toBe(true);
       expect(app.battleUi.attackRow?.row).toBe("target");
       expect(key("ArrowRight")).toBe(true);
       expect(b.attack!.twist).toBe("front"); // cycles the target, not the twist
@@ -616,6 +667,10 @@ describe("Instant Action battle keys", () => {
       expect(b.attack!.twist).toBe("leftSide");
       expect(key("Enter")).toBe(true); // one to the right
       expect(b.attack!.twist).toBe("front");
+      expect(key("ArrowUp")).toBe(true);
+      expect(app.battleUi.attackRow?.row).toBe("control");
+      expect(key("ArrowRight")).toBe(true); // nothing to step on Control
+      expect(b.attack!.twist).toBe("front");
       expect(key("ArrowUp")).toBe(true); // wraps to the last row
       expect(app.battleUi.attackRow?.row).toBe("weapons"); // nobody adjacent: no physical row
     });
@@ -625,6 +680,7 @@ describe("Instant Action battle keys", () => {
       setUp(b);
       const fireable = b.fireSuggestion()!.targets[0]!.weapons.map((w) => w.weaponIndex);
       expect(fireable.length).toBeGreaterThan(1);
+      toWeapons();
       expect(key("Enter")).toBe(true);
       expect(dialog()).toEqual({ kind: "fire", cursor: 0 });
       expect(key("Enter")).toBe(true);
@@ -640,6 +696,7 @@ describe("Instant Action battle keys", () => {
       const b = attackBattle();
       setUp(b);
       const t0 = b.fireSuggestion()!.targets[0]!;
+      toWeapons();
       expect(key("Enter")).toBe(true);
       expect(key("ArrowUp")).toBe(true); // wraps past any blocked rows to the last fireable one
       expect(dialog().cursor).toBe(t0.weapons.length - 1);
@@ -682,7 +739,9 @@ describe("Instant Action battle keys", () => {
     it("opens the physical dialog from its button; a checked punch blocks its arm's weapons", () => {
       const b = meleeBattle();
       setUp(b);
-      expect(key("ArrowDown")).toBe(true); // weapons → physical
+      expect(key("ArrowDown")).toBe(true); // twist → target
+      expect(key("ArrowDown")).toBe(true); // → weapons
+      expect(key("ArrowDown")).toBe(true); // → physical
       expect(app.battleUi.attackRow?.row).toBe("physical");
       expect(key("Enter")).toBe(true);
       expect(dialog().kind).toBe("physical");

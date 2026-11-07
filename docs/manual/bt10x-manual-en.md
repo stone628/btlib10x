@@ -251,7 +251,7 @@ setup > pp setup 2       # random 1v1: map, 'Mechs, positions and personas
 setup > start
 ```
 
-For every decision, the persona prints how many options it scored, the top choices with their scores, and why it picked one. Control the detail with `pp trace off|brief|full`. To hand only one unit to the AI, use `pp <id> <persona>` during setup.
+For every decision, the persona prints how many options it scored, the top choices with their scores, and why it picked one. Control the detail with `pp trace off|brief|full`. To hand only one unit to the AI, use `pp <id> <persona>` during setup. To let a persona play just the current phase of one of your units, type `pp phase <persona>` at its prompt.
 
 [![Figure 9. Seed 7 AI battle ending.](t09_pp_end.png)](t09_pp_end.png)
 
@@ -387,11 +387,13 @@ The top strip shows the engagement and score (`Attrition · 0 : 0`), **Turn** (`
 
 ### Step 8. Move
 
-Click **[Walk:4MP]** in the Movement Command panel. Reachable hexes turn blue, each labeled with its MP cost. Click a destination: a translucent ghost of the 'Mech shows where it will end up, and the panel summarizes it, for example `to (8,14) N · 4 MP`. Change facing with <kbd>←</kbd> <kbd>→</kbd>; clear with <kbd>Bksp</kbd>.
+Open **[Move to hex ▾]** in the Movement Command panel and pick **Walk** (the stationary choices, such as Stand still, are under **[Hold ▾]**, where the cursor starts). Reachable hexes turn blue, each labeled with its MP cost. Click a destination: a translucent ghost of the 'Mech shows where it will end up, and the panel summarizes it, for example `to (8,14) N · 4 MP`. Change facing with <kbd>←</kbd> <kbd>→</kbd>; clear with <kbd>Bksp</kbd>.
 
 [![Figure 21. Destination chosen.](i12_move.png)](i12_move.png)
 
 *Figure 21. Destination chosen: the path is drawn in white and A1's ghost marks the end hex. Confirm with [DONE F10]. — [i12_move.png](i12_move.png)*
+
+Both command panels start with **[Control: Player ▾]**. Pick a persona there to let it play only this phase of your unit: the rest of the panel is hidden, and <kbd>F10</kbd> lets the persona decide and commit. Your unit's next phase starts on Player again.
 
 When an AI unit acts, the screen says "B1 is played by a persona" and shows **[NEXT PERSONA]**. Click it or press <kbd>Enter</kbd>.
 
@@ -401,7 +403,7 @@ When an AI unit acts, the screen says "B1 is played by a persona" and shows **[N
 
 ### Step 9. Attack
 
-In the attack phase the **Attack Command** panel appears and a line of fire (yellow dashes) is drawn on the map. Choose the Twist (Left, Front, Right) and Weapon Target, then click **[0 selected out of 2 available weapons]** to open the weapon list.
+In the attack phase the **Attack Command** panel appears and a line of fire (yellow dashes) is drawn on the map. Choose the Twist (Left, Front, Right; the cursor starts here) and Weapon Target, then click **[0 selected out of 2 available weapons]** to open the weapon list.
 
 [![Figure 23. Attack Command panel.](i14_attack.png)](i14_attack.png)
 

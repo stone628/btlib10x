@@ -186,6 +186,7 @@ export const en = {
     "random setup ready: {players} players, seed {seed}. type 'start' to watch them fight.",
   "cmd.pp.arg.go": "let the persona player act at the current prompt (e.g. after 'rollback')",
   "cmd.pp.arg.why": "reprint a unit's last decision (default: the acting unit)",
+  "cmd.pp.arg.phase": "a persona plays the acting unit's current phase only (hand-played units)",
   "cmd.pp.arg.trace": "how much reasoning to show: off, brief (top 3 options) or full",
   "pp.list.header": "persona assignments:",
   "pp.list.entry": "  {id}: {persona}",
@@ -199,6 +200,10 @@ export const en = {
   "pp.err.setupOnly": "personas are assigned in setup only",
   "pp.err.notPersonaPrompt": "the current prompt is not played by a persona",
   "pp.err.noTrace": "no decision recorded for {id} yet",
+  "pp.ok.phase": "{id}: {persona} plays this phase",
+  "pp.err.phaseNoPrompt": "'pp phase' needs a unit at a movement or attack prompt",
+  "pp.err.phaseAssigned":
+    "{id} is played by the {persona} persona; 'pp phase' is for hand-played units",
   "pp.stopped": "persona player: '{command}' failed; stopped. you have the controls.",
   "pp.limit": "persona player: decision limit reached; stopped. type 'pp go' to continue.",
   "pp.waiting":

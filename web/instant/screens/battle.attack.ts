@@ -11,11 +11,13 @@ import {
   type Twist,
   weaponDefFor,
 } from "btlib10x";
+import { PERSONAS } from "../ai/persona.data";
 import type { ClubAction, PhysicalOption } from "../battle/controller";
 import { locName, t } from "../i18n";
 import { type AttackDialog, type AttackPanelRow, app, rerender } from "../state";
 import { UI_THEME } from "../theme";
 import type { TuiChild, TuiNode } from "../tui";
+import { CONTROL_ID, controlLabel, openControlMenu } from "./battle.control";
 import { cells, fit, h, row, span } from "./common";
 
 const { MARK: M, ARROW: A, GRID: G } = UI_THEME;
@@ -80,7 +82,9 @@ export function frameTarget(): void {
 /** The panel's rows, top to bottom, without the hidden ones. */
 function panelRows(): AttackPanelRow[] {
   const b = app.battle!;
-  const rows: AttackPanelRow[] = ["twist", "target"];
+  // a persona picked under Control plays the attack: the rest is hidden
+  if (b.phasePersona !== null) return ["control"];
+  const rows: AttackPanelRow[] = ["control", "twist", "target"];
   if (currentTarget()) rows.push("weapons");
   if (b.physicalOptions().length > 0) rows.push("physical");
   if (b.clubActions().length > 0) rows.push("club");
@@ -101,12 +105,12 @@ function cursorFor(): string {
   return `${b.state.turn}>${b.actorId}`;
 }
 
-/** The row under the cursor: the last one picked for this actor, else the first button. */
+/** The row under the cursor: the last one picked for this actor, else Twist. */
 export function cursorRow(): AttackPanelRow {
   const rows = panelRows().filter(selectable);
   const c = app.battleUi.attackRow;
   if (c && c.for === cursorFor() && rows.includes(c.row)) return c.row;
-  return (["weapons", "physical", "target"] as const).find((r) => rows.includes(r)) ?? "target";
+  return rows.includes("twist") ? "twist" : "control";
 }
 
 function setCursor(r: AttackPanelRow): void {
@@ -210,9 +214,40 @@ function fireHeat(): number {
   return b.attack!.weapons.reduce((n, w) => n + (weaponDefFor(def.weapons[w]!).heat ?? 0), 0);
 }
 
+/** The Control dropdown row on top of the panel. */
+function controlRow(width: number): TuiNode {
+  const text = `[${controlLabel()} ${A.drop}]`;
+  const on = cursorRow() === "control";
+  return h().el(
+    "div",
+    { class: `ia-row${on ? " sel" : ""}`, key: "control" },
+    span(text, {
+      key: "control",
+      id: CONTROL_ID,
+      cls: app.battle!.phasePersona !== null ? "ia-bright" : "",
+      onClick: () => {
+        setCursor("control");
+        openControlMenu(0, () => setCursor("control"));
+        rerender();
+      },
+    }),
+    " ".repeat(Math.max(0, width - cells(text))),
+  );
+}
+
 /** The panel's rows and its width: `minWidth`, or wider for a long button caption. */
 export function attackPanel(minWidth: number): { rows: TuiNode[]; width: number } {
   const b = app.battle!;
+  const control = controlRow(minWidth);
+  const persona = b.phasePersona;
+  if (persona !== null) {
+    const text = t("orders.personaAttack", { persona: PERSONAS[persona].name });
+    const width = Math.max(minWidth, cells(text) + 2);
+    return {
+      rows: [control, row(fit(text, width, "center"), { cls: "ia-accent", key: "persona" })],
+      width,
+    };
+  }
   const draft = b.attack!;
   const unit = b.actor!;
   const def = mechDefFor(unit);
@@ -259,6 +294,7 @@ export function attackPanel(minWidth: number): { rows: TuiNode[]; width: number 
       ? t("orders.noTargets")
       : t("orders.pickTarget");
   const out: TuiNode[] = [
+    control,
     h().el("div", { class: `ia-row${sel("twist") ? " sel" : ""}`, key: "twist" }, ...twistKids),
     row(fit(`${label("orders.weaponTarget")}${targetLine}`, width), {
       key: "target",
@@ -307,7 +343,10 @@ export function attackKey(e: KeyboardEvent): boolean {
   const n = rows.length;
   const move = (d: number) => setCursor(rows[(rows.indexOf(cur) + d + n) % n]!);
   const side = e.key === "ArrowRight" ? 1 : e.key === "ArrowLeft" ? -1 : 0;
-  if (side) {
+  if (cur === "control" && (e.key === "Enter" || e.key === " ")) {
+    openControlMenu(0, () => setCursor("control"));
+  } else if (side) {
+    if (cur === "control") return true;
     if (cur === "target") cycleTarget(side);
     else if (cur === "club") cycleClub(side);
     else twistToward(side);
@@ -335,6 +374,11 @@ export function attackKeys(): (readonly [string, string])[] {
       ["Bksp", "key.close"],
     ];
   const cur = cursorRow();
+  if (cur === "control")
+    return [
+      ["↑↓", "key.row"],
+      ["Enter", "key.open"],
+    ];
   const side = cur === "target" ? "key.target" : cur === "club" ? "key.club" : "key.twist";
   const enter =
     cur === "weapons" || cur === "physical" ? "key.open" : cur === "twist" ? "key.twist" : side;

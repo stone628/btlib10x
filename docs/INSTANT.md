@@ -215,6 +215,13 @@ The movement choices offered are only those legal for the actor now
 Shut-down units still move first, regardless of initiative (engine rule, as
 in the terminal). Each choice shows its MP budget after any posture cost.
 
+The Movement Command bar holds three dropdowns: Control (see below), **Hold**
+(the choices with no hex to pick: Stand still, Drop prone, Stay prone, Stand
+up, Shut down, Start up, Eject, Abandon) and **Move to hex** (the choices that
+pick a landing: Walk, Run, Jump, Drop prone + turn, Turn (prone), Stand up +
+walk / run, each with its MP). A dropdown with a choice made shows it,
+`[●Run:8MP ▾]`. The cursor starts on Hold.
+
 - Choosing Walk / Run / Jump / a stand-up or prone move shows every
   reachable landing (`reachableLandings`) on the map, with the cheapest MP
   cost per hex. A click (or A on the reticle) picks a landing hex and the
@@ -232,12 +239,26 @@ in the terminal). Each choice shows its MP budget after any posture cost.
   unconscious unit's Done passes. Backspace clears the landing; choosing
   another mode drops it too.
 
+### Control: a persona for this phase
+
+Both command panels open with a **Control** dropdown, `[Control: Player ▾]`
+(`web/instant/screens/battle.control.ts`), shown only while a Player unit
+acts. Its list is the one Choose Control shows: Player, then every persona.
+Picking a persona hides the rest of the panel (the map shows no landings or
+targets either) and leaves one line, "Long Tom plays this move · F10 to
+commit"; F10 (or DONE) drops the Player's draft and lets that persona decide
+and commit the prompt at the persona pace (`commitPhasePersona`). The pick
+covers the current phase only: it lapses with the prompt
+(`BattleController.phasePersona`), so the unit's next prompt opens on
+Player again. Picking Player brings the panel back with the draft as it
+was. Persona units cannot be handed over. Terminal: `pp phase <persona>`.
+
 ### Attack orders
 
-The Attack Command panel holds selectors and two buttons, top to bottom:
-Twist, Weapon Target, the weapons button, the physical attacks button, Club,
-and the heat estimate. The cursor starts on the weapons button
-(`web/instant/screens/battle.attack.ts`).
+The Attack Command panel holds the Control dropdown, selectors and two
+buttons, top to bottom: Control, Twist, Weapon Target, the weapons button,
+the physical attacks button, Club, and the heat estimate. The cursor starts
+on Twist (`web/instant/screens/battle.attack.ts`).
 
 - **Twist** — shown Left / Front / Right, Front by default (← → on any row
   but Weapon Target and Club turn toward that side; Enter on the Twist row
@@ -536,8 +557,8 @@ space there; pad B leaves the box (a pad cannot type).
 | Deployment | Home edge dropdown: Enter opens it, arrows leave it like any control; unit list: ↑ ↓ select unit (centres the map on it), past the ends to the nearest control, ← → turn a Player unit; on a button, arrows move to the nearest control; Backspace pick the unit up, F10 done (once an edge is set), Esc menu (Done, Discard, Options) |
 | Battle, any prompt | Esc battle menu, Tab / Shift+Tab (X) key focus: left sheet (its closed tab when shut), orders, right sheet (its closed tab), wrapping; `[` / `]` open / close the left / right record sheet (closing the focused one hands the focus to the orders), Shift+`[` / `]` pin / unpin it, L log, Enter / Space next persona activation (step pace; ignored for 300 ms after control returns, and on key repeat); while a map animation plays, Enter / Space / F10 / Backspace or a press on the map only skip it, Esc opens the menu and pauses it, view keys work and other keys are ignored |
 | Battle, a sheet focused | arrows move to the nearest hint target that way (header, pin, pilot hits, policy, engine, gyro, sensors, life support, location names, HS, heat; its tip shows), Enter / Space on the header open the unit picker, on the pin toggle it, on the policy button (acting Player unit) the policy dialog, on a closed tab open the sheet; Backspace focus back to the orders; F10 still commits |
-| Movement | ← → along the mode bar; on Hold, Enter / Space open its dropdown on the held choice, ↓ / ↑ open it one choice after / before it, round the list (nothing held: ↓ the first, ↑ the last); Enter / Space on a mode choose it (another mode drops the landing); Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
-| Attack | ↑ ↓ Twist, Weapon Target, weapons button, physical attacks button, Club (hidden and dim rows skipped); ← → previous / next target on Weapon Target, previous / next action on Club, else twist; Enter / Space step the twist, next target or club action, or open the button's dialog; F10 done (with nothing checked, a Pass? confirm) |
+| Movement | ← → along the mode bar (Control, Hold, Move to hex; the cursor starts on Hold); Enter / Space open the dropdown under the cursor on its current choice, ↓ / ↑ open it one choice after / before it, round the list (nothing chosen: ↓ the first, ↑ the last); choosing another mode drops the landing; Backspace clear the landing, F10 done. While a record sheet has the focus, the orders cursor dims to the sheet header's green |
+| Attack | ↑ ↓ Control, Twist, Weapon Target, weapons button, physical attacks button, Club (hidden and dim rows skipped); ← → previous / next target on Weapon Target, previous / next action on Club, else twist; Enter / Space step the twist, next target or club action, or open the button's dialog or the Control dropdown; F10 done (with nothing checked, a Pass? confirm) |
 | Attack dialog | ↑ ↓ rows that can be checked; Enter / Space toggle the row and move on to the next (A A A checks a volley); Esc / Backspace / F10 close, the checks kept |
 | Debrief | `[` / `]` previous / next section, ↑ ↓ unit, PgUp PgDn scroll, Esc menu (Rematch, Edit battle setup, Back to title, Options; ↑ ↓ pick, Enter / Space run) |
 | Options | ↑ ↓ row, ← → step the value, Enter / Space step it forward, Esc / Backspace back to the opener |

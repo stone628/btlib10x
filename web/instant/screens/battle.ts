@@ -1,5 +1,6 @@
 /** Screen 3: the battle HUD (full map, frame, drawers, orders) and its windows. */
 import { type Facing, isHull, isUnitOnBoard, type RevealedLanding } from "btlib10x";
+import { PERSONAS } from "../ai/persona.data";
 import { ANIM_SPEEDS } from "../battle/beats";
 import { largestRect, safeRects } from "../battle/camera";
 import type { MoveChoice } from "../battle/controller";
@@ -12,6 +13,7 @@ import {
   AI_PACES,
   app,
   kitModal,
+  type MoveBarItem,
   reducedMotion,
   rerender,
   setAiPace,
@@ -32,6 +34,7 @@ import {
   physicalOutline,
   pickTarget,
 } from "./battle.attack";
+import { byId, CONTROL_ID, controlLabel, openControlMenu, openDropdown } from "./battle.control";
 import {
   BODY,
   battleFrame,
@@ -68,8 +71,9 @@ const STATIONARY = new Set<MoveChoice>([
   "abandon",
 ]);
 type StatusKey = readonly [string, string, (() => void)?];
-/** Id of the Hold dropdown on the mode bar, where Enter opens its menu. */
+/** Ids of the Hold and Move to hex dropdowns, where Enter opens their menus. */
 const HOLD_ID = "ia-hold";
+const HEX_ID = "ia-hex";
 
 // ------------------------------------------------------------ movement orders
 
@@ -77,101 +81,132 @@ function landingMp(l: RevealedLanding): number {
   return l.path.reduce((n, s) => n + s.baseMp, 0);
 }
 
-/** A stationary mode, or a mode with its hex and facing: DONE can commit it. */
+/** A persona picked under Control, a stationary mode, or a mode with its hex and facing: DONE can commit it. */
 function moveReady(): boolean {
-  const d = app.battle?.move;
+  const b = app.battle;
+  if (b?.phasePersona != null) return true;
+  const d = b?.move;
   if (!d?.choice) return false;
   return STATIONARY.has(d.choice) || d.landing !== null;
 }
 
-/** The mode bar, left to right: the Hold dropdown (when any), then the modes that pick a hex. */
-type BarItem = "hold" | MoveChoice;
+/** The modes of one dropdown: Hold (no hex to pick) or Move to hex. */
+function groupChoices(item: "hold" | "hex"): MoveChoice[] {
+  return app.battle!.moveChoices().filter((c) => (item === "hold") === STATIONARY.has(c));
+}
 
-function barItems(): BarItem[] {
-  const choices = app.battle!.moveChoices();
-  const hold: BarItem[] = choices.some((c) => STATIONARY.has(c)) ? ["hold"] : [];
-  return [...hold, ...choices.filter((c) => !STATIONARY.has(c))];
+/**
+ * The mode bar, left to right: Control, then Hold and Move to hex (when they
+ * have modes); a persona picked under Control leaves Control alone.
+ */
+function barItems(): MoveBarItem[] {
+  const b = app.battle!;
+  if (b.phasePersona !== null) return ["control"];
+  const items: MoveBarItem[] = ["control"];
+  if (groupChoices("hold").length > 0) items.push("hold");
+  if (groupChoices("hex").length > 0) items.push("hex");
+  return items;
+}
+
+function moveCursorFor(): string {
+  const b = app.battle!;
+  return `${b.state.turn}>${b.actorId}`;
+}
+
+/** The dropdown under the cursor: the last one used for this mover, else Hold. */
+function moveCursor(): MoveBarItem {
+  const items = barItems();
+  const c = app.battleUi.moveItem;
+  if (c && c.for === moveCursorFor() && items.includes(c.item)) return c.item;
+  return items.includes("hold") ? "hold" : (items[1] ?? "control");
+}
+
+function setMoveCursor(item: MoveBarItem): void {
+  app.battleUi.moveItem = { for: moveCursorFor(), item };
 }
 
 function pickMove(c: MoveChoice): void {
   const b = app.battle!;
-  app.orderCursor = Math.max(0, barItems().indexOf(STATIONARY.has(c) ? "hold" : c));
+  setMoveCursor(STATIONARY.has(c) ? "hold" : "hex");
   act(() => b.chooseMove(c));
   rerender();
 }
 
-/**
- * The Hold dropdown under its bar item (a click, Enter, or ↑ ↓ on it). The
- * menu cursor starts on the held choice; `step` ±1 (↓ / ↑) starts it one
- * after or before it, round the list (nothing held: ↓ the first, ↑ the last).
- */
-function openHoldMenu(el: HTMLElement | null, step = 0): void {
-  if (!el) return;
-  const hold = app.battle!.moveChoices().filter((c) => STATIONARY.has(c));
-  const current = app.battle?.move?.choice ?? null;
-  const at = hold.indexOf(current as MoveChoice);
-  const n = hold.length;
-  const active =
-    step === 0 ? Math.max(0, at) : at < 0 ? (step > 0 ? 0 : n - 1) : (at + step + n) % n;
-  kitModal.open = true;
-  void kit()
-    .popupMenu(
-      el,
-      hold.map((c) => ({
-        label: `${c === current ? M.on : " "} ${fit(t(`choice.${c}`), 16)}`,
-      })),
-      { active },
-    )
-    .then((r) => {
-      kitModal.open = false;
-      const c = r && "index" in r ? hold[r.index] : undefined;
-      if (c) pickMove(c);
-      else rerender();
-    });
+/** A mode's dropdown row: the mark, its name and, for Move to hex, its MP. */
+function choiceLabel(c: MoveChoice, current: MoveChoice | null): string {
+  const mp = STATIONARY.has(c) ? 0 : app.battle!.budgetFor(c);
+  const name = fit(t(`choice.${c}`), 18);
+  return `${c === current ? M.on : " "} ${name}${mp > 0 ? `${fit(String(mp), 3, "right")} MP` : ""}`;
 }
 
-/** Mode bar: the Hold dropdown, then the modes that pick a hex. */
+/**
+ * Open a dropdown of the bar under its button (a click, Enter, or ↑ ↓ on
+ * it): its menu cursor starts on the current choice; `step` ±1 (↓ / ↑)
+ * starts it one after or before it.
+ */
+function openBarMenu(item: MoveBarItem, step = 0): void {
+  setMoveCursor(item);
+  if (item === "control") {
+    openControlMenu(step, () => setMoveCursor("control"));
+    return;
+  }
+  const list = groupChoices(item);
+  const current = app.battle?.move?.choice ?? null;
+  openDropdown(
+    byId(item === "hold" ? HOLD_ID : HEX_ID),
+    list.map((c) => choiceLabel(c, current)),
+    list.indexOf(current as MoveChoice),
+    step,
+    (i) => {
+      const c = list[i];
+      if (c) pickMove(c);
+    },
+  );
+}
+
+/** Mode bar: the Control, Hold and Move to hex dropdowns. */
 function moveMenu(): { rows: TuiNode[]; width: number } {
   const b = app.battle!;
-  const choices = b.moveChoices();
   const draft = b.move!;
-  const hold = choices.filter((c) => STATIONARY.has(c));
-  const modes = choices.filter((c) => !STATIONARY.has(c));
-  const cursor = barItems()[app.orderCursor];
-  const held = draft.choice && STATIONARY.has(draft.choice) ? draft.choice : null;
+  const cursor = moveCursor();
+  const chosen = draft.choice;
   const kids: TuiChild[] = [" "];
   let width = 2;
   const add = (text: string, node: TuiChild = text) => {
     kids.push(node);
     width += cells(text);
   };
-  if (hold.length > 0) {
-    const label = held ? `${M.on}${t(`choice.${held}`)}` : t("orders.hold");
+  const button = (item: MoveBarItem, id: string, label: string, bright: boolean) => {
+    if (kids.length > 1) add("  ");
     const text = `[${label} ${A.drop}]`;
     add(
       text,
       span(text, {
-        key: "hold",
-        id: HOLD_ID,
-        cls: cursor === "hold" ? "sel" : held ? "ia-bright" : "",
-        onClick: (e) =>
-          openHoldMenu(e.currentTarget instanceof HTMLElement ? e.currentTarget : null),
+        key: item,
+        id,
+        cls: cursor === item ? "sel" : bright ? "ia-bright" : "",
+        onClick: () => {
+          openBarMenu(item);
+          rerender();
+        },
       }),
     );
-  }
-  for (const c of modes) {
-    const on = draft.choice === c;
-    const mp = b.budgetFor(c);
-    if (kids.length > 1) add("  ");
-    const text = `[${on ? M.on : ""}${t(`choice.${c}`)}${mp > 0 ? `:${mp}MP` : ""}]`;
-    add(
-      text,
-      span(text, {
-        key: c,
-        cls: c === cursor ? "sel" : on ? "ia-bright" : "",
-        onClick: () => pickMove(c),
-      }),
-    );
+  };
+  button("control", CONTROL_ID, controlLabel(), b.phasePersona !== null);
+  for (const item of barItems()) {
+    if (item === "hold") {
+      const held = chosen && STATIONARY.has(chosen) ? chosen : null;
+      button("hold", HOLD_ID, held ? `${M.on}${t(`choice.${held}`)}` : t("orders.hold"), !!held);
+    } else if (item === "hex") {
+      const mode = chosen && !STATIONARY.has(chosen) ? chosen : null;
+      const mp = mode ? b.budgetFor(mode) : 0;
+      button(
+        "hex",
+        HEX_ID,
+        mode ? `${M.on}${t(`choice.${mode}`)}${mp > 0 ? `:${mp}MP` : ""}` : t("orders.moveToHex"),
+        !!mode,
+      );
+    }
   }
   kids.push(" ");
   return { rows: [h().el("div", { class: "ia-row", key: "modes" }, ...kids)], width };
@@ -186,19 +221,23 @@ function moveHint(): { width: number; row: (width: number) => TuiNode } | null {
   const b = app.battle!;
   const draft = b.move;
   if (!draft) return null;
-  const l = draft.landing;
-  const info = l
-    ? t("orders.landing", {
-        col: l.hex.col,
-        row: l.hex.row,
-        facing: l.facing.toUpperCase(),
-        mp: landingMp(l),
-      })
-    : draft.choice && draft.landings.length > 0
-      ? t("orders.clickHex")
-      : draft.choice
-        ? t("orders.noMoveNeeded")
-        : t("orders.chooseMode");
+  const persona = b.phasePersona;
+  const l = persona === null ? draft.landing : null;
+  const info =
+    persona !== null
+      ? t("orders.personaMove", { persona: PERSONAS[persona].name })
+      : l
+        ? t("orders.landing", {
+            col: l.hex.col,
+            row: l.hex.row,
+            facing: l.facing.toUpperCase(),
+            mp: landingMp(l),
+          })
+        : draft.choice && draft.landings.length > 0
+          ? t("orders.clickHex")
+          : draft.choice
+            ? t("orders.noMoveNeeded")
+            : t("orders.chooseMode");
   const melee = l?.melee ? ` ${t("orders.melee", { kind: l.melee.kind })}` : "";
   const used = cells(`${info}${melee}`);
   return {
@@ -314,6 +353,7 @@ function orders(): Orders {
 
 const MOVE_KEYS: StatusKey[] = [
   ["←→", "key.mode"],
+  ["Enter", "key.open"],
   ["Shift+←→", "key.aim"],
   ["Bksp", "key.clear"],
 ];
@@ -434,6 +474,11 @@ function skipClip(): void {
 
 function commit(): void {
   const b = app.battle!;
+  if (b.phasePersona !== null) {
+    act(() => b.commitPhasePersona());
+    pumpAi();
+    return;
+  }
   const d = b.attack;
   if (b.phase === "attack" && d && !d.weapons.length && !d.physical.length) {
     if (!d.pickup && !d.dropClub) {
@@ -442,7 +487,6 @@ function commit(): void {
     }
   }
   act(() => (b.phase === "movement" ? b.commitMove() : b.commitAttack()));
-  app.orderCursor = 0;
   pumpAi();
 }
 
@@ -461,7 +505,6 @@ function confirmPass(): void {
       const b = app.battle;
       if (r === t("yes") && b?.attack) {
         act(() => b.commitAttack());
-        app.orderCursor = 0;
         pumpAi();
       }
       rerender();
@@ -492,7 +535,9 @@ export function battleOverlays(): void {
     return;
   }
   const actor = b.actor;
-  if (b.move && actor && b.actorPersona === null) {
+  // a persona picked under Control: no landings or targets to pick
+  const drafting = b.actorPersona === null && b.phasePersona === null;
+  if (b.move && actor && drafting) {
     const reach = new Map<string, string>();
     const facings = new Map<string, Facing[]>();
     for (const l of b.move.landings) {
@@ -509,7 +554,7 @@ export function battleOverlays(): void {
     const chosen = b.move.landing;
     o.selected = chosen ? keyOf(chosen.hex) : null;
     o.chosen = chosen ? { hex: keyOf(chosen.hex), facing: chosen.facing } : null;
-  } else if (b.attack && actor) {
+  } else if (b.attack && actor && drafting) {
     const targets = b.fireSuggestion()?.targets ?? [];
     o.targets = new Set(targets.map((x) => keyOf(b.state.units[x.targetId]!.position)));
     const tu = b.attack.targetId ? b.state.units[b.attack.targetId] : null;
@@ -530,7 +575,7 @@ export function battleOverlays(): void {
       (u) => u.team !== actor.team && isUnitOnBoard(u) && !isHull(u),
     );
     // a Player's move: where it can go too
-    const reach = b.move && b.actorPersona === null ? b.move.landings.map((l) => l.hex) : [];
+    const reach = b.move && drafting ? b.move.landings.map((l) => l.hex) : [];
     v.fitHexes(
       [actor.position, ...foes.map((u) => u.position), ...reach],
       largestRect(v.canvas, safeRects(v.canvas)),
@@ -602,7 +647,7 @@ function onMapPick(hex: { col: number; row: number }, facing: Facing | null): vo
   const showSheet = () => {
     if (unit) openSheetFor(unit.id);
   };
-  if (b.actorPersona !== null) {
+  if (b.actorPersona !== null || b.phasePersona !== null) {
     showSheet();
     return;
   }
@@ -838,20 +883,16 @@ const PLAYER_GRACE_MS = 300;
 function moveKey(e: KeyboardEvent): boolean {
   const b = app.battle!;
   const items = barItems();
-  const n = Math.max(1, items.length);
-  // ← → run along the bar; ↑ ↓ open Hold one choice after / before the held one
-  if (e.key === "ArrowRight") app.orderCursor = (app.orderCursor + 1) % n;
-  else if (e.key === "ArrowLeft") app.orderCursor = (app.orderCursor + n - 1) % n;
-  else if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-    if (items[app.orderCursor] === "hold")
-      openHoldMenu(document.getElementById(HOLD_ID), e.key === "ArrowDown" ? 1 : -1);
-  } else if (e.key === "Enter" || e.key === " ") {
-    // Hold opens its dropdown; choosing a mode never commits, another drops the landing
-    const c = items[app.orderCursor];
-    if (c === "hold") openHoldMenu(document.getElementById(HOLD_ID));
-    else if (c && b.move?.choice !== c) act(() => b.chooseMove(c));
-  } else if (e.key === "Backspace") {
-    if (b.move?.landing) act(() => b.clearLanding());
+  const n = items.length;
+  const at = items.indexOf(moveCursor());
+  // ← → run along the bar; Enter opens the dropdown, ↑ ↓ one choice after / before the current one
+  if (e.key === "ArrowRight") setMoveCursor(items[(at + 1) % n]!);
+  else if (e.key === "ArrowLeft") setMoveCursor(items[(at + n - 1) % n]!);
+  else if (e.key === "ArrowDown" || e.key === "ArrowUp")
+    openBarMenu(moveCursor(), e.key === "ArrowDown" ? 1 : -1);
+  else if (e.key === "Enter" || e.key === " ") openBarMenu(moveCursor());
+  else if (e.key === "Backspace") {
+    if (b.move?.landing && b.phasePersona === null) act(() => b.clearLanding());
   } else if (e.key === "F10" && moveReady()) commit();
   else return false;
   return true;

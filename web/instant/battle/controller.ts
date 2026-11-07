@@ -186,6 +186,8 @@ export class BattleController {
   onStep: ((step: StepRecord) => void) | null = null;
   private committing: CommittedMove | null = null;
   private aiStepping = false;
+  /** Persona the Player picked to play the current prompt only (Control dropdown). */
+  private phasePick: { for: string; key: PersonaKey } | null = null;
 
   constructor(
     map: MapDef,
@@ -215,6 +217,24 @@ export class BattleController {
   /** Persona of the acting unit, or null when a player acts (or nobody). */
   get actorPersona(): PersonaKey | null {
     return this.actorId === null ? null : (this.control[this.actorId] ?? null);
+  }
+
+  /** The prompt a Control pick belongs to: it lapses once the prompt moves on. */
+  private promptKey(): string {
+    return `${this.state.turn}:${this.state.phase}:${this.actorId}`;
+  }
+
+  /** Persona picked to play this prompt only, or null (the Player plays it). */
+  get phasePersona(): PersonaKey | null {
+    const p = this.phasePick;
+    return p !== null && p.for === this.promptKey() && this.result === null ? p.key : null;
+  }
+
+  /** Hand the current Player prompt to a persona (null: back to the Player); nothing runs yet. */
+  setPhasePersona(key: PersonaKey | null): void {
+    if (this.actorId === null || this.result !== null) throw new Error(t("err.noPrompt"));
+    if (this.actorPersona !== null) throw new Error(t("err.personaUnit", { id: this.actorId }));
+    this.phasePick = key === null ? null : { for: this.promptKey(), key };
   }
 
   get phase(): "movement" | "attack" | "over" {
@@ -892,8 +912,27 @@ export class BattleController {
     }
   }
 
-  private playPersona(): boolean {
-    const key = this.actorPersona;
+  /**
+   * Commit the current prompt through the persona picked for it
+   * (`setPhasePersona`): the Player's draft is dropped and the persona decides
+   * and commits, as at a persona unit's own prompt. The next prompt is the
+   * Player's again.
+   */
+  commitPhasePersona(): void {
+    const key = this.phasePersona;
+    if (key === null) throw new Error(t("err.noPhasePersona"));
+    this.phasePick = null;
+    if (this.move) this.clearMove();
+    if (this.attack) this.clearAttack();
+    this.aiStepping = true;
+    try {
+      this.playPersona(key);
+    } finally {
+      this.aiStepping = false;
+    }
+  }
+
+  private playPersona(key: PersonaKey | null = this.actorPersona): boolean {
     const actor = this.actor;
     if (key === null || actor === null || this.result !== null) return false;
     if (!isUnitAvailable(actor)) return false;

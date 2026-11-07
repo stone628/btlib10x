@@ -119,6 +119,49 @@ describe("persona player: decisions", () => {
   });
 });
 
+describe("persona player: pp phase", () => {
+  it("plays the human unit's current phase once, then hands the next prompt back", () => {
+    const s = setup();
+    execute(s, "start");
+    expect(actorId(s)).toBe("me");
+    const turn = s.battle!.turn;
+    const out = execute(s, "pp phase longtom").join("\n");
+    expect(out).toMatch(/me: Long Tom plays this phase/);
+    expect(out).toMatch(/persona Long Tom · posture/);
+    expect(out).toMatch(/> done/);
+    expect(s.persona.lastTrace.me?.persona).toBe("longtom");
+    expect(s.persona.assignments.me).toBeUndefined();
+    // The persona opponent's prompts were driven on: the prompt is the human's again.
+    expect(actorId(s)).toBe("me");
+    expect(s.battle!.phase === "attack" || s.battle!.turn > turn).toBe(true);
+  });
+
+  it("refuses persona-assigned units, unknown personas and setup", () => {
+    const s = setup();
+    expect(execute(s, "pp phase alpha")[0]).toMatch(/phase/);
+    execute(s, "start");
+    expect(execute(s, "pp phase sniper")[0]).toMatch(/unknown persona/);
+    execute(s, "rollback");
+    if (actorId(s) === "foe") {
+      expect(execute(s, "pp phase alpha")[0]).toMatch(/foe is played by the Jump Jockey persona/);
+    }
+  });
+
+  it("rolls back like any other prompt", () => {
+    const s = setup();
+    execute(s, "start");
+    const before = execute(s, "status").join("\n");
+    execute(s, "pp phase alpha");
+    expect(s.persona.lastTrace.me).toBeDefined();
+    // Back through the prompts the phase and the opponent played, to the start.
+    for (let i = 0; i < 10 && execute(s, "status").join("\n") !== before; i++) {
+      execute(s, "rollback");
+    }
+    expect(s.persona.lastTrace.me).toBeUndefined();
+    expect(execute(s, "status").join("\n")).toBe(before);
+  });
+});
+
 describe("persona player: jump", () => {
   it("never jumps back into its own hex (TW p. 53: a jump must leave the hex)", () => {
     for (const seed of [1, 2, 3, 5, 8]) {

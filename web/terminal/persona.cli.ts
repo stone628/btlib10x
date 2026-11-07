@@ -14,7 +14,7 @@ import type { MessageKey } from "./i18n/index";
 import { i18n } from "./i18n/index";
 import { decide, promptActorId, promptPersona, type TraceLevel } from "./persona";
 import type { DecisionTrace, TraceCandidate, TraceNote, TraceTerm } from "./persona.common";
-import { isPersonaKey, PERSONA_KEYS, PERSONAS } from "./persona.data";
+import { isPersonaKey, PERSONA_KEYS, PERSONAS, type PersonaKey } from "./persona.data";
 import { PP_SETUP_USAGE, randomPersonaSetup } from "./persona.setup";
 import { handleSessionGameEvents, promptBody, type Session } from "./session";
 
@@ -159,11 +159,47 @@ export function drivesAfter(command: string): boolean {
 }
 
 /**
+ * Decide the current prompt with persona `key`, show the trace, then type the
+ * commands through `run`. The next persona context is installed before the
+ * commands run, so the snapshot taken at the following prompt already holds
+ * it; a failed command restores it and returns false.
+ */
+function playDecision(
+  s: Session,
+  key: PersonaKey,
+  run: (raw: string) => Chunk[],
+  out: Chunk[],
+): "played" | "none" | "failed" {
+  const decision = decide(s, key, s.persona);
+  if (decision === null) return "none";
+  const before = s.persona;
+  s.persona = decision.next;
+  out.push(...traceChunks(s, decision.trace, s.persona.traceLevel));
+  for (const command of decision.commands) {
+    out.push(buildLinesChunkWith("cmd", `${promptBody(s)} > ${command}`));
+    const result = run(command);
+    // The reachable-hex board of `mode` is for a human picking a landing: skip it.
+    out.push(...result.filter((c) => c.kind !== "board"));
+    if (result.some((c) => c.kind === "lines" && c.cls === "err")) {
+      s.persona = { ...before, traceLevel: s.persona.traceLevel };
+      out.push(buildLinesChunkWith("banner", i18n("pp.stopped", { command })));
+      return "failed";
+    }
+  }
+  return "played";
+}
+
+function errorChunk(e: unknown): Chunk {
+  return buildLinesChunkWith(
+    "err",
+    `${i18n("err.prefix")} ${e instanceof Error ? e.message : String(e)}`,
+  );
+}
+
+/**
  * Play every consecutive persona prompt: decide, show the trace, then type
  * the commands through `run` (the normal CLI dispatch, so `commitAtomic`,
- * replay recording and rollback snapshots all apply). The next persona
- * context is installed before the commands run, so the snapshot taken at the
- * following prompt already holds it; a failed command restores it and stops.
+ * replay recording and rollback snapshots all apply).
  */
 export function drivePersona(s: Session, run: (raw: string) => Chunk[]): Chunk[] {
   if (driving) return [];
@@ -177,38 +213,40 @@ export function drivePersona(s: Session, run: (raw: string) => Chunk[]): Chunk[]
       }
       const key = promptPersona(s);
       if (key === null) break;
-      const decision = decide(s, key, s.persona);
-      if (decision === null) break;
-      const before = s.persona;
-      s.persona = decision.next;
-      out.push(...traceChunks(s, decision.trace, s.persona.traceLevel));
-      let failed: string | null = null;
-      for (const command of decision.commands) {
-        out.push(buildLinesChunkWith("cmd", `${promptBody(s)} > ${command}`));
-        const result = run(command);
-        // The reachable-hex board of `mode` is for a human picking a landing: skip it.
-        out.push(...result.filter((c) => c.kind !== "board"));
-        if (result.some((c) => c.kind === "lines" && c.cls === "err")) {
-          failed = command;
-          break;
-        }
-      }
-      if (failed !== null) {
-        s.persona = { ...before, traceLevel: s.persona.traceLevel };
-        out.push(buildLinesChunkWith("banner", i18n("pp.stopped", { command: failed })));
-        break;
-      }
+      if (playDecision(s, key, run, out) !== "played") break;
     }
   } catch (e) {
-    out.push(
-      buildLinesChunkWith(
-        "err",
-        `${i18n("err.prefix")} ${e instanceof Error ? e.message : String(e)}`,
-      ),
-    );
+    out.push(errorChunk(e));
   } finally {
     driving = false;
   }
+  return out;
+}
+
+/**
+ * `pp phase <persona>`: persona `key` plays the current phase of the acting
+ * unit once (a hand-played unit only); the unit's next prompt is the human's
+ * again. Persona prompts that follow are driven as after `done`.
+ */
+export function playPhase(s: Session, key: PersonaKey, run: (raw: string) => Chunk[]): Chunk[] {
+  const id = promptActorId(s);
+  if (id === null) throw new Error(i18n("pp.err.phaseNoPrompt"));
+  const assigned = promptPersona(s);
+  if (assigned !== null) {
+    throw new Error(i18n("pp.err.phaseAssigned", { id, persona: PERSONAS[assigned].name }));
+  }
+  const out: Chunk[] = [buildLinesChunk(i18n("pp.ok.phase", { id, persona: PERSONAS[key].name }))];
+  let result: "played" | "none" | "failed" = "none";
+  driving = true;
+  try {
+    result = playDecision(s, key, run, out);
+  } catch (e) {
+    out.push(errorChunk(e));
+  } finally {
+    driving = false;
+  }
+  if (result === "none") throw new Error(i18n("pp.err.phaseNoPrompt"));
+  if (result === "played") out.push(...drivePersona(s, run));
   return out;
 }
 
@@ -236,6 +274,7 @@ const PP_USAGE = [
   "pp [<id> <persona | off>]",
   "pp setup 2 | 4",
   "pp go | pp why [id]",
+  "pp phase <persona>",
   "pp trace off | brief | full",
 ].join("\n");
 
@@ -250,6 +289,7 @@ export function personaCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
       ["setup 2|4", "cmd.pp.arg.setup"],
       ["go", "cmd.pp.arg.go"],
       ["why [id]", "cmd.pp.arg.why"],
+      ["phase <persona>", "cmd.pp.arg.phase"],
       ["trace off|brief|full", "cmd.pp.arg.trace"],
     ],
     run: (s, a) => {
@@ -273,6 +313,18 @@ export function personaCmd(run: (s: Session, raw: string) => Chunk[]): CmdDef {
           trace,
           s.persona.traceLevel === "off" ? "brief" : s.persona.traceLevel,
         );
+      }
+      // `pp phase <persona>` in battle; in setup a unit named "phase" still takes an assignment.
+      if (sub === "phase" && s.state === "battle") {
+        const word = a[1]?.toLowerCase();
+        if (word === undefined)
+          throw new Error(i18n("err.expectedArgs", { usage: "pp phase <persona>" }));
+        if (!isPersonaKey(word)) {
+          throw new Error(
+            i18n("pp.err.unknownPersona", { name: a[1]!, list: PERSONA_KEYS.join(", ") }),
+          );
+        }
+        return playPhase(s, word, (raw) => run(s, raw));
       }
       if (sub === "go") {
         if (promptPersona(s) === null) throw new Error(i18n("pp.err.notPersonaPrompt"));
